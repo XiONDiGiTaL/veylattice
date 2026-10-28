@@ -287,3 +287,79 @@ Notes: Pages inherited the account's custom domain, so `/veylattice/` required n
 edit to the base site. The API reported `https_enforced: false` even though it was requested; HTTPS
 works via the approved certificate. Profiles are per-origin, so a profile created on
 `localhost:8000` is separate from one created on the deployed origin — there is no import/export yet.
+
+## Session 2026-10-28 · S-M2-C · Actions, Relics, accounts, voxel combat
+
+**Base revision:** `b8afd6a` (`main`). Working tree contained only this session's changes.
+**Environment:** Windows, Git Bash, Node v24.19.0, Python 3.14 static server on port 8130.
+
+### Inspected
+
+- Engine, content, AI and HUD source at `b8afd6a`; the whole test suite; `styles.css` board/unit rules.
+- `supabase/migrations/0001_profiles.sql` and the live Supabase Auth settings endpoint
+  (`/auth/v1/settings`) before promising anything about social sign-in. It returned
+  `email: true, google: false, discord: false, mailer_autoconfirm: false`, which is why OAuth was
+  documented rather than faked.
+
+### Implemented
+
+| File | Change |
+|---|---|
+| `src/cards/actions-relics.json` | 8 Actions and 4 Relics as typed data. |
+| `src/game/constants.js` | `ACTION_TARGETING`, `EFFECT_KINDS` (scope + ranges); deleted `PRACTICE_DECK_RULES`. |
+| `src/game/content.js` | Effect validation, action/relic requirements, frozen effects, legal 38-card practice deck, `actionIdsFrom`/`relicIdsFrom`. |
+| `src/game/engine.js` | `actionTargetsFor`, `relicAuras`, `effectiveAttack`, `applyEffect`, `handlePlayAction`, `handlePlayRelic`, `cleanupDefeated`, relic mend at turn start, guard aura on summon, aura-aware attack/Nexus previews, `actions`/`relics` in `getLegalActions`, new error codes. |
+| `src/game/ai.js` | Observation gains `category`/`targeting`/`effect`, `own.attackBonus`, `own.relics`, `foe.nexusArmor`, `foe.relicEffectKinds`; `playAction`/`playRelic` candidates; `evaluateAction`; no-op casts rejected at scoring. |
+| `src/net/rpc.js` | Shared RPC transport extracted from `profile.js`. |
+| `src/net/account.js` | Recovery-code accounts: normalise/format/validate, session storage, create/load/save/rotate. |
+| `src/net/profile.js` | Account-aware `initialiseProfile`/`persistProfile`, `accountStatus`, `createAccountForProfile`, `signInToAccount`, `signOutOfAccount`. |
+| `supabase/migrations/0002_accounts.sql` | Account table, RLS, code minting/rotation, four guarded RPCs. |
+| `src/main.js` | Cast/set flow and target highlighting, relic panel, card-type rendering, `playEvents` presentation layer with pre-command snapshots, account panel wiring. |
+| `index.html` / `styles.css` | Play button, relic list, account panel, voxel cubes, combat keyframes, mobile tile rules. |
+| `tests/cards.test.js` | 13 new tests. `tests/content.test.js` rewritten for the 30-card pool. `tests/support.js` loads both card files. |
+| `docs/ACCOUNTS.md` | Account model, threat table, verification log, blocked OAuth steps. |
+
+### Design decisions
+
+- **Effects are data.** A card can only name a known kind with in-range numbers; `createCatalog`
+  rejects anything else, so no card text can become behaviour.
+- **One aura implementation.** `relicAuras` feeds attacks, Nexus mitigation, dawn mending and summon
+  bonuses, so the HUD preview and the engine cannot drift apart.
+- **Auras are timing-independent.** A Guard Relic bumps existing Vessels immediately *and* is applied at
+  summon, rather than depending on when it was set.
+- **Accounts are a credential, not a password.** Server-minted 100-bit code, SHA-256 digest at rest,
+  account id is only a lookup key. Rotation invalidates in one statement.
+- **Presentation reads events.** `playEvents` takes the events the engine emitted plus a snapshot taken
+  before the command, because defeated units no longer exist in the new state.
+
+### Verification
+
+```
+npm test                                  -> 69 pass, 0 fail (~0.45 s)
+direct GET /rest/v1/veylattice_accounts   -> 401
+create / load / wrong-code save / rotate  -> see docs/ACCOUNTS.md
+browser: cast, relic set, auras, mobile   -> no console or network errors
+browser: account create/sign-out/sign-in  -> "Lattice Adept" restored from the database
+```
+
+Browser presentation checks observed `.fx-lunge`, `.fx-hit`, `.dmg-float`, `.dmg-float.retaliation`,
+`.fx-ghost`, `.fx-spawn`, `.fx-cast-hit` and `.fx-shake` on real engine events, and a Guard value
+counting `5/8 → 2/8` during a strike. These were driven from a **temporary** `?debug=1` hook used to
+compose positions; the hook was removed before committing and `grep __veylattice src/main.js` is empty.
+
+### Fixed during the session
+
+- The AI cast `Ashfall` on an empty board because the Standard exploration window could pick a negative
+  score. Root cause was scoring, not exploration: no-op casts now score `-Infinity`. A regression test
+  covers it.
+- Mobile cells clipped Guard numbers; under 640 px the tile drops the name and shows the two numbers
+  that matter, with the full name kept in the selection panel and `aria-label`.
+
+### Limitations
+
+- No Google/Discord sign-in: providers disabled, credentials unavailable (documented in
+  `docs/ACCOUNTS.md`).
+- No throttling on account load attempts (M2-005).
+- No transient animation screenshot: effects outlive the capture latency, so the README describes the
+  presentation instead of illustrating a frame.
+- Effect queue ordering, revive/death triggers and buff expiry remain for full M2-001.

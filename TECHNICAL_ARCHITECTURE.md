@@ -2,12 +2,13 @@
 
 Status: target architecture. HTML/CSS/vanilla JS ES modules and JSON remain the baseline; Three.js/GLB follow tested gameplay.
 
-**Implemented as of 2026-10-28 (M1 + M2-003/M2-004):** static frontend on GitHub Pages at
-`xiondigital.net/veylattice/`; deterministic rules engine and AI in `src/game/`; local-first profile
-persistence with a dedicated Supabase project (`jjtfnduodxtulxvviasf`) for name/avatar/settings/stats.
-Everything below about authoritative matches, wallets, seats and ranked progression remains a target.
-The AI's current guarantees (filtered observation, engine-derived candidates, bounded decisions) are the
-pattern any server-side AI must keep.
+**Implemented as of 2026-10-28 (M1 + M2-001a/002a/003/004/006/007):** static frontend on GitHub Pages
+at `xiondigital.net/veylattice/`; deterministic rules engine with typed Action and Relic effects, and an
+AI in `src/game/` that plays them; local-first persistence with a dedicated Supabase project
+(`jjtfnduodxtulxvviasf`) for name/avatar/settings/stats, plus portable accounts keyed by a recovery code;
+an event-driven presentation layer for voxel combat. Everything below about authoritative matches,
+wallets, seats and ranked progression remains a target. The AI's current guarantees (filtered
+observation, engine-derived candidates, bounded decisions) are the pattern any server-side AI must keep.
 
 ## Static frontend and trusted backend
 Host frontend assets on GitHub Pages and the website at /Veylattice/. Use relative module/content URLs and base-aware invite links. Do not configure a CNAME for a subpath. Prefer query/hash navigation so direct routes do not need SPA rewrites. Authentication redirects must preserve deployment base and be allowlisted.
@@ -28,17 +29,23 @@ Use persisted turn deadlines, compare-and-swap state versions and a scheduled ti
 DOM click ─▶ applyCommand(state, command, {now}) ─▶ accepted? new state + events
                                                   └▶ rejected? same state object
 AI turn  ─▶ buildObservation ─▶ buildCandidates(engine) ─▶ choosePlan(bounded) ─▶ applyCommand
+Events   ─▶ playEvents(events, pre-command snapshot) ─▶ CSS animation (never mutates state)
 Profile  ─▶ sanitize ─▶ localStorage ─▶ (best effort) Supabase RPC ─▶ sync state shown in UI
+Account  ─▶ recovery code ─▶ account RPCs ─▶ account row replaces the device row while signed in
 ```
 
 ### Implemented client persistence boundary
 
-The browser holds the publishable/anon key only. `public.veylattice_profiles` has RLS enabled and **no
-grants to `anon`/`authenticated`**; the only callable surface is two `SECURITY DEFINER` RPCs, and
-writes additionally require a per-profile edit token whose bcrypt hash is stored server-side. Name,
-avatar shape/size and JSON payload sizes are database constraints, not just client validation. This is a
-device identity, not authentication: it must be replaced by authenticated ownership before any
-reward-bearing or cross-device feature depends on it.
+The browser holds the publishable/anon key only. Both `public.veylattice_profiles` and
+`public.veylattice_accounts` have RLS enabled and **no grants to `anon`/`authenticated`**; the only
+callable surface is `SECURITY DEFINER` RPCs. Guest rows require a per-profile edit token whose bcrypt
+hash is stored server-side. Account rows require the account id *and* the recovery code, of which only
+a SHA-256 digest is stored; the code is server-minted with 100 bits of entropy and can be rotated.
+Name, avatar shape/size and JSON payload sizes are database constraints, not just client validation.
+
+Neither surface is OAuth: accounts carry no email address or personal data, and social providers are
+disabled on the project. Both remain client-trusted for *identity of the device*, so any reward-bearing
+feature still needs the server-authoritative backend described below.
 
 ## Proposed tables
 profiles(user_id PK/display settings); wallets(user_id PK/balance); wallet_ledger(id, user_id, delta, reason, operation_id UNIQUE); collection(user_id, card_id, finish, quantity, composite PK); discovered_cards(user_id, canonical_card_id, first_obtained_at); decks/deck_cards; rooms/room_seats; matches/match_seats; match_events(match_id, seq UNIQUE within match); match_snapshots; match_results(match_id UNIQUE); seasons; season_progress(user_id, season_id composite PK); pack_definitions/content_versions; shop_rotations; pack_openings(operation_id UNIQUE); offer_redemptions.

@@ -20,7 +20,12 @@ import {
   isOver,
   unitAt,
 } from "./game/engine.js";
-import { BOARD_SIZE, ELEMENT_LABELS, MAX_UNITS_PER_SEAT } from "./game/constants.js";
+import {
+  BOARD_SIZE,
+  ELEMENT_LABELS,
+  MAX_RELICS_PER_SEAT,
+  MAX_UNITS_PER_SEAT,
+} from "./game/constants.js";
 import { previewDamage } from "./game/elemental-rules.js";
 import {
   AI_ARCHETYPES,
@@ -30,6 +35,8 @@ import {
   resolveDifficulty,
 } from "./game/ai.js";
 import {
+  accountStatus,
+  createAccountForProfile,
   createProfile,
   fileToAvatar,
   initialiseProfile,
@@ -37,7 +44,10 @@ import {
   recordMatchResult,
   resetLocalProfile,
   sanitizeName,
+  signInToAccount,
+  signOutOfAccount,
 } from "./net/profile.js";
+import { formatCode, normaliseCode, readSession, rotateRecoveryCode } from "./net/account.js";
 
 const HUMAN_SEAT = 0;
 const AI_SEAT = 1;
@@ -65,6 +75,7 @@ const ui = {
   aiGeneration: 0,
   recorded: false,
   persistTimer: null,
+  accountBusy: false,
 };
 
 /* ------------------------------ helpers ------------------------------ */
@@ -149,6 +160,73 @@ function humanCanAct() {
   );
 }
 
+/* ------------------------- card description ------------------------- */
+
+/** One line of plain English for a typed effect. Display only. */
+function effectSummary(def) {
+  const effect = def?.effect;
+  if (!effect) return def?.flavorText ?? "";
+  switch (effect.kind) {
+    case "damage":
+      return `Deal ${effect.amount} damage, resolved elementally.`;
+    case "damageAll":
+      return `Deal ${effect.amount} damage to every enemy Vessel.`;
+    case "heal":
+      return `Restore ${effect.amount} Guard to a Vessel you control.`;
+    case "buff":
+      return `Grant +${effect.attack ?? 0} Attack and +${effect.guard ?? 0} Guard permanently.`;
+    case "draw":
+      return `Draw ${effect.amount} card${effect.amount === 1 ? "" : "s"}.`;
+    case "nexusDamage":
+      return `Deal ${effect.amount} damage to the enemy Nexus.`;
+    case "attackAura":
+      return `Relic · your Vessels' attacks deal +${effect.amount}.`;
+    case "armorAura":
+      return `Relic · your Nexus takes ${effect.amount} less damage.`;
+    case "mendAura":
+      return `Relic · at the start of your turn, heal ${effect.amount} Guard.`;
+    case "guardAura":
+      return `Relic · your Vessels have +${effect.amount} Guard.`;
+    default:
+      return def.flavorText ?? "";
+  }
+}
+
+function categoryLabel(def) {
+  if (def.category === "action") return "Action";
+  if (def.category === "relic") return "Relic";
+  return "Vessel";
+}
+
+/**
+ * Resolve the selected hand card into what the UI and the engine agree on.
+ * Legality comes from the engine's own enumeration, never from the DOM.
+ */
+function selectedCardEntry() {
+  if (!ui.match || !ui.selectedCard) return null;
+  const card = ui.match.players[HUMAN_SEAT].hand.find((c) => c.instanceId === ui.selectedCard);
+  if (!card) return null;
+  const def = ui.match.catalog.get(card.cardId);
+  if (!def) return null;
+  const legal = getLegalActions(ui.match);
+
+  if (def.category === "action") {
+    const entry = legal.actions.find((a) => a.instanceId === ui.selectedCard);
+    return {
+      ...def,
+      instanceId: ui.selectedCard,
+      playable: Boolean(entry),
+      targeting: entry?.targeting ?? def.targeting,
+      targetIds: entry?.targetIds ?? [],
+    };
+  }
+  if (def.category === "relic") {
+    const entry = legal.relics.find((a) => a.instanceId === ui.selectedCard);
+    return { ...def, instanceId: ui.selectedCard, playable: Boolean(entry), targeting: "none", targetIds: [] };
+  }
+  return { ...def, instanceId: ui.selectedCard, playable: true, targeting: "none", targetIds: [] };
+}
+
 /* ------------------------------ logging ------------------------------ */
 
 function logEvents(events, actor) {
@@ -185,6 +263,32 @@ function logEvents(events, actor) {
       case "mulligan":
         entries.push(`${who} used a mulligan (1 Flux).`);
         break;
+      case "playAction": {
+        const where = event.targetId ? ` on a Vessel at ${coordLabel(event.x, event.y)}` : "";
+        entries.push(`${who} cast ${event.name} for ${event.cost} Flux${where}.`);
+        break;
+      }
+      case "playRelic":
+        entries.push(`${who} set ${event.name} for ${event.cost} Flux.`);
+        break;
+      case "actionDamage": {
+        const packets = event.packets ?? [];
+        const total = packets.reduce((sum, p) => sum + p.packet.damage, 0);
+        const spread = packets.length > 1 ? ` across ${packets.length} Vessels` : "";
+        entries.push(`${who}'s ${cardName(event.cardId)} dealt ${total} damage${spread}.`);
+        break;
+      }
+      case "actionHeal":
+        entries.push(`${who}'s ${cardName(event.cardId)} restored ${event.healed} Guard.`);
+        break;
+      case "actionBuff":
+        entries.push(
+          `${who}'s ${cardName(event.cardId)} empowered a Vessel (Attack ${event.attack}, Guard ${event.guard}/${event.guardMax}).`,
+        );
+        break;
+      case "relicMend":
+        entries.push(`${seatLabel(event.seat)}'s Relic restored ${event.healed} Guard at the start of the turn.`);
+        break;
       case "turnStart":
         entries.push(
           `Round ${event.turn} — ${event.seat === HUMAN_SEAT ? "your" : "opponent's"} turn begins ` +
@@ -211,6 +315,10 @@ function logEvents(events, actor) {
 
 function seatLabel(seat) {
   return seat === HUMAN_SEAT ? "You" : "Opponent";
+}
+
+function cardName(cardId) {
+  return ui.match?.catalog?.get(cardId)?.name ?? "a card";
 }
 
 function pushLog(text) {
@@ -250,6 +358,9 @@ function newMatch() {
 
 function dispatch(command) {
   const now = Date.now();
+  // Snapshot positions and Guard values before the command so the presentation
+  // layer can animate a hit that the new state no longer describes.
+  const before = snapshotUnits(ui.match);
   const result = applyCommand(ui.match, command, { now });
   if (result.state !== ui.match) ui.match = result.state;
   if (!result.ok) {
@@ -259,6 +370,7 @@ function dispatch(command) {
   }
   logEvents(result.events, "You");
   render();
+  playEvents(result.events, before);
   return true;
 }
 
@@ -293,7 +405,11 @@ async function runAiTurn() {
       now: () => (typeof performance !== "undefined" ? performance.now() : Date.now()),
     });
 
+    // One frame per command so a move-then-attack plan animates from the cell
+    // the Vessel actually moved to, not from its final position in this state.
+    const frames = [];
     for (const command of decision.commands) {
+      const frame = snapshotUnits(ui.match);
       const outcome = applyCommand(ui.match, command, { now: Date.now() });
       // A deadline may materialize a timeout even though this command is rejected.
       if (outcome.state !== ui.match) ui.match = outcome.state;
@@ -302,10 +418,15 @@ async function runAiTurn() {
         break;
       }
       logEvents(outcome.events, "Opponent");
+      frames.push({ events: outcome.events, before: frame });
       if (isOver(ui.match)) break;
     }
 
     render();
+    for (const frame of frames) {
+      if (generation !== ui.aiGeneration) break;
+      await playEvents(frame.events, frame.before);
+    }
     if (isOver(ui.match)) break;
     if (ui.match.version === before) break; // nothing changed: never spin
     await sleep(pace());
@@ -376,6 +497,34 @@ function onCellClick(x, y) {
   const occupant = unitAt(ui.match, x, y);
 
   if (ui.selectedCard) {
+    const entry = selectedCardEntry();
+    if (!entry) {
+      ui.selectedCard = null;
+      render();
+      return;
+    }
+
+    if (entry.category === "action") {
+      if (entry.targeting === "none") {
+        setMessage(`${entry.name} needs no target — press Play selected card.`);
+        return;
+      }
+      if (occupant && entry.targetIds.includes(occupant.id)) {
+        if (dispatch({ type: "playAction", instanceId: entry.instanceId, targetId: occupant.id })) {
+          ui.selectedCard = null;
+          ui.selectedUnit = null;
+        }
+        return;
+      }
+      setMessage(`Choose a highlighted target for ${entry.name}.`);
+      return;
+    }
+
+    if (entry.category === "relic") {
+      setMessage(`${entry.name} is a Relic — press Play selected card to set it.`);
+      return;
+    }
+
     if (canSummon(ui.match, ui.selectedCard, x, y)) {
       if (dispatch({ type: "summon", instanceId: ui.selectedCard, x, y })) {
         ui.selectedCard = null;
@@ -426,6 +575,38 @@ function onCellClick(x, y) {
   setMessage("Select one of your Vessels first.");
 }
 
+function playSelectedCard() {
+  if (!humanCanAct()) return;
+  const entry = selectedCardEntry();
+  if (!entry) {
+    setMessage("Select a card in your hand first.");
+    return;
+  }
+  if (entry.category === "vessel") {
+    setMessage("Choose a highlighted cell to summon this Vessel.");
+    return;
+  }
+  if (!entry.playable) {
+    setMessage(`${entry.name} cannot be played right now (Flux, targets or Relic limit).`);
+    return;
+  }
+  if (entry.category === "action") {
+    if (entry.targeting !== "none") {
+      setMessage(`Choose a highlighted target for ${entry.name}.`);
+      return;
+    }
+    if (dispatch({ type: "playAction", instanceId: entry.instanceId })) {
+      ui.selectedCard = null;
+      ui.selectedUnit = null;
+    }
+    return;
+  }
+  if (dispatch({ type: "playRelic", instanceId: entry.instanceId })) {
+    ui.selectedCard = null;
+    ui.selectedUnit = null;
+  }
+}
+
 function onNexusClick() {
   if (!humanCanAct() || !ui.selectedUnit) {
     if (humanCanAct()) setMessage("Select one of your Vessels on the enemy home row first.");
@@ -433,6 +614,181 @@ function onNexusClick() {
   }
   if (dispatch({ type: "attack", unitId: ui.selectedUnit, target: "nexus" })) {
     ui.selectedUnit = null;
+  }
+}
+
+/* --------------------------- presentation --------------------------- */
+
+/**
+ * Combat presentation.
+ *
+ * The engine is the only authority on what happened; this layer reads the
+ * events it emitted and animates the result. Nothing here can change state,
+ * and every effect is skipped under reduced-motion settings.
+ */
+
+function fxEnabled() {
+  if (ui.profile?.settings?.reducedMotion) return false;
+  if (typeof matchMedia !== "function") return true;
+  return !matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function snapshotUnits(state) {
+  if (!state) return {};
+  return Object.fromEntries(
+    Object.values(state.units).map((unit) => [
+      unit.id,
+      {
+        name: unit.name,
+        x: unit.x,
+        y: unit.y,
+        guard: unit.guard,
+        maxGuard: unit.maxGuard,
+      },
+    ]),
+  );
+}
+
+function cellAt(x, y) {
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  return document.querySelectorAll("#board .cell")[y * BOARD_SIZE + x] ?? null;
+}
+
+function pulse(node, className, ms) {
+  if (!node) return;
+  node.classList.add(className);
+  setTimeout(() => node.classList.remove(className), ms);
+}
+
+function floatText(host, text, className = "") {
+  if (!host) return;
+  const node = el("span", { class: `dmg-float ${className}`.trim(), text });
+  host.append(node);
+  setTimeout(() => node.remove(), 900);
+}
+
+/** Count a Guard number down instead of swapping it instantly. */
+function tickGuard(unitId, from, to) {
+  const unit = ui.match?.units?.[unitId];
+  const cell = unit ? cellAt(unit.x, unit.y) : null;
+  const node = cell?.querySelector(".unit-stats");
+  if (!node || from === to) return;
+  const target = Math.max(0, to);
+  const started = performance.now();
+  const render = (now) => {
+    const t = Math.min(1, (now - started) / 280);
+    const value = Math.round(from + (target - from) * t);
+    node.textContent = `ATK ${unit.attack} · GD ${value}/${unit.maxGuard}`;
+    if (t < 1) requestAnimationFrame(render);
+  };
+  requestAnimationFrame(render);
+  pulse(cell, "fx-hit", 320);
+}
+
+async function playEvents(events, before) {
+  if (!fxEnabled() || !Array.isArray(events)) return;
+  const known = before ?? {};
+
+  for (const event of events) {
+    switch (event.type) {
+      case "summon": {
+        const cell = cellAt(event.x, event.y);
+        pulse(cell, "fx-spawn", 320);
+        break;
+      }
+      case "move": {
+        pulse(cellAt(event.to.x, event.to.y), "fx-step", 260);
+        break;
+      }
+      case "playRelic": {
+        pulse($("#relic-list"), "fx-buff", 520);
+        break;
+      }
+      case "attack": {
+        const a = known[event.attackerId];
+        const d = known[event.defenderId];
+        if (!a || !d) break;
+        const attackerCell = cellAt(a.x, a.y);
+        const defenderCell = cellAt(d.x, d.y);
+        if (attackerCell) {
+          attackerCell.style.setProperty("--fx-dx", `${(d.x - a.x) * 26}px`);
+          attackerCell.style.setProperty("--fx-dy", `${(d.y - a.y) * 26}px`);
+          pulse(attackerCell, "fx-lunge", 400);
+        }
+        await sleep(120);
+        pulse(defenderCell, "fx-hit", 420);
+        floatText(
+          defenderCell,
+          `-${event.attackPacket.damage}`,
+          event.attackPacket.relation === "advantage" ? "advantage" : "",
+        );
+        tickGuard(event.defenderId, d.guard, event.defenderGuard);
+        await sleep(190);
+
+        if (event.retaliationPacket) {
+          pulse(attackerCell, "fx-hit", 380);
+          floatText(attackerCell, `-${event.retaliationPacket.damage}`, "retaliation");
+          tickGuard(event.attackerId, a.guard, event.attackerGuard);
+          await sleep(170);
+        }
+        break;
+      }
+      case "actionDamage": {
+        for (const hit of event.packets ?? []) {
+          const unit = known[hit.unitId];
+          if (!unit) continue;
+          const cell = cellAt(unit.x, unit.y);
+          pulse(cell, "fx-cast-hit", 460);
+          floatText(cell, `-${hit.packet.damage}`, hit.packet.relation === "advantage" ? "advantage" : "");
+          tickGuard(hit.unitId, unit.guard, hit.guardAfter);
+        }
+        await sleep(240);
+        break;
+      }
+      case "actionHeal":
+      case "relicMend": {
+        const unit = known[event.unitId];
+        if (!unit) break;
+        const cell = cellAt(unit.x, unit.y);
+        pulse(cell, "fx-heal", 520);
+        floatText(cell, `+${event.healed}`, "heal");
+        await sleep(140);
+        break;
+      }
+      case "actionBuff": {
+        const unit = known[event.unitId];
+        if (!unit) break;
+        const cell = cellAt(unit.x, unit.y);
+        pulse(cell, "fx-buff", 520);
+        await sleep(120);
+        break;
+      }
+      case "nexusHit": {
+        const nexus = event.seat === HUMAN_SEAT ? $("#enemy-nexus") : $("#player-nexus");
+        pulse($("#board"), "fx-shake", 460);
+        pulse(nexus, "fx-nexus-hit", 560);
+        floatText(nexus, `-${event.damage}`, "nexus");
+        await sleep(200);
+        break;
+      }
+      case "defeat": {
+        const unit = known[event.unitId];
+        if (!unit) break;
+        const cell = cellAt(unit.x, unit.y);
+        if (!cell) break;
+        // The unit is already gone from state, so show a ghost chip crumbling.
+        const ghost = el("span", { class: "unit enemy fx-ghost" }, [
+          el("strong", { class: "unit-name", text: unit.name }),
+          el("span", { class: "unit-stats", text: `GD 0/${unit.maxGuard}` }),
+        ]);
+        cell.append(ghost);
+        setTimeout(() => ghost.remove(), 520);
+        await sleep(150);
+        break;
+      }
+      default:
+        break;
+    }
   }
 }
 
@@ -449,6 +805,16 @@ function renderBoard() {
   const moveKeys = new Set(moves.map((m) => `${m.x},${m.y}`));
   const showCoords = ui.profile?.settings?.showCoordinates !== false;
 
+  // A selected Action highlights the only cells the engine would accept.
+  const card = interact && ui.selectedCard ? selectedCardEntry() : null;
+  const targetKeys = new Set();
+  if (card?.category === "action" && card.targeting !== "none") {
+    for (const id of card.targetIds) {
+      const unit = match.units[id];
+      if (unit) targetKeys.add(`${unit.x},${unit.y}`);
+    }
+  }
+
   for (let y = 0; y < BOARD_SIZE; y += 1) {
     for (let x = 0; x < BOARD_SIZE; x += 1) {
       const occupant = unitAt(match, x, y);
@@ -458,6 +824,7 @@ function renderBoard() {
       if (legalSummon) classes.push("legal");
       if (moveKeys.has(`${x},${y}`)) classes.push("move");
       if (occupant && attackIds.has(occupant.id)) classes.push("attack");
+      if (targetKeys.has(`${x},${y}`)) classes.push("target");
       if (occupant && ui.selectedUnit === occupant.id) classes.push("selected");
 
       const cell = el("button", {
@@ -485,7 +852,20 @@ function renderBoard() {
         const flags = [];
         if (!occupant.ready) flags.push("UNREADY");
         else if (!occupant.hasAttacked && !occupant.hasMoved) flags.push("READY");
+        const voxel = el(
+          "span",
+          { class: "voxel", "data-element": occupant.element, "aria-hidden": "true" },
+          [
+            el("i", { class: "v-front" }),
+            el("i", { class: "v-back" }),
+            el("i", { class: "v-left" }),
+            el("i", { class: "v-right" }),
+            el("i", { class: "v-top" }),
+            el("i", { class: "v-bottom" }),
+          ],
+        );
         const unit = el("span", { class: `unit ${occupant.owner === HUMAN_SEAT ? "friendly" : "enemy"}` }, [
+          voxel,
           badge,
           name,
           stats,
@@ -510,36 +890,54 @@ function renderHand() {
   for (const card of player.hand) {
     const def = match.catalog.get(card.cardId);
     if (!def) continue;
+    const kind = def.category;
     const affordable = player.flux > 0 && player.flux >= def.cost;
     const button = el("button", {
       type: "button",
-      class: `card ${def.element}${ui.selectedCard === card.instanceId ? " selected" : ""}`,
+      class: `card ${def.element} ${kind}${ui.selectedCard === card.instanceId ? " selected" : ""}`,
       disabled: interactive ? undefined : "disabled",
       onclick: () => {
         if (!humanCanAct()) return;
         ui.selectedCard = ui.selectedCard === card.instanceId ? null : card.instanceId;
         ui.selectedUnit = null;
-        setMessage(
-          ui.selectedCard
-            ? `${def.name}: ${ELEMENT_LABELS[def.element]} ${def.category}, ${def.cost} Flux. Choose a highlighted cell.`
-            : "Selection cleared.",
-        );
+        if (!ui.selectedCard) {
+          setMessage("Selection cleared.");
+        } else if (kind === "vessel") {
+          setMessage(
+            `${def.name}: ${ELEMENT_LABELS[def.element]} Vessel, ${def.cost} Flux. Choose a highlighted cell.`,
+          );
+        } else if (kind === "relic") {
+          setMessage(`${def.name}: press Play selected card to set this Relic (${def.cost} Flux).`);
+        } else {
+          setMessage(
+            def.targeting === "none"
+              ? `${def.name}: press Play selected card (${def.cost} Flux).`
+              : `${def.name}: choose a highlighted target.`,
+          );
+        }
         render();
       },
     });
     button.append(
       el("span", { class: "cost" + (affordable ? "" : " unaffordable"), text: String(def.cost) }),
       el("span", { class: "card-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
+      el("span", { class: "card-kind", text: categoryLabel(def) }),
       el("h3", { text: def.name }),
-      el("p", { class: "card-role", text: def.role ?? def.category }),
-      el("div", { class: "card-stats" }, [
-        el("span", { text: `ATK ${def.attack ?? "—"}` }),
-        el("span", { text: `GD ${def.guard ?? "—"}` }),
-        el("span", { text: `MV ${def.movement ?? "—"}` }),
-        el("span", { text: `RG ${def.range ?? "—"}` }),
-      ]),
-      el("p", { class: "card-flavor", text: def.flavorText ?? "" }),
     );
+    if (kind === "vessel") {
+      button.append(
+        el("p", { class: "card-role", text: def.role ?? "Vessel" }),
+        el("div", { class: "card-stats" }, [
+          el("span", { text: `ATK ${def.attack ?? "—"}` }),
+          el("span", { text: `GD ${def.guard ?? "—"}` }),
+          el("span", { text: `MV ${def.movement ?? "—"}` }),
+          el("span", { text: `RG ${def.range ?? "—"}` }),
+        ]),
+      );
+    } else {
+      button.append(el("p", { class: "card-effect", text: effectSummary(def) }));
+    }
+    button.append(el("p", { class: "card-flavor", text: def.flavorText ?? "" }));
     hand.append(button);
   }
   $("#hand-count").textContent = String(player.hand.length);
@@ -556,6 +954,29 @@ function renderSelectedPanel() {
     const card = match.players[HUMAN_SEAT].hand.find((c) => c.instanceId === ui.selectedCard);
     const def = card ? match.catalog.get(card.cardId) : null;
     if (def) {
+      const entry = selectedCardEntry();
+      if (def.category !== "vessel") {
+        panel.append(
+          el("h4", { text: def.name }),
+          el("p", {
+            class: "muted",
+            text: `${ELEMENT_LABELS[def.element]} · ${categoryLabel(def)} · ${def.cost} Flux`,
+          }),
+          el("p", { text: effectSummary(def) }),
+          el("p", { class: "card-flavor", text: def.flavorText ?? "" }),
+        );
+        if (def.category === "action" && def.targeting !== "none") {
+          panel.append(
+            el("p", {
+              class: "preview",
+              text: entry?.targetIds?.length
+                ? "Click a highlighted Vessel to cast."
+                : "No legal target right now.",
+            }),
+          );
+        }
+        return;
+      }
       panel.append(
         el("h4", { text: def.name }),
         el("p", {
@@ -623,6 +1044,30 @@ function renderTimer() {
   timer.setAttribute("aria-label", `${seconds} seconds remaining in this turn`);
 }
 
+function renderRelics() {
+  const list = $("#relic-list");
+  if (!list || !ui.match) return;
+  const relics = ui.match.players[HUMAN_SEAT].relics;
+  list.replaceChildren();
+  if (relics.length === 0) {
+    list.append(
+      el("li", { class: "relic-empty", text: "No Relics set. They are persistent cards in your deck." }),
+    );
+  } else {
+    for (const relic of relics) {
+      const def = ui.match.catalog.get(relic.cardId);
+      if (!def) continue;
+      list.append(
+        el("li", {}, [
+          el("strong", { text: def.name }),
+          el("span", { text: effectSummary(def).replace("Relic · ", "") }),
+        ]),
+      );
+    }
+  }
+  $("#relic-count").textContent = `${relics.length} / ${MAX_RELICS_PER_SEAT}`;
+}
+
 function renderOpponent() {
   const match = ui.match;
   const archetype = currentArchetype();
@@ -632,7 +1077,8 @@ function renderOpponent() {
   const aiPlayer = match.players[AI_SEAT];
   $("#opponent-style").textContent =
     `${difficulty.label} difficulty · ${archetype.description} · ${aiPlayer.flux} Flux · ` +
-    `${aiPlayer.hand.length} cards · ${Object.values(match.units).filter((u) => u.owner === AI_SEAT).length} Vessels`;
+    `${aiPlayer.hand.length} cards · ${Object.values(match.units).filter((u) => u.owner === AI_SEAT).length} Vessels · ` +
+    `${aiPlayer.relics.length} Relics`;
   $("#opponent-difficulty").textContent = difficulty.label.toUpperCase();
   if (!ui.aiBusy) $("#opponent-status").textContent = match.active === AI_SEAT ? "Ready" : "Waiting";
 }
@@ -657,6 +1103,7 @@ function render() {
   renderSelectedPanel();
   renderTimer();
   renderOpponent();
+  renderRelics();
   renderLog();
 
   const human = match.players[HUMAN_SEAT];
@@ -686,6 +1133,24 @@ function render() {
   $("#mulligan-btn").disabled =
     !canAct || !ui.selectedCard || !actions.canMulligan || match.active !== HUMAN_SEAT;
   $("#end-turn-btn").disabled = !canAct;
+
+  const entry = selectedCardEntry();
+  const playBtn = $("#play-card-btn");
+  const needsTarget = entry?.category === "action" && entry.targeting !== "none";
+  playBtn.disabled = !(
+    canAct &&
+    entry &&
+    entry.playable &&
+    entry.category !== "vessel" &&
+    !needsTarget
+  );
+  playBtn.textContent = !entry
+    ? "Play selected card"
+    : entry.category === "vessel"
+      ? "Choose a cell to summon"
+      : needsTarget
+        ? "Choose a target on the board"
+        : `Play ${entry.name}`;
 
   const nexus = $("#enemy-nexus");
   const canStrike =
@@ -755,6 +1220,28 @@ function renderProfileForm() {
     ? `Last match recorded ${new Date(stats.lastPlayedAt).toLocaleString()}.`
     : "No matches recorded yet.";
   renderSync();
+  renderAccount();
+}
+
+/* ---------------------------- accounts ---------------------------- */
+
+function setAccountStatus(text) {
+  const node = $("#account-status");
+  if (node) node.textContent = text;
+}
+
+function renderAccount() {
+  if (!ui.profile) return;
+  const status = accountStatus();
+  $("#account-signed-in").hidden = !status.signedIn;
+  $("#account-signed-out").hidden = status.signedIn;
+  $("#account-create").disabled = ui.accountBusy;
+  $("#account-signin").disabled = ui.accountBusy;
+  if (status.signedIn) {
+    const session = readSession();
+    $("#account-id").textContent = status.accountId.slice(0, 8);
+    $("#account-code-display").textContent = session ? formatCode(session.code) : "—";
+  }
 }
 
 function updateSettings(patch) {
@@ -877,6 +1364,94 @@ function bind() {
     updateSettings({ showCoordinates: event.target.checked }),
   );
 
+  $("#play-card-btn").addEventListener("click", playSelectedCard);
+
+  // ---- account controls ----
+  $("#account-create").addEventListener("click", async () => {
+    if (ui.accountBusy) return;
+    ui.accountBusy = true;
+    renderAccount();
+    setAccountStatus("Creating account…");
+    try {
+      const { profile, code } = await createAccountForProfile(ui.profile);
+      ui.profile = profile;
+      ui.sync = { state: "synced", message: "Signed in" };
+      renderProfileForm();
+      setAccountStatus(`Account created. Your recovery code is ${formatCode(code)} — write it down.`);
+    } catch (error) {
+      setAccountStatus(error.message);
+    } finally {
+      ui.accountBusy = false;
+      renderAccount();
+    }
+  });
+
+  $("#account-signin").addEventListener("click", async () => {
+    const raw = $("#account-code").value;
+    if (!normaliseCode(raw)) {
+      setAccountStatus("Enter a recovery code first.");
+      return;
+    }
+    if (ui.accountBusy) return;
+    ui.accountBusy = true;
+    renderAccount();
+    setAccountStatus("Checking the recovery code…");
+    try {
+      ui.profile = await signInToAccount(raw);
+      ui.sync = { state: "synced", message: "Signed in" };
+      $("#account-code").value = "";
+      renderProfileForm();
+      render();
+      setAccountStatus("Signed in. This device now uses the account's name, avatar, settings and record.");
+    } catch (error) {
+      setAccountStatus(error.message);
+    } finally {
+      ui.accountBusy = false;
+      renderAccount();
+    }
+  });
+
+  $("#account-copy").addEventListener("click", async () => {
+    const session = readSession();
+    if (!session) return;
+    try {
+      await navigator.clipboard.writeText(formatCode(session.code));
+      setAccountStatus("Recovery code copied.");
+    } catch {
+      setAccountStatus("Copy failed — select the code and copy it manually.");
+    }
+  });
+
+  $("#account-rotate").addEventListener("click", async () => {
+    if (ui.accountBusy) return;
+    const confirmed = window.confirm(
+      "Issue a new recovery code? The current code stops working immediately, and anything holding the old one loses access.",
+    );
+    if (!confirmed) return;
+    ui.accountBusy = true;
+    renderAccount();
+    try {
+      const code = await rotateRecoveryCode();
+      setAccountStatus(`New recovery code: ${formatCode(code)} — write it down.`);
+    } catch (error) {
+      setAccountStatus(error.message);
+    } finally {
+      ui.accountBusy = false;
+      renderAccount();
+    }
+  });
+
+  $("#account-signout").addEventListener("click", async () => {
+    const confirmed = window.confirm(
+      "Sign out on this device? The account and its record stay in the cloud; this browser continues as a guest profile.",
+    );
+    if (!confirmed) return;
+    signOutOfAccount();
+    await saveProfile();
+    renderProfileForm();
+    setAccountStatus("Signed out. This browser is a guest profile again.");
+  });
+
   $("#profile-save").addEventListener("click", () => saveProfile());
   $("#profile-copy").addEventListener("click", async () => {
     try {
@@ -920,10 +1495,14 @@ function bind() {
 async function boot() {
   bind();
   try {
-    const response = await fetch("./src/cards/starter-set.json");
-    if (!response.ok) throw new Error(`Card data request failed (${response.status}).`);
-    const cards = await response.json();
-    ui.catalog = createCatalog(cards);
+    const [vessels, extras] = await Promise.all(
+      ["./src/cards/starter-set.json", "./src/cards/actions-relics.json"].map(async (path) => {
+        const response = await fetch(path);
+        if (!response.ok) throw new Error(`Card data request failed (${response.status}) for ${path}.`);
+        return response.json();
+      }),
+    );
+    ui.catalog = createCatalog([...vessels, ...extras]);
   } catch (error) {
     console.error(error);
     setMessage(
@@ -937,6 +1516,12 @@ async function boot() {
   ui.sync = initial.sync;
   renderChip();
   renderProfileForm();
+  renderAccount();
+  setAccountStatus(
+    accountStatus().signedIn
+      ? "Signed in. Your record follows the recovery code, not this browser."
+      : "Guest profile. Create an account to carry this name, avatar and record to another device.",
+  );
   newMatch();
   if (ui.match.active === AI_SEAT) runAiTurn();
 }

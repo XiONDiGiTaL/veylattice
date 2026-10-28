@@ -51,7 +51,9 @@ test("the observation never contains opponent hand or deck contents", () => {
     "deckCount",
     "discardCount",
     "handCount",
+    "nexusArmor",
     "relicCount",
+    "relicEffectKinds",
     "unitCount",
     "vitality",
   ]);

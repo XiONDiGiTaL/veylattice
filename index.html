@@ -75,10 +75,17 @@
         <div id="flux-track" class="flux-track" aria-label="Flux available"></div>
         <p class="muted">Flux refills at the start of your turn and caps at ten.</p>
         <div class="divider"></div>
+        <div class="panel-heading">
+          <h3>Your Relics</h3>
+          <span id="relic-count" class="muted small">0 / 2</span>
+        </div>
+        <ul id="relic-list" class="relic-list" aria-label="Relics in play"></ul>
+        <div class="divider"></div>
         <h3>Selection</h3>
         <div id="selected-card" class="selected-card empty">Select a card or a Vessel.</div>
         <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
         <div class="button-stack">
+          <button id="play-card-btn" class="button primary full" type="button" disabled>Play selected card</button>
           <button id="mulligan-btn" class="button secondary full" type="button" disabled>Mulligan selected card (1 Flux)</button>
           <button id="end-turn-btn" class="button primary full" type="button">End Turn</button>
         </div>
@@ -106,6 +113,7 @@
           <span><i class="legend-dot legal"></i>Legal summon</span>
           <span><i class="legend-dot move"></i>Legal move</span>
           <span><i class="legend-dot attack"></i>Legal attack</span>
+          <span><i class="legend-dot target"></i>Action target</span>
         </div>
       </section>
     </section>
@@ -133,14 +141,60 @@
     </section>
 
     <footer>
-      <span>VEY LATTICE · M2-003 AI OPPONENT</span>
-      <span>Deterministic engine. The AI submits only engine-validated commands.</span>
+      <span>VEY LATTICE · ACTIONS · RELICS · TACTICAL AI</span>
+      <span>Deterministic engine. Every card, human or AI, is played through one validated command path.</span>
     </footer>
   </section>
 
   <!-- ============================ PROFILE ============================ -->
   <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
     <div class="profile-layout">
+      <section class="panel account-panel">
+        <p class="eyebrow">ACCOUNT</p>
+        <h2>Keep your progress anywhere</h2>
+        <p class="muted small">
+          Everything is written to this browser first, then backed up to the cloud. A guest record is
+          tied to this browser — clearing site data breaks that link. An account travels with you.
+        </p>
+
+        <div id="account-signed-out">
+          <button id="account-create" class="button primary" type="button">Create account from this profile</button>
+          <p class="muted small">Your name, avatar, settings and record are uploaded as the account's starting point.</p>
+          <div class="divider"></div>
+          <h3>Sign in on this device</h3>
+          <label class="field" for="account-code">
+            <span>Recovery code</span>
+            <input id="account-code" type="text" class="mono" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+          </label>
+          <button id="account-signin" class="button secondary" type="button">Sign in with recovery code</button>
+          <p class="muted small">Signing in replaces this browser's profile with the account's record.</p>
+        </div>
+
+        <div id="account-signed-in" hidden>
+          <p class="muted small">Signed in · account <strong id="account-id" class="mono">—</strong></p>
+          <div class="code-box">
+            <p class="eyebrow">YOUR RECOVERY CODE</p>
+            <code id="account-code-display">—</code>
+            <button id="account-copy" class="button secondary small" type="button">Copy</button>
+          </div>
+          <p class="muted small">Write this down. It is the only way to reach this account on another device.</p>
+          <div class="button-row">
+            <button id="account-rotate" class="button secondary" type="button">Issue a new code</button>
+            <button id="account-signout" class="button danger" type="button">Sign out on this device</button>
+          </div>
+        </div>
+
+        <p id="account-status" class="muted small" role="status"></p>
+
+        <div class="divider"></div>
+        <h3>Google &amp; Discord</h3>
+        <p class="muted small">
+          Social sign-in needs OAuth client credentials registered on the database project; this build
+          cannot create those for you. The recovery code above already restores your name, avatar,
+          settings and record on any device. Setup notes: docs/ACCOUNTS.md.
+        </p>
+      </section>
+
       <section class="panel">
         <p class="eyebrow">PLAYER PROFILE</p>
         <h2>Identity</h2>
@@ -163,8 +217,8 @@
         <p class="muted small"><span id="profile-name-count">0</span>/24 characters. Names are plain text only.</p>
 
         <div class="divider"></div>
-        <h3>Profile id</h3>
-        <p class="muted small">Your profile is a device identity — not an account, and not a password. Keep it to keep your stats.</p>
+        <h3>Device profile id</h3>
+        <p class="muted small">Used when you are playing as a guest. Create an account above to stop depending on this browser.</p>
         <div class="inline-row">
           <input id="profile-id" type="text" readonly class="mono">
           <button id="profile-copy" class="button secondary" type="button">Copy</button>
@@ -212,9 +266,9 @@
         <h3>Where this is stored</h3>
         <p class="muted small">
           Your profile is written to this browser first, always. When the cloud is reachable it is
-          also saved to a dedicated Supabase project created for Veylattice, in a table that denies
-          direct access and accepts writes only through a function that checks your private edit token.
-          Offline play never blocks.
+          also saved to a dedicated Supabase project created for Veylattice. Nothing can read those
+          tables directly: writes go through guarded functions, a guest row needs this browser's
+          private edit token, and an account needs its recovery code. Offline play never blocks.
         </p>
       </section>
     </div>

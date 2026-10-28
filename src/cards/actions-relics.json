@@ -1,0 +1,142 @@
+[
+  {
+    "category": "action",
+    "id": "action_ember_lance",
+    "name": "Ember Lance",
+    "element": "fire",
+    "cost": 2,
+    "rarity": "common",
+    "targeting": "enemyUnit",
+    "effect": { "kind": "damage", "amount": 5 },
+    "flavorText": "A spear of furnace-light, thrown along a line that was already burning.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_undertow_mend",
+    "name": "Undertow Mend",
+    "element": "water",
+    "cost": 1,
+    "rarity": "common",
+    "targeting": "friendlyUnit",
+    "effect": { "kind": "heal", "amount": 4 },
+    "flavorText": "The tide returns what the shore has taken.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_quarry_verdict",
+    "name": "Quarry Verdict",
+    "element": "earth",
+    "cost": 3,
+    "rarity": "uncommon",
+    "targeting": "enemyUnit",
+    "effect": { "kind": "damage", "amount": 7 },
+    "flavorText": "Stone does not argue. It concludes.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_thorned_vigil",
+    "name": "Thorned Vigil",
+    "element": "wood",
+    "cost": 2,
+    "rarity": "uncommon",
+    "targeting": "friendlyUnit",
+    "effect": { "kind": "buff", "attack": 2, "guard": 2 },
+    "flavorText": "Roots tighten, bark hardens, and the watch resumes.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_lodestone_survey",
+    "name": "Lodestone Survey",
+    "element": "metal",
+    "cost": 1,
+    "rarity": "common",
+    "targeting": "none",
+    "effect": { "kind": "draw", "amount": 2 },
+    "flavorText": "Every needle points at an answer someone buried.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_ashfall",
+    "name": "Ashfall",
+    "element": "fire",
+    "cost": 3,
+    "rarity": "rare",
+    "targeting": "none",
+    "effect": { "kind": "damageAll", "amount": 2 },
+    "flavorText": "The sky remembers the furnace it used to be.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_siege_canticle",
+    "name": "Siege Canticle",
+    "element": "earth",
+    "cost": 3,
+    "rarity": "rare",
+    "targeting": "none",
+    "effect": { "kind": "nexusDamage", "amount": 4 },
+    "flavorText": "Sung in a register that walls find persuasive.",
+    "abilities": []
+  },
+  {
+    "category": "action",
+    "id": "action_barkbound_ward",
+    "name": "Barkbound Ward",
+    "element": "wood",
+    "cost": 2,
+    "rarity": "common",
+    "targeting": "friendlyUnit",
+    "effect": { "kind": "buff", "attack": 0, "guard": 4 },
+    "flavorText": "A ring of living wood closes around the bitten limb.",
+    "abilities": []
+  },
+  {
+    "category": "relic",
+    "id": "relic_ember_lens",
+    "name": "Ember Lens",
+    "element": "fire",
+    "cost": 2,
+    "rarity": "uncommon",
+    "effect": { "kind": "attackAura", "amount": 1 },
+    "flavorText": "It focuses a candle's worth of heat into every blade you raise.",
+    "abilities": []
+  },
+  {
+    "category": "relic",
+    "id": "relic_stone_sigil",
+    "name": "Stone Sigil",
+    "element": "earth",
+    "cost": 3,
+    "rarity": "rare",
+    "effect": { "kind": "armorAura", "amount": 1 },
+    "flavorText": "Your Nexus wears the mountain's refusal.",
+    "abilities": []
+  },
+  {
+    "category": "relic",
+    "id": "relic_choir_bell",
+    "name": "Choir Bell",
+    "element": "water",
+    "cost": 2,
+    "rarity": "uncommon",
+    "effect": { "kind": "mendAura", "amount": 2 },
+    "flavorText": "At every dawn it rings once, and something wounded remembers how to hold.",
+    "abilities": []
+  },
+  {
+    "category": "relic",
+    "id": "relic_verdant_seal",
+    "name": "Verdant Seal",
+    "element": "wood",
+    "cost": 3,
+    "rarity": "rare",
+    "effect": { "kind": "guardAura", "amount": 2 },
+    "flavorText": "New growth arrives already armored.",
+    "abilities": []
+  }
+]

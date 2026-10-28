@@ -7,7 +7,7 @@
 Grid movement · persistent Guard · five-element counter-cycle · a tactical AI that plays by the rules
 
 [![Play now](https://img.shields.io/badge/▶_PLAY_NOW-xiondigital.net%2Fveylattice-7ad7ff?style=for-the-badge)](https://xiondigital.net/veylattice/)
-[![Tests](https://img.shields.io/badge/tests-53_passing-6ee7a8?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-69_passing-6ee7a8?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-b58bff?style=flat-square)](#architecture)
 [![License](https://img.shields.io/badge/license-All_Rights_Reserved-9aa6c4?style=flat-square)](LICENSE)
 
@@ -24,24 +24,29 @@ them into firing lanes, and break the opposing **Nexus** before yours falls. Eve
 miniature sculpture of its element, every trade is decided by persistent Guard, and the five-element
 cycle decides who hits harder.
 
-This repository is a **working vertical slice**, not a design document. A deterministic rules engine,
-a tactically competent AI opponent, a profile system with cloud-saved avatars and match statistics,
-and automated tests all ship from this tree today.
+This repository is a **working vertical slice**, not a design document. A deterministic rules engine
+with typed Action and Relic cards, a tactically competent AI opponent, portable accounts with a
+cross-device recovery code, animated voxel combat, and automated tests all ship from this tree today.
 
 | Playable now | Not built yet |
 |---|---|
-| 7×7 tactical board with orthogonal movement and line of sight | Action and Relic cards (typed effect queue) |
-| Persistent Guard, simultaneous retaliation, lethal trades | Card collection, deck builder, shop, packs |
-| Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Online lobbies and server-authoritative matches |
-| Flux economy 1→10, one summon, four-Vessel cap | Lore Bonds, arenas, Forge, Codex |
-| 120-second deadline with automatic turn pass | Unique 3D voxel models (roster is 2D UI today) |
-| Tactical AI: 4 difficulties × 3 styles, bounded latency | Ranked ladder and seasonal rewards |
-| Profile, avatar upload, match record synced to Postgres | Accounts, sign-in, cross-device identity |
-| 53 automated tests + offline-first play | — |
+| 7×7 tactical board with orthogonal movement and line of sight | Card collection, deck builder, shop, packs |
+| Persistent Guard, simultaneous retaliation, lethal trades | Online lobbies and server-authoritative matches |
+| Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Lore Bonds, arenas, Forge, Codex |
+| **8 Action cards** (damage, sweep, heal, buff, draw, Nexus) | Full 3D voxel models (units are CSS voxel cubes on a tile) |
+| **4 Relic cards** with persistent auras | Ranked ladder and seasonal rewards |
+| Typed, data-only effects — no card can carry code | Google / Discord sign-in (needs OAuth credentials) |
+| Flux economy 1→10, one summon, four-Vessel cap | — |
+| 120-second deadline with automatic turn pass | — |
+| Tactical AI: 4 difficulties × 3 styles, plays Actions and Relics | — |
+| Voxel combat: lunges, impact, floating damage, Guard ticks, deaths | — |
+| Profiles, avatars, match record, **portable accounts** | — |
+| 69 automated tests + offline-first play | — |
 
-> **Honest status:** Seat 2 is a real AI opponent with no access to your hand. The card pool is the
-> 18-Vessel starter set, so the canonical "five Actions per deck" rule is still waived by an
-> explicitly named practice profile (`PRACTICE_DECK_RULES`) — see [TODO.md](TODO.md#m2-002--todo--canonical-deck-validation-and-prebuilt-decks).
+> **Honest status:** Seat 2 is a real AI opponent with no access to your hand. The card pool is 18
+> Vessels plus 8 Actions and 4 Relics, so the canonical deck rules — including the five-Action
+> minimum — are now enforced with **no exception profile**: the old `PRACTICE_DECK_RULES` escape
+> hatch is gone.
 
 ---
 
@@ -107,6 +112,56 @@ A crafted-position test proves the tiers differ for a reason: a Veteran sees the
 move-onto-home-row-then-strike line and wins the match; a Novice has no move-then-attack search and
 cannot. A separate test proves the Veteran rates a suicidal trade *below* the Novice and declines it.
 
+The AI also plays the new card types through the same command path: `buildCandidates` enumerates
+`playAction` and `playRelic` plans from `getLegalActions`, and `evaluateAction` scores damage (with
+retaliation modelled as zero), kills, sweeps, heals, buffs, draws and Nexus burn. It is never offered
+a cast that would do nothing — a board wipe against an empty board and a heal on an undamaged Vessel
+both return no plan at all, which was caught in browser play and fixed at the scoring level.
+
+---
+
+## ▸ Actions, Relics and voxel combat
+
+![Battle screen with Actions in hand and voxel units](screenshots/battle.png)
+
+Cards are **typed data, never code**. Every effect is one of a closed set of `kind` values, validated
+against a numeric range, frozen at catalog build time, and executed by one switch in the engine. A
+card that tries to smuggle behaviour is rejected before a match can start.
+
+| Card | Element | Cost | Effect |
+|---|---|---|---|
+| Ember Lance | Fire | 2 | 5 damage to a Vessel, resolved elementally |
+| Quarry Verdict | Earth | 3 | 7 damage to a Vessel |
+| Ashfall | Fire | 3 | 2 damage to every enemy Vessel |
+| Siege Canticle | Earth | 3 | 4 damage to the enemy Nexus |
+| Undertow Mend | Water | 1 | Restore 4 Guard, capped at maximum |
+| Thorned Vigil | Wood | 2 | Permanent +2 Attack / +2 Guard |
+| Barkbound Ward | Wood | 2 | Permanent +4 Guard |
+| Lodestone Survey | Metal | 1 | Draw 2 |
+| Ember Lens | Fire | 2 | Relic · your Vessel attacks deal +1 |
+| Stone Sigil | Earth | 3 | Relic · your Nexus takes 1 less |
+| Choir Bell | Water | 2 | Relic · mend 2 Guard at the start of your turn |
+| Verdant Seal | Wood | 3 | Relic · your Vessels have +2 Guard |
+
+Relics are persistent, capped at two per seat, and their auras are computed in one place
+(`relicAuras`) so the HUD, the previews, the engine and the AI cannot disagree. A Guard aura applies
+to Vessels already on the table *and* to every future summon, so the bonus does not depend on timing.
+
+### Combat presentation
+
+Attack resolution is animated from the engine's own events, never from re-derived state:
+
+- the attacker **lunges** toward its target using a per-strike offset, then settles;
+- the defender **flashes and shakes**, and a floating `-N` rises from the tile (larger and amber on an
+  elemental advantage, smaller and red for retaliation);
+- surviving Guard **counts down** from its old value to its new one instead of snapping;
+- a lethal hit leaves a **ghost chip that crumbles** away before the tile clears;
+- Nexus strikes **shake the board** and stamp a large number on the Nexus;
+- Actions add violet impact rings, green mend pulses and gold buff glows.
+
+Everything is skipped when `prefers-reduced-motion` is set or the in-game toggle is on, and no effect
+can mutate a match — the presentation layer only reads events.
+
 ---
 
 ## ▸ Rules at a glance
@@ -153,38 +208,70 @@ content. Removal is one click.
 
 | Layer | What | Behaviour |
 |---|---|---|
-| `localStorage` | Whole profile + private edit token | Written first, always. The game never blocks on the network. |
-| Supabase Postgres | Name, avatar, settings, stats | Best-effort sync; the UI reports *Saved to cloud*, *Saving…* or *Offline — saved on this device* — never a success it did not observe |
+| `localStorage` | Whole profile + guest edit token (and the account link, once signed in) | Written first, always. The game never blocks on the network. |
+| Supabase Postgres | Name, avatar, settings, stats — under a device row *or* an account | Best-effort sync; the UI reports *Saved to account*, *Saved to cloud*, *Saving…* or *Offline — saved on this device*, never a success it did not observe |
 
 The cloud side runs in a **dedicated Supabase project created for Veylattice**, deliberately separate
 from the Sohbet project so nothing here can touch another app's data or quotas.
+
+### Accounts, and why they exist
+
+A guest profile is an identity bound to one browser: its credential is a token in `localStorage`, so
+clearing site data breaks the link to the cloud row. **An account fixes exactly that.**
+
+1. **Create account** uploads the current name, avatar, settings and record, and the server returns a
+   **recovery code** — 20 characters from a 32-symbol alphabet (`XXXX-XXXX-XXXX-XXXX-XXXX`, 100 bits).
+2. **Sign in** with that code on any device and the account's record replaces the local one.
+3. **Sign out** returns this browser to a guest profile without touching the account.
+4. **Issue a new code** invalidates the old one immediately.
+
+No email, password, or personal data is collected. The code is the credential; the account id is only
+a lookup key.
 
 ### Security model
 
 ```sql
 -- RLS on, no anon table privileges: direct PostgREST access returns 401
-revoke all on table public.veylattice_profiles from anon, authenticated;
+revoke all on table public.veylattice_profiles  from anon, authenticated;
+revoke all on table public.veylattice_accounts  from anon, authenticated;
 
--- The only writable surface: a SECURITY DEFINER function guarded by an edit token
-veylattice_profile_save(p_id, p_token, p_display_name, p_avatar, p_settings, p_stats)
-veylattice_profile_get (p_id)
+-- Guest rows: guarded by a per-browser edit token
+veylattice_profile_save(p_id, p_token, ...)   veylattice_profile_get(p_id)
+
+-- Accounts: guarded by the recovery code
+veylattice_account_create(...) -> {account_id, recovery_code}
+veylattice_account_load(p_code)
+veylattice_account_save(p_account_id, p_code, ...)
+veylattice_account_rotate(p_account_id, p_code) -> {recovery_code}
 ```
 
 | Threat | Mitigation | Verified |
 |---|---|---|
-| Client writes arbitrary rows | No table grants; RPC only | `GET /rest/v1/veylattice_profiles` → **401** |
-| Hijacking someone's profile | 64-hex edit token; DB stores a bcrypt hash | Wrong token → **401 `not authorized`** |
+| Client writes arbitrary rows | No table grants; RPC only | direct `GET /rest/v1/veylattice_accounts` → **401** |
+| Hijacking someone's profile | 64-hex edit token; DB stores a bcrypt hash | wrong token → **401 `not authorized`** |
+| Guessing an account code | 100-bit CSPRNG code; only a SHA-256 digest is stored | wrong code → `null`; wrong code on save → **401** |
+| Reusing a revoked code | Rotate replaces the digest in one statement | old code → `null` after rotation |
 | Stored XSS via avatar | DB `CHECK` allows only base64 PNG/JPEG/WebP data URLs | schema constraint |
 | Oversized payloads | Name ≤ 24 chars, avatar ≤ 70 000 chars, JSON ≤ 4 000 / 2 000 chars | schema constraints |
 | Tampered local storage | Every restored field re-sanitised (`sanitizeProfile`) | unit tests |
 | Privileged key leakage | Only the publishable anon key ships; the service-role key is absent from the repo and browser | [config.js](src/net/config.js) |
 
-> **What this is not:** a device profile is an identity, not an account. There is no password, no
-> email, and no personal data collected. Anyone holding the profile id can *read* its public fields;
-> only the token holder can change them. Cross-device sign-in, account recovery and ownership
-> transfer are M4 work, and the README will not claim them before they exist.
+**Verified end to end against the live database** — create → load → save with a wrong code (401) →
+save with the right code → rotate → old code rejected → new code returns the updated record. Then,
+in the browser: create an account, rename to *Lattice Adept*, sign out, rename the guest to *Guest
+Only*, sign back in with the code, and see *Lattice Adept* return from the database. Test rows were
+removed afterwards.
 
-Reproduce the schema with [`supabase/migrations/0001_profiles.sql`](supabase/migrations/0001_profiles.sql).
+### Google and Discord
+
+Supabase Auth is present on the project but **Google and Discord providers are disabled**, and turning
+them on needs OAuth client credentials created in the Google Cloud and Discord developer consoles.
+That is not something this build can do for you, so the UI says so instead of showing buttons that
+cannot work. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) lists the exact steps; the recovery code already
+provides cross-device identity without them.
+
+Reproduce the schema with [`supabase/migrations/0001_profiles.sql`](supabase/migrations/0001_profiles.sql)
+and [`supabase/migrations/0002_accounts.sql`](supabase/migrations/0002_accounts.sql).
 
 ---
 
@@ -215,13 +302,16 @@ src/game/            DOM-free rules and AI
   ai.js                observation → candidates → bounded scoring
 src/net/             browser persistence
   config.js            public Supabase URL + publishable key
+  rpc.js               one guarded PostgREST transport
   profile.js           sanitise, local-first save, cloud sync, avatar pipeline
-src/main.js          HUD controller: every click becomes a validated command
-index.html           Battle + Profile views
-styles.css           themed UI (element colours, reduced-motion support)
-tests/               Node test runner, 53 tests, zero dependencies
-supabase/migrations/ profile schema + RPCs
-docs/                rules, research, adaptation matrix, session log
+  account.js           recovery-code accounts (create, load, save, rotate)
+src/main.js          HUD controller + presentation layer (events → animation)
+src/cards/           starter Vessels, Actions and Relics as validated JSON
+index.html           Battle + Profile & Settings views
+styles.css           themed UI, voxel cubes, combat keyframes, reduced motion
+tests/               Node test runner, 69 tests, zero dependencies
+supabase/migrations/ profile + account schemas and RPCs
+docs/                rules, research, adaptation matrix, accounts, session log
 ```
 
 Design rules the code follows:
@@ -250,16 +340,19 @@ npm test            # node --test "tests/*.test.js"
 
 ### Tests
 
-`npm test` → **53 passing, 0 failing** (~0.6 s). Coverage includes:
+`npm test` → **69 passing, 0 failing** (~0.45 s). Coverage includes:
 
 | Area | Examples |
 |---|---|
 | Elemental system | all 25 pairs, rounding, minimum 1, persistent Guard |
 | Combat | lethal trades, out-of-range retaliation, blocked line of sight, Nexus gating |
+| Actions & Relics | elemental damage, heal capping, permanent buffs, sweeps, Nexus burn vs armour, wrong-side and missing targets, Relic cap, attack/guard/mend auras, aura timing on existing and future Vessels |
+| Deck rules | canonical five-Action minimum enforced, vessel-only decks rejected, practice deck legal with no exception profile |
+| Content | 30-card pool validates; malformed effects, cross-scope effects and pseudo-targeting Relics are rejected |
 | Economy & turns | Flux 1→10, zero-Flux restriction, summon limits, draw, fatigue |
 | Determinism | byte-identical rejection, seeded replay, catalog immutability |
 | Deadlines | boundary rejection, committed actions preserved |
-| AI | information isolation, hidden-hand invariance, time budget, legality, tier differentiation, full AI-vs-AI match |
+| AI | information isolation, hidden-hand invariance, time budget, legality, tier differentiation, Actions/Relics played through the engine, no pointless casts, full AI-vs-AI match |
 | Profiles | name/avatar/settings/stats sanitisation, forged ids, streak maths |
 
 Tests I did **not** run are listed as unrun in [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md),
@@ -283,12 +376,13 @@ the base site was modified** — `/sohbet` and the root site are unaffected.
 **Database** (optional for local play; required for cloud profiles):
 
 1. Create a Supabase project (a separate one — do not reuse another app's project).
-2. Run [`supabase/migrations/0001_profiles.sql`](supabase/migrations/0001_profiles.sql) in the SQL editor.
+2. Run [`supabase/migrations/0001_profiles.sql`](supabase/migrations/0001_profiles.sql) and
+   [`supabase/migrations/0002_accounts.sql`](supabase/migrations/0002_accounts.sql) in the SQL editor.
 3. Put the project URL and **publishable/anon** key in [`src/net/config.js`](src/net/config.js).
 4. Never put the `service_role` key in this repository or in the browser bundle.
 
 Without step 1–3 the game still runs: `CLOUD_ENABLED = false` (or a failing network) degrades to a
-clearly labelled local profile.
+clearly labelled local profile and accounts report that cloud sync is disabled.
 
 ---
 
@@ -297,13 +391,15 @@ clearly labelled local profile.
 | Milestone | State |
 |---|---|
 | **M1** deterministic engine, HUD, tests, deadline | ✅ done |
+| **M2-001** typed Action and Relic effects, relic auras | ✅ done |
+| **M2-002** canonical deck rules, practice exception removed | ✅ done |
 | **M2-003** tactical AI, difficulties, styles | ✅ done |
-| Profile, avatar, cloud persistence | ✅ done (device identity, not accounts) |
-| **M2-001/002** typed Actions & Relics, canonical deck rules | next |
-| **M3** collection, deck builder, shop, packs | planned |
-| **M4** trusted backend, auth, authoritative matches | planned |
+| **M2-004** portable accounts, recovery codes, cross-device restore | ✅ done |
+| **M2-005** voxel combat presentation | ✅ done |
+| **M3** collection, deck builder, shop, packs | next |
+| **M4** trusted backend, authoritative matches, throttling | planned |
 | **M5** lobbies and Tag | planned |
-| **M6–M7** ranked, arenas, Lore Bonds, voxel models | planned |
+| **M6–M7** ranked, arenas, Lore Bonds, full voxel models | planned |
 
 Full task list, acceptance criteria and blockers: [TODO.md](TODO.md). Dated session records:
 [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md).

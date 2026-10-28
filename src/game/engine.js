@@ -14,9 +14,9 @@ import {
   CELL_COUNT,
   DECK_RULES,
   MAX_FLUX,
+  MAX_RELICS_PER_SEAT,
   MAX_UNITS_PER_SEAT,
   OPENING_HAND,
-  PRACTICE_DECK_RULES,
   RULES_VERSION,
   START_VITALITY,
   TURN_MS,
@@ -52,6 +52,8 @@ export const ERROR_CODES = Object.freeze({
   NOT_ON_HOME_ROW: "NOT_ON_HOME_ROW",
   DECK_EMPTY: "DECK_EMPTY",
   MULLIGAN_USED: "MULLIGAN_USED",
+  INVALID_TARGET: "INVALID_TARGET",
+  RELIC_LIMIT: "RELIC_LIMIT",
 });
 
 /* ------------------------------------------------------------------ *
@@ -101,6 +103,8 @@ function shuffleInPlace(items, rng) {
 export function createUnit(state, def, owner, x, y, options = {}) {
   const id = `u${state.nextUnitSeq}`;
   state.nextUnitSeq += 1;
+  const guardBonus = Number.isInteger(options.guardBonus) ? options.guardBonus : 0;
+  const maxGuard = def.guard + guardBonus;
   return {
     id,
     cardId: def.id,
@@ -110,8 +114,8 @@ export function createUnit(state, def, owner, x, y, options = {}) {
     subtype: def.subtypes?.[0] ?? null,
     attack: def.attack,
     baseGuard: def.guard,
-    maxGuard: def.guard,
-    guard: def.guard,
+    maxGuard,
+    guard: maxGuard,
     movement: def.movement,
     range: def.range,
     x,
@@ -167,7 +171,7 @@ export function createMatch(options = {}) {
     catalog,
     rng = Math.random,
     now = Date.now(),
-    deckRules = PRACTICE_DECK_RULES,
+    deckRules = DECK_RULES,
   } = options;
 
   if (!catalog || !(catalog.byId instanceof Map)) {
@@ -256,9 +260,63 @@ function startTurn(state, seat, now, events) {
     unit.hasMoved = false;
     unit.hasAttacked = false;
   }
+  applyRelicMend(state, seat, events);
   state.deadlineAt = now + TURN_MS;
   events.push({ type: "turnStart", seat, turn: state.turn, maxFlux: player.maxFlux });
   drawCard(state, seat, events, "turnStart");
+}
+
+/* ------------------------------------------------------------------ *
+ * Relic auras
+ * ------------------------------------------------------------------ */
+
+/**
+ * Aggregate the persistent auras a seat's Relics project.
+ * Relics are open information: they sit on the table, not in a hand.
+ */
+export function relicAuras(state, seat) {
+  const auras = { attack: 0, armor: 0, mend: 0, guard: 0 };
+  for (const relic of state.players[seat].relics) {
+    const def = state.catalog.get(relic.cardId);
+    const effect = def?.effect;
+    if (!effect) continue;
+    if (effect.kind === "attackAura") auras.attack += effect.amount;
+    else if (effect.kind === "armorAura") auras.armor += effect.amount;
+    else if (effect.kind === "mendAura") auras.mend += effect.amount;
+    else if (effect.kind === "guardAura") auras.guard += effect.amount;
+  }
+  return auras;
+}
+
+/** Printed Attack plus Relic bonuses. Vessel attacks only, never Actions. */
+export function effectiveAttack(state, unit) {
+  return Math.max(0, unit.attack + relicAuras(state, unit.owner).attack);
+}
+
+/** Relic armor softens Nexus damage but can never nullify it. */
+function nexusDamageAfterArmor(raw, armor) {
+  const attack = Math.max(0, Math.trunc(raw));
+  if (armor <= 0) return attack;
+  return Math.max(1, attack - armor);
+}
+
+function applyRelicMend(state, seat, events) {
+  const { mend } = relicAuras(state, seat);
+  if (mend <= 0) return;
+  const wounded = unitsOf(state, seat)
+    .filter((unit) => unit.guard < unit.maxGuard)
+    .sort((a, b) => a.guard / a.maxGuard - b.guard / b.maxGuard || a.id.localeCompare(b.id));
+  const target = wounded[0];
+  if (!target) return;
+  const before = target.guard;
+  target.guard = Math.min(target.maxGuard, target.guard + mend);
+  events.push({
+    type: "relicMend",
+    seat,
+    unitId: target.id,
+    healed: target.guard - before,
+    guardAfter: target.guard,
+  });
 }
 
 function endTurn(state, now, events, reason) {
@@ -364,7 +422,11 @@ function handleSummon(state, command, events) {
   const def = state.catalog.get(card.cardId);
   if (!def) return reject(ERROR_CODES.CARD_NOT_IN_HAND, "Unknown card definition.");
   if (def.category !== "vessel") {
-    return reject(ERROR_CODES.UNSUPPORTED_CARD, `${def.category} cards are not implemented in this build.`);
+    const verb = def.category === "action" ? "played" : "set";
+    return reject(
+      ERROR_CODES.UNSUPPORTED_CARD,
+      `${def.name} is ${def.category === "action" ? "an" : "a"} ${def.category}; it must be ${verb}, not summoned.`,
+    );
   }
   if (!inBounds(command.x, command.y)) return reject(ERROR_CODES.ILLEGAL_CELL, "Cell is outside the board.");
   if (unitsOf(state, state.active).length >= MAX_UNITS_PER_SEAT) {
@@ -389,7 +451,10 @@ function handleSummon(state, command, events) {
   player.hand = player.hand.filter((c) => c.instanceId !== card.instanceId);
   player.flux -= def.cost;
   player.summonUsed += 1;
-  const unit = createUnit(state, def, state.active, command.x, command.y, { ready: false });
+  const unit = createUnit(state, def, state.active, command.x, command.y, {
+    ready: false,
+    guardBonus: relicAuras(state, state.active).guard,
+  });
   insertUnit(state, unit);
   events.push({
     type: "summon",
@@ -438,11 +503,15 @@ export function canAttackNexus(state, unit) {
 }
 
 export function nexusAttackPreview(state, unit) {
-  const opponent = state.players[opponentOf(unit.owner)];
+  const foeSeat = opponentOf(unit.owner);
+  const opponent = state.players[foeSeat];
+  const raw = effectiveAttack(state, unit);
+  const damage = nexusDamageAfterArmor(raw, relicAuras(state, foeSeat).armor);
   return {
-    damage: Math.max(0, unit.attack),
+    damage,
+    raw,
     vitalityBefore: opponent.vitality,
-    vitalityAfter: opponent.vitality - Math.max(0, unit.attack),
+    vitalityAfter: opponent.vitality - damage,
   };
 }
 
@@ -460,8 +529,10 @@ function handleAttack(state, command, events) {
       }
       return reject(ERROR_CODES.NOT_ON_HOME_ROW, "A Vessel must stand on the enemy home row to strike the Nexus.");
     }
-    const opponent = state.players[opponentOf(attacker.owner)];
-    const damage = Math.max(0, attacker.attack);
+    const foeSeat = opponentOf(attacker.owner);
+    const opponent = state.players[foeSeat];
+    const raw = effectiveAttack(state, attacker);
+    const damage = nexusDamageAfterArmor(raw, relicAuras(state, foeSeat).armor);
     opponent.vitality -= damage;
     attacker.hasAttacked = true;
     events.push({
@@ -469,6 +540,7 @@ function handleAttack(state, command, events) {
       seat: attacker.owner,
       unitId: attacker.id,
       damage,
+      raw,
       vitality: opponent.vitality,
     });
     applyOutcome(state, events);
@@ -486,10 +558,10 @@ function handleAttack(state, command, events) {
     return reject(ERROR_CODES.NO_LINE_OF_SIGHT, "No clear orthogonal line of sight.");
   }
 
-  const attackPacket = previewDamage(attacker.attack, attacker.element, defender.element);
+  const attackPacket = previewDamage(effectiveAttack(state, attacker), attacker.element, defender.element);
   const retaliates = defender.range >= distance && lineClear(state, defender, attacker);
   const retaliationPacket = retaliates
-    ? previewDamage(defender.attack, defender.element, attacker.element)
+    ? previewDamage(effectiveAttack(state, defender), defender.element, attacker.element)
     : null;
 
   defender.guard -= attackPacket.damage;
@@ -508,12 +580,20 @@ function handleAttack(state, command, events) {
     attackerGuard: attacker.guard,
   });
 
-  const defeated = Object.values(state.units).filter((u) => u.guard <= 0);
+  cleanupDefeated(state, events);
+  return null;
+}
+
+/** Remove every unit at or below zero Guard, in id order, and log each loss. */
+function cleanupDefeated(state, events) {
+  const defeated = Object.values(state.units)
+    .filter((u) => u.guard <= 0)
+    .sort((a, b) => a.id.localeCompare(b.id));
   for (const unit of defeated) {
     removeUnit(state, unit);
     events.push({ type: "defeat", unitId: unit.id, cardId: unit.cardId, seat: unit.owner });
   }
-  return null;
+  return defeated;
 }
 
 function handleMulligan(state, command, events) {
@@ -538,6 +618,206 @@ function handleMulligan(state, command, events) {
     bottomed: card,
     drawn,
     cost: 1,
+  });
+  return null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Actions and Relics
+ * ------------------------------------------------------------------ */
+
+/**
+ * Legal targets for an Action, in deterministic unit order.
+ * Public geometry only, so the HUD and the AI share one implementation.
+ */
+export function actionTargetsFor(state, def, seat) {
+  if (!def || def.targeting === "none") return [];
+  const ids = [];
+  for (const unit of Object.values(state.units)) {
+    if (def.targeting === "enemyUnit" && unit.owner === seat) continue;
+    if (def.targeting === "friendlyUnit" && unit.owner !== seat) continue;
+    ids.push(unit.id);
+  }
+  return ids;
+}
+
+function fluxAllows(player, cost) {
+  return player.flux >= 1 && player.flux >= cost;
+}
+
+/** Apply one typed Action effect. Mutates `state`; logs what happened. */
+function applyEffect(state, def, target, events) {
+  const effect = def.effect;
+  const seat = state.active;
+  switch (effect.kind) {
+    case "damage": {
+      const packet = previewDamage(effect.amount, def.element, target.element);
+      target.guard -= packet.damage;
+      events.push({
+        type: "actionDamage",
+        seat,
+        cardId: def.id,
+        unitId: target.id,
+        packets: [{ unitId: target.id, packet, guardAfter: target.guard }],
+      });
+      cleanupDefeated(state, events);
+      break;
+    }
+    case "damageAll": {
+      const packets = [];
+      for (const unit of Object.values(state.units)) {
+        if (unit.owner === seat) continue;
+        const packet = previewDamage(effect.amount, def.element, unit.element);
+        unit.guard -= packet.damage;
+        packets.push({ unitId: unit.id, packet, guardAfter: unit.guard });
+      }
+      events.push({ type: "actionDamage", seat, cardId: def.id, unitId: null, packets });
+      cleanupDefeated(state, events);
+      break;
+    }
+    case "heal": {
+      const before = target.guard;
+      target.guard = Math.min(target.maxGuard, target.guard + effect.amount);
+      events.push({
+        type: "actionHeal",
+        seat,
+        cardId: def.id,
+        unitId: target.id,
+        healed: target.guard - before,
+        guardAfter: target.guard,
+      });
+      break;
+    }
+    case "buff": {
+      target.attack += effect.attack ?? 0;
+      target.maxGuard += effect.guard ?? 0;
+      target.guard += effect.guard ?? 0;
+      events.push({
+        type: "actionBuff",
+        seat,
+        cardId: def.id,
+        unitId: target.id,
+        attack: target.attack,
+        guard: target.guard,
+        guardMax: target.maxGuard,
+      });
+      break;
+    }
+    case "draw": {
+      for (let i = 0; i < effect.amount; i += 1) {
+        if (state.phase === "over") break;
+        drawCard(state, seat, events, "action");
+      }
+      break;
+    }
+    case "nexusDamage": {
+      const foeSeat = opponentOf(seat);
+      const armor = relicAuras(state, foeSeat).armor;
+      const damage = nexusDamageAfterArmor(effect.amount, armor);
+      state.players[foeSeat].vitality -= damage;
+      events.push({
+        type: "nexusHit",
+        seat,
+        unitId: null,
+        cardId: def.id,
+        damage,
+        vitality: state.players[foeSeat].vitality,
+      });
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+function handlePlayAction(state, command, events) {
+  const player = state.players[state.active];
+  const card = player.hand.find((c) => c.instanceId === command.instanceId);
+  if (!card) return reject(ERROR_CODES.CARD_NOT_IN_HAND, "That card is not in the active hand.");
+  const def = state.catalog.get(card.cardId);
+  if (!def) return reject(ERROR_CODES.CARD_NOT_IN_HAND, "Unknown card definition.");
+  if (def.category !== "action") {
+    return reject(ERROR_CODES.UNSUPPORTED_CARD, `${def.name} is not an Action card.`);
+  }
+  if (!fluxAllows(player, def.cost)) {
+    return reject(
+      ERROR_CODES.INSUFFICIENT_FLUX,
+      `Playing ${def.name} needs ${def.cost} Flux and at least 1 available Flux (have ${player.flux}).`,
+    );
+  }
+
+  const legalTargets = actionTargetsFor(state, def, state.active);
+  let target = null;
+  if (def.targeting !== "none") {
+    if (!command.targetId) {
+      return reject(ERROR_CODES.INVALID_TARGET, `${def.name} needs a target.`);
+    }
+    if (!legalTargets.includes(command.targetId)) {
+      return reject(ERROR_CODES.INVALID_TARGET, `${def.name} cannot target that Vessel.`);
+    }
+    target = state.units[command.targetId] ?? null;
+    if (!target) return reject(ERROR_CODES.INVALID_TARGET, "Unknown target.");
+  }
+
+  player.flux -= def.cost;
+  player.hand = player.hand.filter((c) => c.instanceId !== card.instanceId);
+  player.discard.push(def.id);
+  events.push({
+    type: "playAction",
+    seat: state.active,
+    cardId: def.id,
+    name: def.name,
+    element: def.element,
+    targetId: target ? target.id : null,
+    x: target ? target.x : null,
+    y: target ? target.y : null,
+    cost: def.cost,
+  });
+  applyEffect(state, def, target, events);
+  applyOutcome(state, events);
+  return null;
+}
+
+function handlePlayRelic(state, command, events) {
+  const player = state.players[state.active];
+  const card = player.hand.find((c) => c.instanceId === command.instanceId);
+  if (!card) return reject(ERROR_CODES.CARD_NOT_IN_HAND, "That card is not in the active hand.");
+  const def = state.catalog.get(card.cardId);
+  if (!def) return reject(ERROR_CODES.CARD_NOT_IN_HAND, "Unknown card definition.");
+  if (def.category !== "relic") {
+    return reject(ERROR_CODES.UNSUPPORTED_CARD, `${def.name} is not a Relic card.`);
+  }
+  if (player.relics.length >= MAX_RELICS_PER_SEAT) {
+    return reject(ERROR_CODES.RELIC_LIMIT, `A seat may hold at most ${MAX_RELICS_PER_SEAT} Relics.`);
+  }
+  if (!fluxAllows(player, def.cost)) {
+    return reject(
+      ERROR_CODES.INSUFFICIENT_FLUX,
+      `Setting ${def.name} needs ${def.cost} Flux and at least 1 available Flux (have ${player.flux}).`,
+    );
+  }
+
+  player.flux -= def.cost;
+  player.hand = player.hand.filter((c) => c.instanceId !== card.instanceId);
+  player.relics.push({ instanceId: card.instanceId, cardId: def.id });
+
+  // Guard auras boost the Vessels already on the table; later summons pick the
+  // bonus up in handleSummon, so the aura is uniform rather than timing-dependent.
+  if (def.effect.kind === "guardAura") {
+    for (const unit of unitsOf(state, state.active)) {
+      unit.maxGuard += def.effect.amount;
+      unit.guard += def.effect.amount;
+    }
+  }
+
+  events.push({
+    type: "playRelic",
+    seat: state.active,
+    cardId: def.id,
+    name: def.name,
+    element: def.element,
+    effect: def.effect,
+    cost: def.cost,
   });
   return null;
 }
@@ -635,6 +915,12 @@ export function applyCommand(state, command, context = {}) {
     case "mulligan":
       error = handleMulligan(draft, command, events);
       break;
+    case "playAction":
+      error = handlePlayAction(draft, command, events);
+      break;
+    case "playRelic":
+      error = handlePlayRelic(draft, command, events);
+      break;
     case "endTurn":
       error = handleEndTurn(draft, effectiveNow, events);
       break;
@@ -711,7 +997,14 @@ export function attacksFromCell(state, unitId, x, y) {
 
 export function getLegalActions(state) {
   if (state.phase === "over") {
-    return { summons: [], units: [], canEndTurn: false, canMulligan: false };
+    return {
+      summons: [],
+      actions: [],
+      relics: [],
+      units: [],
+      canEndTurn: false,
+      canMulligan: false,
+    };
   }
   const player = state.players[state.active];
   const summons = [];
@@ -728,6 +1021,26 @@ export function getLegalActions(state) {
       summons.push({ instanceId: card.instanceId, cardId: card.cardId, cells });
     }
   }
+  const playableActions = [];
+  const playableRelics = [];
+  for (const card of player.hand) {
+    const def = state.catalog.get(card.cardId);
+    if (!def || !fluxAllows(player, def.cost)) continue;
+    if (def.category === "action") {
+      const targetIds = actionTargetsFor(state, def, state.active);
+      if (def.targeting !== "none" && targetIds.length === 0) continue;
+      playableActions.push({
+        instanceId: card.instanceId,
+        cardId: def.id,
+        name: def.name,
+        targeting: def.targeting,
+        targetIds,
+      });
+    } else if (def.category === "relic" && player.relics.length < MAX_RELICS_PER_SEAT) {
+      playableRelics.push({ instanceId: card.instanceId, cardId: def.id, name: def.name });
+    }
+  }
+
   const units = unitsOf(state, state.active).map((unit) => ({
     unitId: unit.id,
     moves: getLegalMoves(state, unit.id),
@@ -735,7 +1048,14 @@ export function getLegalActions(state) {
   }));
   const canMulligan =
     player.mulliganUsed < 1 && player.flux >= 1 && player.deck.length > 0 && player.hand.length > 1;
-  return { summons, units, canEndTurn: true, canMulligan };
+  return {
+    summons,
+    actions: playableActions,
+    relics: playableRelics,
+    units,
+    canEndTurn: true,
+    canMulligan,
+  };
 }
 
 /** Attack preview for the HUD, without mutating state. */
@@ -744,10 +1064,10 @@ export function previewAttack(state, unitId, targetId) {
   const defender = state.units[targetId];
   if (!attacker || !defender) return null;
   const distance = distanceBetween(attacker, defender);
-  const packet = previewDamage(attacker.attack, attacker.element, defender.element);
+  const packet = previewDamage(effectiveAttack(state, attacker), attacker.element, defender.element);
   const retaliation =
     defender.range >= distance && lineClear(state, defender, attacker)
-      ? previewDamage(defender.attack, defender.element, attacker.element)
+      ? previewDamage(effectiveAttack(state, defender), defender.element, attacker.element)
       : null;
   return {
     packet,
@@ -761,4 +1081,4 @@ export function isOver(state) {
   return state.phase === "over";
 }
 
-export { DECK_RULES, PRACTICE_DECK_RULES };
+export { DECK_RULES };

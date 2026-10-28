@@ -18,6 +18,47 @@
 - Environment: Windows/Git Bash, Node v24.19.0, Python 3.14 for static serving. No dependencies are
   installed for the app; tests use Node's built-in runner.
 
+## Latest session — S-M2-C (Actions, Relics, accounts, combat presentation)
+
+Implemented in this session, all verified:
+
+1. **Action and Relic cards** — `src/cards/actions-relics.json` (8 Actions, 4 Relics). Every effect is a
+   closed `kind` in `EFFECT_KINDS` (`src/game/constants.js`) with a scope and numeric range; `content.js`
+   validates and freezes it. New commands `playAction` / `playRelic` live in `engine.js` beside the
+   existing handlers and go through the same `applyCommand` validator.
+2. **Relic auras** — `relicAuras(state, seat)` is the single source for `attack`, `armor`, `mend` and
+   `guard`. Used by `handleAttack`, Nexus damage, `startTurn` (mend) and `handleSummon` (guard bonus).
+   Do not duplicate aura maths elsewhere; previews and the AI read the same helper.
+3. **Canonical deck rules** — `PRACTICE_DECK_RULES` is deleted. `createMatch` defaults to `DECK_RULES`
+   and `buildPracticeDeck` now builds a legal 38-card deck from the whole pool.
+4. **AI** — `buildCandidates` emits `playAction` / `playRelic` plans; `evaluateAction` scores damage,
+   kills, sweeps, heals, buffs, draws and Nexus burn. Pointless casts return `-Infinity` (empty-board
+   sweep, heal at full Guard, draw from an empty deck) so exploration can never pick them.
+5. **Accounts** — `src/net/account.js` + `supabase/migrations/0002_accounts.sql`. Recovery-code accounts;
+   see `docs/ACCOUNTS.md`. `profile.js` routes saves to the account when signed in and to the device row
+   otherwise; `initialiseProfile` prefers the account.
+6. **Combat presentation** — `playEvents(events, before)` in `src/main.js` animates from engine events
+   using a **pre-command snapshot**, because casualties are already gone from the new state. Voxel cubes,
+   lunges, impact flashes, floating damage, Guard countdowns, crumbling ghosts, Nexus shake.
+
+### Where the seams are
+
+- `ui.selectedCard` holds an instance id; `selectedCardEntry()` resolves it to a definition plus the
+  engine's own legality (`getLegalActions`). The DOM never decides what is playable.
+- `dispatch()` snapshots units before applying and then calls `playEvents`. The AI loop keeps one frame
+  per command for the same reason (a move-then-attack plan must animate from the moved cell).
+- Account state lives in `localStorage` under `veylattice.account.v1`; `profile.js` re-exports the
+  account actions the UI needs so `main.js` does not talk to the RPC layer directly.
+
+### Verified in this session
+
+- `npm test` → **69 passing, 0 failing**.
+- Live database: direct table read 401; create → load → wrong-code save 401 → correct save → rotate →
+  old code null → new code returns the updated record. Test rows removed (`veylattice_accounts` count 0).
+- Browser: no console errors; Actions cast, Relics set with auras visible (`2 / 2`), combat classes
+  observed during real events, and a full account round trip (create → rename → sign out → guest rename
+  → sign in → restored).
+
 ## Read first
 
 `AI_INSTRUCTIONS.md`, `GAME_RULES.md`, `TODO.md`, `ROADMAP.md`, `TECHNICAL_ARCHITECTURE.md`,

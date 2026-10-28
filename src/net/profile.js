@@ -11,13 +11,16 @@
  *    and remote rows are untrusted input.
  */
 
+import { CLOUD_ENABLED, PROFILE_RPC_GET, PROFILE_RPC_SAVE } from "./config.js";
+import { rpc } from "./rpc.js";
 import {
-  CLOUD_ENABLED,
-  PROFILE_RPC_GET,
-  PROFILE_RPC_SAVE,
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-} from "./config.js";
+  clearSession,
+  createAccount as createAccountRemote,
+  loadAccount,
+  readSession,
+  saveAccount,
+  writeSession,
+} from "./account.js";
 
 const STORAGE_KEY = "veylattice.profile.v2";
 const TOKEN_KEY = "veylattice.profile.token.v2";
@@ -234,30 +237,6 @@ export function resetLocalProfile() {
  * Cloud transport
  * ------------------------------------------------------------------ */
 
-async function rpc(name, payload, { timeoutMs = 8000 } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      throw new Error(`Cloud request failed (${response.status}) ${detail.slice(0, 160)}`);
-    }
-    return response.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export async function pullRemoteProfile(id) {
   if (!CLOUD_ENABLED) return null;
   const row = await rpc(PROFILE_RPC_GET, { p_id: id });
@@ -287,14 +266,40 @@ export async function pushProfile(profile) {
 }
 
 /**
- * Reconcile this device with the cloud row.
- * Newest wins on conflict; the local profile is always written first so the
- * game keeps working when the network is unavailable.
+ * Reconcile this device with the cloud.
+ *
+ * Three cases, in order of precedence:
+ *  1. Signed in: the account is the source of truth, so the same name, avatar,
+ *     settings and record appear on any device that enters the recovery code.
+ *  2. Guest: the device row is synced newest-wins, exactly as before.
+ *  3. Offline: the local profile is used and the UI says so honestly.
+ * The local profile is always written before any network call, so the game
+ * never blocks on connectivity.
  */
 export async function initialiseProfile() {
-  let local = loadLocalProfile();
+  const local = loadLocalProfile();
   ensureProfileToken();
   if (!CLOUD_ENABLED) return { profile: local, sync: { state: "local", message: "Local only" } };
+
+  const session = readSession();
+  if (session) {
+    try {
+      const remote = await loadAccount(session.code);
+      if (remote) {
+        const merged = sanitizeProfile({ ...local, ...remote }, local.id);
+        saveLocalProfile(merged);
+        return { profile: merged, sync: { state: "synced", message: "Signed in" } };
+      }
+      // The stored code no longer resolves (rotated elsewhere). Fall back to guest.
+      clearSession();
+    } catch (error) {
+      return {
+        profile: local,
+        sync: { state: "offline", message: "Account unreachable — using this device" },
+        error,
+      };
+    }
+  }
 
   try {
     const remote = await pullRemoteProfile(local.id);
@@ -305,7 +310,7 @@ export async function initialiseProfile() {
     }
     await pushProfile(local);
     saveLocalProfile(local);
-    return { profile: local, sync: { state: "synced", message: "Synced" } };
+    return { profile: local, sync: { state: "synced", message: "Guest · backed up" } };
   } catch (error) {
     return {
       profile: local,
@@ -323,6 +328,22 @@ export async function persistProfile(profile) {
   const clean = sanitizeProfile(profile);
   saveLocalProfile(clean);
   if (!CLOUD_ENABLED) return { profile: clean, sync: { state: "local", message: "Local only" } };
+
+  if (readSession()) {
+    try {
+      await saveAccount(clean);
+      const synced = { ...clean, updatedAt: new Date().toISOString() };
+      saveLocalProfile(synced);
+      return { profile: synced, sync: { state: "synced", message: "Saved to account" } };
+    } catch (error) {
+      return {
+        profile: clean,
+        sync: { state: "offline", message: "Account unreachable — saved on this device" },
+        error,
+      };
+    }
+  }
+
   try {
     await pushProfile(clean);
     const synced = { ...clean, updatedAt: new Date().toISOString() };
@@ -335,6 +356,50 @@ export async function persistProfile(profile) {
       error,
     };
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Accounts
+ * ------------------------------------------------------------------ */
+
+/** Current account link, for the settings panel. Never exposes a token. */
+export function accountStatus() {
+  const session = readSession();
+  return session ? { signedIn: true, accountId: session.accountId } : { signedIn: false, accountId: null };
+}
+
+/**
+ * Turn this device's profile into a portable account.
+ * The existing name, avatar, settings and record are uploaded first, so
+ * progress earned before signing up is preserved.
+ */
+export async function createAccountForProfile(profile) {
+  if (!CLOUD_ENABLED) throw new Error("Cloud sync is disabled in this build.");
+  const clean = sanitizeProfile(profile);
+  const { code } = await createAccountRemote(clean);
+  const stamped = { ...clean, updatedAt: new Date().toISOString() };
+  saveLocalProfile(stamped);
+  return { profile: stamped, code };
+}
+
+/**
+ * Sign in on this device with a recovery code.
+ * The account replaces this device's profile: it carries the record that was
+ * earned wherever the account was last used.
+ */
+export async function signInToAccount(rawCode) {
+  if (!CLOUD_ENABLED) throw new Error("Cloud sync is disabled in this build.");
+  const remote = await loadAccount(rawCode);
+  if (!remote) throw new Error("No account matches that recovery code.");
+  writeSession({ accountId: remote.accountId, code: rawCode });
+  const merged = sanitizeProfile(remote);
+  saveLocalProfile(merged);
+  return merged;
+}
+
+/** Leave the account on this device; the account itself is untouched. */
+export function signOutOfAccount() {
+  clearSession();
 }
 
 /* ------------------------------------------------------------------ *

@@ -1013,3 +1013,252 @@ body.reduce-motion * {
   transition: none !important;
   animation: none !important;
 }
+
+/* ------------------------------------------------------------------ *
+ * Actions, Relics and voxel combat presentation
+ * ------------------------------------------------------------------ */
+
+.legend-dot.target { background: rgba(181, 139, 255, 0.7); }
+
+.relic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relic-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(181, 139, 255, 0.08);
+}
+
+.relic-list li strong { font-weight: 600; }
+.relic-list li span { color: var(--muted); }
+.relic-list li.relic-empty {
+  border-style: dashed;
+  background: none;
+  color: var(--muted);
+}
+
+.card .card-kind {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.card.relic .card-kind { color: var(--ok); }
+
+.card .card-effect {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #d7def2;
+}
+
+.code-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px dashed rgba(122, 215, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(122, 215, 255, 0.07);
+}
+
+.code-box .eyebrow { width: 100%; margin: 0; }
+
+.code-box code {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---- voxel unit marker ---- */
+
+.cell .voxel {
+  --vox-size: 18px;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: var(--vox-size);
+  height: var(--vox-size);
+  transform-style: preserve-3d;
+  transform: rotateX(-24deg) rotateY(-38deg);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cell .voxel i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--vox);
+  border: 1px solid rgba(6, 9, 18, 0.55);
+  backface-visibility: hidden;
+}
+
+.cell .voxel i.v-front { transform: translateZ(calc(var(--vox-size) / 2)); }
+.cell .voxel i.v-back { transform: rotateY(180deg) translateZ(calc(var(--vox-size) / 2)); filter: brightness(0.5); }
+.cell .voxel i.v-right { transform: rotateY(90deg) translateZ(calc(var(--vox-size) / 2)); filter: brightness(0.72); }
+.cell .voxel i.v-left { transform: rotateY(-90deg) translateZ(calc(var(--vox-size) / 2)); filter: brightness(0.62); }
+.cell .voxel i.v-top { transform: rotateX(90deg) translateZ(calc(var(--vox-size) / 2)); filter: brightness(1.25); }
+.cell .voxel i.v-bottom { transform: rotateX(-90deg) translateZ(calc(var(--vox-size) / 2)); filter: brightness(0.45); }
+
+.cell .voxel[data-element="wood"] { --vox: var(--wood); }
+.cell .voxel[data-element="fire"] { --vox: var(--fire); }
+.cell .voxel[data-element="earth"] { --vox: var(--earth); }
+.cell .voxel[data-element="metal"] { --vox: var(--metal); }
+.cell .voxel[data-element="water"] { --vox: var(--water); }
+
+.unit-name { padding-right: 20px; }
+
+/* ---- action targets ---- */
+
+.cell.target {
+  border-color: rgba(181, 139, 255, 0.95);
+  background: rgba(181, 139, 255, 0.16);
+}
+
+.cell.target::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(181, 139, 255, 0.6);
+  animation: target-pulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes target-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+
+/* ---- combat feedback ---- */
+
+.dmg-float {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translate(-50%, 0);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffd7dc;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  z-index: 6;
+  animation: fx-float 820ms ease-out forwards;
+}
+
+.dmg-float.advantage { color: #ffb347; font-size: 17px; }
+.dmg-float.retaliation { color: #ff9aa4; font-size: 12px; }
+.dmg-float.heal { color: #7dffb0; }
+.dmg-float.nexus { position: static; font-size: 22px; color: #ff8a95; animation: none; }
+
+@keyframes fx-float {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+  18% { opacity: 1; transform: translate(-50%, -2px) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%, -26px) scale(1); }
+}
+
+@keyframes fx-lunge {
+  0% { transform: translate(0, 0); }
+  38% { transform: translate(var(--fx-dx, 0px), var(--fx-dy, 0px)) scale(1.06); }
+  100% { transform: translate(0, 0); }
+}
+
+.cell.fx-lunge { overflow: visible; z-index: 5; }
+.cell.fx-lunge .unit { animation: fx-lunge 380ms cubic-bezier(0.32, 0.9, 0.3, 1); }
+
+@keyframes fx-hit-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-3px); }
+  38% { transform: translateX(3px); }
+  62% { transform: translateX(-2px); }
+  80% { transform: translateX(1px); }
+}
+
+.cell.fx-hit { background: rgba(255, 107, 122, 0.3); border-color: rgba(255, 107, 122, 0.9); }
+.cell.fx-hit .unit { animation: fx-hit-shake 320ms ease-in-out; }
+
+.cell.fx-cast-hit { border-color: var(--accent-2); background: rgba(181, 139, 255, 0.2); }
+.cell.fx-cast-hit .unit { animation: fx-hit-shake 340ms ease-in-out; }
+
+.cell.fx-heal { border-color: rgba(110, 231, 168, 0.9); background: rgba(110, 231, 168, 0.14); }
+.cell.fx-buff { border-color: rgba(255, 209, 102, 0.95); background: rgba(255, 209, 102, 0.14); }
+.cell.fx-step { border-color: var(--accent); background: rgba(122, 215, 255, 0.12); }
+
+@keyframes fx-spawn-in {
+  from { opacity: 0; transform: translateY(9px) scale(0.82); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cell.fx-spawn { border-color: rgba(122, 215, 255, 0.9); }
+.cell.fx-spawn .unit { animation: fx-spawn-in 300ms ease-out; }
+
+@keyframes fx-crumble {
+  0% { opacity: 0.95; transform: none; filter: grayscale(0); }
+  100% { opacity: 0; transform: rotate(16deg) scale(0.5) translateY(8px); filter: grayscale(1); }
+}
+
+.cell .unit.fx-ghost {
+  position: absolute;
+  inset: 2px;
+  z-index: 4;
+  background: linear-gradient(170deg, rgba(255, 107, 122, 0.45), rgba(12, 16, 28, 0.9));
+  animation: fx-crumble 500ms ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes fx-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 1px); }
+  40% { transform: translate(3px, -1px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+.board.fx-shake { animation: fx-shake 420ms ease-in-out; }
+
+.nexus.fx-nexus-hit {
+  border-style: solid;
+  border-color: var(--danger);
+  box-shadow: 0 0 26px rgba(255, 107, 122, 0.55);
+}
+
+@media (max-width: 640px) {
+  .cell .voxel { --vox-size: 11px; top: 2px; right: 2px; }
+  .dmg-float { font-size: 12px; }
+
+  /* A phone cell is too narrow for a name plus four stat labels: the tile
+     becomes a voxel plus the two numbers that matter, and the full name and
+     rules stay available in the selection panel and the cell's aria-label. */
+  .unit { padding: 2px; }
+  .unit-name,
+  .unit-flag { display: none; }
+  .unit-name { padding-right: 0; }
+  .unit-stats {
+    font-size: 8px;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell.target::after { animation: none; }
+}

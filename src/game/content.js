@@ -7,8 +7,10 @@
  */
 
 import {
+  ACTION_TARGETING,
   CARD_CATEGORIES,
   DECK_RULES,
+  EFFECT_KINDS,
   MAX_FLUX,
   RARITIES,
   SUBTYPES,
@@ -21,6 +23,46 @@ const MAX_TEXT_LENGTH = 400;
 
 function isIntegerInRange(value, min, max) {
   return Number.isInteger(value) && value >= min && value <= max;
+}
+
+/**
+ * Validate a card's typed effect.
+ *
+ * Effects are declarative data. Anything that is not a known kind with the
+ * right numeric fields for its scope is rejected, so a card can never smuggle
+ * behaviour (or code) into the engine.
+ */
+function validateEffect(card, where, scope, errors) {
+  const effect = card.effect;
+  if (!effect || typeof effect !== "object" || Array.isArray(effect)) {
+    errors.push(`${where}: ${scope} requires a typed effect object.`);
+    return;
+  }
+  const rule = EFFECT_KINDS[effect.kind];
+  if (!rule) {
+    errors.push(`${where}: unknown effect kind "${String(effect.kind)}".`);
+    return;
+  }
+  if (rule.scope !== scope) {
+    errors.push(`${where}: effect "${effect.kind}" belongs to ${rule.scope} cards, not ${scope}.`);
+    return;
+  }
+  if (rule.min !== undefined && !isIntegerInRange(effect.amount, rule.min, rule.max)) {
+    errors.push(`${where}: effect amount must be an integer between ${rule.min} and ${rule.max}.`);
+  }
+  if (effect.kind === "buff") {
+    const attack = effect.attack ?? 0;
+    const guard = effect.guard ?? 0;
+    if (!isIntegerInRange(attack, 0, 5)) {
+      errors.push(`${where}: buff attack must be an integer between 0 and 5.`);
+    }
+    if (!isIntegerInRange(guard, 0, 5)) {
+      errors.push(`${where}: buff guard must be an integer between 0 and 5.`);
+    }
+    if (attack === 0 && guard === 0) {
+      errors.push(`${where}: buff must change attack or guard.`);
+    }
+  }
 }
 
 /**
@@ -94,6 +136,20 @@ export function validateCatalog(cards) {
         errors.push(`${where}: vessel requires a modelId.`);
       }
     }
+
+    if (card.category === "action") {
+      if (!ACTION_TARGETING.includes(card.targeting)) {
+        errors.push(`${where}: action targeting must be one of ${ACTION_TARGETING.join(", ")}.`);
+      }
+      validateEffect(card, where, "action", errors);
+    }
+
+    if (card.category === "relic") {
+      if (card.targeting !== undefined) {
+        errors.push(`${where}: relics are persistent and take no targeting field.`);
+      }
+      validateEffect(card, where, "relic", errors);
+    }
   });
 
   return { ok: errors.length === 0, errors };
@@ -104,6 +160,7 @@ function freezeCard(card) {
   if (Array.isArray(card.subtypes)) Object.freeze(card.subtypes);
   if (Array.isArray(card.abilities)) Object.freeze(card.abilities);
   if (Array.isArray(card.loreBondIds)) Object.freeze(card.loreBondIds);
+  if (card.effect && typeof card.effect === "object") Object.freeze(card.effect);
   return Object.freeze(card);
 }
 
@@ -131,16 +188,27 @@ export function vesselIdsFrom(catalog) {
   return catalog.cards.filter((c) => c.category === "vessel").map((c) => c.id);
 }
 
+/** Every Action id, in catalog order. */
+export function actionIdsFrom(catalog) {
+  return catalog.cards.filter((c) => c.category === "action").map((c) => c.id);
+}
+
+/** Every Relic id, in catalog order. */
+export function relicIdsFrom(catalog) {
+  return catalog.cards.filter((c) => c.category === "relic").map((c) => c.id);
+}
+
 /**
- * Build the deterministic M1 practice deck: two copies of every Vessel.
- * Copies stay within DECK_RULES.maxCopies and the total is inside 20-40.
+ * Build the deterministic practice deck from the whole shipped pool:
+ * one copy of every Vessel, two of every Action, one of every Relic.
+ *
+ * That is 18 + 16 + 4 = 38 cards for the current set, inside 20-40, with the
+ * canonical five-Action minimum satisfied and no card above the three-copy
+ * limit. There is deliberately no weaker rule profile for this deck.
  */
-export function buildPracticeDeck(catalog, copies = 2) {
-  const ids = vesselIdsFrom(catalog);
-  const deck = [];
-  for (let copy = 0; copy < copies; copy += 1) {
-    for (const id of ids) deck.push(id);
-  }
+export function buildPracticeDeck(catalog) {
+  const deck = [...vesselIdsFrom(catalog), ...relicIdsFrom(catalog)];
+  for (const id of actionIdsFrom(catalog)) deck.push(id, id);
   return deck;
 }
 

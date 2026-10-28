@@ -33,7 +33,8 @@ test("opening state follows the documented sequence", () => {
   assert.equal(state.players[1].vitality, 30);
   assert.equal(state.players[0].hand.length, 6, "five opening cards plus the first-turn draw");
   assert.equal(state.players[1].hand.length, 5);
-  assert.equal(state.players[0].deck.length, 30);
+  // 38-card practice deck minus the five opening cards and the first draw.
+  assert.equal(state.players[0].deck.length, 32);
   assert.equal(state.players[0].maxFlux, 1);
   assert.equal(state.players[0].flux, 1);
   assert.equal(state.deadlineAt, START + TURN_MS);
@@ -136,8 +137,22 @@ test("a zero-cost card still requires at least one available Flux", () => {
     abilities: [],
     loreBondIds: [],
   }));
-  const catalog = createCatalog(synthetic);
-  const deck = synthetic.flatMap((c) => [c.id, c.id]);
+  // The canonical Action minimum is enforced, so even this synthetic pool must
+  // ship real Action cards to build a legal deck.
+  const syntheticActions = Array.from({ length: 5 }, (_, i) => ({
+    id: `synth_action_${i}`,
+    name: `Synth Action ${i}`,
+    category: "action",
+    element: "fire",
+    cost: 0,
+    rarity: "common",
+    targeting: "none",
+    effect: { kind: "draw", amount: 1 },
+    flavorText: "",
+    abilities: [],
+  }));
+  const catalog = createCatalog([...synthetic, ...syntheticActions]);
+  const deck = [...synthetic.flatMap((c) => [c.id, c.id]), ...syntheticActions.map((c) => c.id)];
   const state = createMatch({ catalog, decks: [deck, deck], rng: seededRng(2), now: START });
   const prepared = prepare(state, { hand: ["synth_0"], flux: 0 });
   const result = run(prepared, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });

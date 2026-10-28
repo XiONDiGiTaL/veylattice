@@ -7,23 +7,36 @@ import {
   validateCatalog,
   validateDeck,
 } from "../src/game/content.js";
-import { DECK_RULES, PRACTICE_DECK_RULES } from "../src/game/constants.js";
-import { CATALOG, RAW_CARDS } from "./support.js";
+import { DECK_RULES } from "../src/game/constants.js";
+import { CATALOG, RAW_CARDS, RAW_EXTRAS, RAW_VESSELS } from "./support.js";
 
 function cloneCards() {
   return JSON.parse(JSON.stringify(RAW_CARDS));
 }
 
 test("the shipped starter set is valid and keeps its 18 stable ids", () => {
-  const result = validateCatalog(RAW_CARDS);
+  const result = validateCatalog(RAW_VESSELS);
   assert.deepEqual(result.errors, []);
   assert.equal(result.ok, true);
-  assert.equal(RAW_CARDS.length, 18);
-  assert.equal(new Set(RAW_CARDS.map((c) => c.id)).size, 18);
-  assert.ok(RAW_CARDS.every((c) => c.category === "vessel"));
+  assert.equal(RAW_VESSELS.length, 18);
+  assert.equal(new Set(RAW_VESSELS.map((c) => c.id)).size, 18);
+  assert.ok(RAW_VESSELS.every((c) => c.category === "vessel"));
+});
+
+test("the shipped Action and Relic set is valid and typed", () => {
+  assert.deepEqual(validateCatalog(RAW_CARDS).errors, []);
+  assert.equal(RAW_EXTRAS.length, 12);
+  const actions = RAW_EXTRAS.filter((c) => c.category === "action");
+  const relics = RAW_EXTRAS.filter((c) => c.category === "relic");
+  assert.equal(actions.length, 8);
+  assert.equal(relics.length, 4);
+  assert.ok(actions.every((c) => typeof c.effect?.kind === "string"));
+  assert.ok(relics.every((c) => typeof c.effect?.kind === "string"));
+  assert.equal(CATALOG.cards.length, 30);
 });
 
 test("malformed content is rejected with a specific error", () => {
+  const byId = (cards, id) => cards.find((c) => c.id === id);
   const cases = [
     {
       name: "duplicate id",
@@ -67,6 +80,48 @@ test("malformed content is rejected with a specific error", () => {
       },
       match: /abilities must be an array/,
     },
+    {
+      name: "action without an effect",
+      mutate: (cards) => {
+        delete byId(cards, "action_ember_lance").effect;
+      },
+      match: /requires a typed effect object/,
+    },
+    {
+      name: "action with an unknown effect kind",
+      mutate: (cards) => {
+        byId(cards, "action_ember_lance").effect = { kind: "runScript" };
+      },
+      match: /unknown effect kind/,
+    },
+    {
+      name: "action effect borrowed from the Relic scope",
+      mutate: (cards) => {
+        byId(cards, "action_ember_lance").effect = { kind: "attackAura", amount: 1 };
+      },
+      match: /belongs to relic cards/,
+    },
+    {
+      name: "action with an illegal targeting mode",
+      mutate: (cards) => {
+        byId(cards, "action_ember_lance").targeting = "anywhere";
+      },
+      match: /action targeting must be one of/,
+    },
+    {
+      name: "action amount outside its range",
+      mutate: (cards) => {
+        byId(cards, "action_ember_lance").effect = { kind: "damage", amount: 40 };
+      },
+      match: /effect amount must be an integer between 1 and 12/,
+    },
+    {
+      name: "relic that pretends to have a target",
+      mutate: (cards) => {
+        byId(cards, "relic_ember_lens").targeting = "enemyUnit";
+      },
+      match: /relics are persistent and take no targeting field/,
+    },
   ];
 
   for (const scenario of cases) {
@@ -83,8 +138,9 @@ test("malformed content is rejected with a specific error", () => {
 
 test("createCatalog freezes definitions and refuses invalid input", () => {
   const catalog = createCatalog(cloneCards());
-  assert.equal(catalog.cards.length, 18);
+  assert.equal(catalog.cards.length, 30);
   assert.equal(Object.isFrozen(catalog.byId.get("vessel_ashen_crownblade")), true);
+  assert.equal(Object.isFrozen(catalog.byId.get("action_ember_lance").effect), true);
   assert.throws(() => {
     const cards = cloneCards();
     cards[0].element = "void";
@@ -92,31 +148,36 @@ test("createCatalog freezes definitions and refuses invalid input", () => {
   }, /Invalid card catalog/);
 });
 
-test("practice deck is 20-40 cards, at most three copies, ten-plus Vessels", () => {
-  const deck = buildPracticeDeck(CATALOG, 2);
-  assert.equal(deck.length, 36);
-  const practice = validateDeck(deck, CATALOG, PRACTICE_DECK_RULES);
-  assert.equal(practice.ok, true, practice.errors.join(" | "));
-  assert.equal(practice.counts.vessels, 36);
-  assert.ok(Math.max(...Object.values(practice.counts.copies)) <= DECK_RULES.maxCopies);
-
-  // Documented M1 gap: the canonical Action minimum cannot be met yet.
-  const canonical = validateDeck(deck, CATALOG, DECK_RULES);
-  assert.equal(canonical.ok, false);
-  assert.ok(canonical.errors.some((e) => /at least 5 Actions/.test(e)));
+test("the practice deck satisfies the canonical rules with no exception", () => {
+  const deck = buildPracticeDeck(CATALOG);
+  assert.equal(deck.length, 38);
+  const checked = validateDeck(deck, CATALOG, DECK_RULES);
+  assert.equal(checked.ok, true, checked.errors.join(" | "));
+  assert.equal(checked.counts.vessels, 18);
+  assert.equal(checked.counts.actions, 16);
+  assert.equal(checked.counts.relics, 4);
+  assert.ok(checked.counts.actions >= DECK_RULES.minActions);
+  assert.ok(Math.max(...Object.values(checked.counts.copies)) <= DECK_RULES.maxCopies);
 });
 
-test("deck validation catches size, copy, ownership-unknown and type errors", () => {
-  const tooSmall = validateDeck(buildPracticeDeck(CATALOG, 1), CATALOG, PRACTICE_DECK_RULES);
+test("a deck without Actions is now rejected by the canonical rules", () => {
+  const vesselsOnly = [...RAW_VESSELS.map((c) => c.id), ...RAW_VESSELS.map((c) => c.id)];
+  const result = validateDeck(vesselsOnly, CATALOG, DECK_RULES);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((e) => /at least 5 Actions/.test(e)));
+});
+
+test("deck validation catches size, copy and unknown-card errors", () => {
+  const tooSmall = validateDeck(["vessel_ashen_crownblade"], CATALOG, DECK_RULES);
   assert.equal(tooSmall.ok, false);
   assert.ok(tooSmall.errors.some((e) => /between 20 and 40/.test(e)));
 
   const tooManyCopies = new Array(21).fill("vessel_ashen_crownblade");
-  const copies = validateDeck(tooManyCopies, CATALOG, PRACTICE_DECK_RULES);
+  const copies = validateDeck(tooManyCopies, CATALOG, DECK_RULES);
   assert.equal(copies.ok, false);
   assert.ok(copies.errors.some((e) => /3-copy limit/.test(e)));
 
-  const unknown = validateDeck(["vessel_not_real", ...buildPracticeDeck(CATALOG, 2)], CATALOG, PRACTICE_DECK_RULES);
+  const unknown = validateDeck(["vessel_not_real", ...buildPracticeDeck(CATALOG)], CATALOG, DECK_RULES);
   assert.equal(unknown.ok, false);
   assert.ok(unknown.errors.some((e) => /Unknown card id/.test(e)));
 });

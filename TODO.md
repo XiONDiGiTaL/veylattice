@@ -43,14 +43,22 @@ Evidence: browser play at `/Veylattice/` (AI summoned, moved, attacked, traded a
 
 ## M2 - Cards, decks and Practice (P1)
 
-### M2-001 | TODO | Typed effects and Actions/Relics
-Depends on M1-003, M1-004. Paths: src/game/effects/, src/cards/, tests/.
-Acceptance: allowlisted effect queue with explicit ordering and resolution limit; damage/heal/draw/revive/return/death-trigger effects; revive clears temporary buffs and enters unready; no executable card code; tested simultaneous death, buff expiry and loop protection.
+### M2-001 | IN_PROGRESS | Typed effects and Actions/Relics
+Depends on M1-003, M1-004. Paths: src/cards/actions-relics.json, src/game/content.js, src/game/engine.js, tests/cards.test.js.
+Acceptance: allowlisted effect vocabulary with no executable card code; damage/heal/draw/buff effects; relic auras; tested rejections; remaining families still outstanding.
 
-### M2-002 | TODO | Canonical deck validation and prebuilt decks
-Depends on M2-001. Paths: src/cards/, src/game/content.js, tests/.
-Acceptance: switch `createMatch` to `DECK_RULES` (20-40 cards, ≥10 Vessels, ≥5 Actions, ≤3 copies) and delete the `PRACTICE_DECK_RULES` exception once Actions ship; at least three validated archetypes; ownership-aware validation remains a backend concern.
-Blocker: starter content has zero Actions; this is why the practice profile exists.
+#### M2-001a | DONE | Action and Relic slice
+Acceptance met: closed `EFFECT_KINDS` vocabulary with per-kind scope and numeric ranges validated at catalog build and frozen; 8 Actions (`damage`, `damageAll`, `heal`, `buff`, `draw`, `nexusDamage`) and 4 Relics (`attackAura`, `armorAura`, `mendAura`, `guardAura`); `playAction`/`playRelic` commands behind the same `applyCommand` validator; targets enumerated by `actionTargetsFor` and shared by HUD and AI; two-Relic cap; aura aggregation in one `relicAuras` helper used by attacks, Nexus damage, turn start and summons.
+Evidence: 69/69 tests, including elemental Action damage, heal capping, permanent buffs, sweep packets, armour reduction, wrong-side/missing targets, Relic cap, and aura timing on existing and future Vessels.
+Outstanding for full M2-001: effect **queue** with explicit ordering and a resolution limit; revive/return/death-trigger effects; temporary buff expiry; loop protection; tested simultaneous-death ordering.
+
+### M2-002 | IN_PROGRESS | Canonical deck validation and prebuilt decks
+Depends on M2-001. Paths: src/cards/, src/game/content.js, tests/content.test.js.
+Acceptance: `createMatch` uses `DECK_RULES` (20-40 cards, ≥10 Vessels, ≥5 Actions, ≤3 copies) with the practice exception deleted; at least three validated archetypes; ownership-aware validation remains a backend concern.
+
+#### M2-002a | DONE | Canonical rules enforced, exception removed
+Acceptance met: `PRACTICE_DECK_RULES` deleted from constants, engine and tests; `createMatch` defaults to `DECK_RULES`; the practice deck is 38 cards (18 Vessels + 16 Actions + 4 Relics) and validates under the canonical rules; a vessel-only deck is rejected with `Deck needs at least 5 Actions`.
+Outstanding: three named, validated prebuilt deck archetypes and a deck-building UI.
 
 ### M2-003 | DONE | Legal tactical AI
 Depends on M1-005. Paths: src/game/ai.js, src/game/engine.js (`attacksFromCell`, `lineOfSightOnBoard`, `canStrikeNexusFrom`), src/main.js, tests/ai.test.js.
@@ -65,8 +73,20 @@ Evidence: 53/53 tests; live RPC verification (insert 200, read 200, wrong token 
 Not claimed: not an authentication system. No cross-device sign-in, recovery or ownership transfer; no abuse rate limiting (see M2-005).
 
 ### M2-005 | TODO | Cloud write abuse guard
-Depends on M2-004. Paths: supabase/migrations/, src/net/profile.js.
-Acceptance: bounded profile creation per IP/window or a captcha-equivalent gate; documented retention/cleanup for abandoned profiles; a test or documented manual check demonstrating the guard. Blocker: requires a trusted edge/server component; a browser cannot enforce this.
+Depends on M2-004, M2-006. Paths: supabase/migrations/, src/net/profile.js, src/net/account.js.
+Acceptance: bounded profile and account creation per IP/window, plus a load attempt limit for recovery codes, or a captcha-equivalent gate; documented retention/cleanup for abandoned rows; a test or documented manual check demonstrating the guard. Blocker: requires a trusted edge/server component; a browser cannot enforce this.
+
+### M2-006 | DONE | Portable accounts and cross-device progress
+Depends on M2-004. Paths: src/net/account.js, src/net/rpc.js, src/net/profile.js, src/main.js, index.html, supabase/migrations/0002_accounts.sql, docs/ACCOUNTS.md.
+Acceptance met: server-minted 100-bit recovery code stored only as a SHA-256 digest; create/load/save/rotate RPCs behind RLS with no table grants; signed-in saves replace device saves; signing out leaves the account intact; the UI shows the code, supports copy, rotation and sign-out, and states the provider limitation instead of rendering dead buttons.
+Evidence: live database flow verified (direct read 401, wrong code null, wrong-code save 401, correct save ok, rotation invalidates the old code); browser round trip — create, rename to *Lattice Adept*, sign out, rename guest to *Guest Only*, sign back in, *Lattice Adept* restored. Test rows deleted.
+Not claimed: no Google/Discord sign-in (providers disabled and credentials unavailable — see docs/ACCOUNTS.md); no throttling on load attempts (see M2-005).
+
+### M2-007 | DONE | Voxel combat presentation
+Depends on M1-005, M2-001a. Paths: src/main.js (`playEvents`), styles.css.
+Acceptance met: CSS voxel cubes per unit; attack lunges driven by pre-command snapshots; impact flash and shake; floating damage numbers with advantage/retaliation variants; Guard values counted down rather than swapped; lethal hits leave a crumbling ghost chip; Nexus strikes shake the board; Action casts, heals, buffs and summons have distinct feedback; reduced-motion and the in-game toggle skip everything.
+Evidence: browser checks confirmed `.fx-lunge`, `.fx-hit`, `.dmg-float`, `.dmg-float.retaliation`, `.fx-ghost`, `.fx-spawn`, `.fx-cast-hit`, `.fx-shake` appearing during real engine events, and a Guard value animating `5/8 → 2/8` mid-tick.
+Not claimed: no sprite or GLB models; units are CSS cubes on a tile, and no animation frame was captured as a screenshot (transient effects outlive the capture latency).
 
 ### M3-001 | TODO | Stash, deck builder, shop, Singles and recycling UI
 Depends on M2-002. Paths: UI, collection modules, tests/.

@@ -20,6 +20,7 @@ import {
   canStrikeNexusFrom,
   getLegalActions,
   lineOfSightOnBoard,
+  relicAuras,
 } from "./engine.js";
 import { previewDamage } from "./elemental-rules.js";
 import { BOARD_SIZE, enemyHomeRow } from "./constants.js";
@@ -169,6 +170,9 @@ export function buildObservation(state, seat) {
       instanceId: card.instanceId,
       cardId: card.cardId,
       name: def?.name ?? card.cardId,
+      category: def?.category ?? null,
+      targeting: def?.targeting ?? null,
+      effect: def?.effect ?? null,
       cost: def?.cost ?? 0,
       element: def?.element ?? null,
       attack: def?.attack ?? 0,
@@ -176,6 +180,12 @@ export function buildObservation(state, seat) {
       movement: def?.movement ?? 0,
       range: def?.range ?? 0,
     };
+  });
+  const ownAuras = relicAuras(state, seat);
+  const foeAuras = relicAuras(state, seat === 0 ? 1 : 0);
+  const ownRelics = own.relics.map((relic) => {
+    const def = state.catalog.get(relic.cardId);
+    return { cardId: relic.cardId, name: def?.name ?? relic.cardId, effect: def?.effect ?? null };
   });
   return {
     seat,
@@ -191,6 +201,9 @@ export function buildObservation(state, seat) {
       handCount: hand.length,
       deckCount: own.deck.length,
       discardCount: own.discard.length,
+      attackBonus: ownAuras.attack,
+      nexusArmor: ownAuras.armor,
+      relics: ownRelics,
       hand,
     },
     foe: {
@@ -200,6 +213,10 @@ export function buildObservation(state, seat) {
       discardCount: foe.discard.length,
       unitCount: units.filter((u) => u.owner !== seat).length,
       relicCount: foe.relics.length,
+      // Relics are open information: they sit on the table, visible to both
+      // seats. Hand and deck contents are never exposed.
+      nexusArmor: foeAuras.armor,
+      relicEffectKinds: foe.relics.map((relic) => state.catalog.get(relic.cardId)?.effect?.kind ?? null),
     },
     units: units.map(publicUnit),
     board: state.board.slice(),
@@ -279,6 +296,37 @@ export function buildCandidates(state, seat, options = {}) {
     }
   }
 
+  for (const action of actions.actions) {
+    if (action.targeting === "none") {
+      plans.push({
+        kind: "playAction",
+        instanceId: action.instanceId,
+        cardId: action.cardId,
+        targetId: null,
+        commands: [{ type: "playAction", instanceId: action.instanceId }],
+      });
+      continue;
+    }
+    for (const targetId of action.targetIds) {
+      plans.push({
+        kind: "playAction",
+        instanceId: action.instanceId,
+        cardId: action.cardId,
+        targetId,
+        commands: [{ type: "playAction", instanceId: action.instanceId, targetId }],
+      });
+    }
+  }
+
+  for (const relic of actions.relics) {
+    plans.push({
+      kind: "playRelic",
+      instanceId: relic.instanceId,
+      cardId: relic.cardId,
+      commands: [{ type: "playRelic", instanceId: relic.instanceId }],
+    });
+  }
+
   if (actions.canMulligan) {
     for (const card of state.players[seat].hand) {
       plans.push({
@@ -326,8 +374,13 @@ function threatAt(observation, seat, cell) {
  * destination cell of a preceding move).
  */
 function evaluateAttack(observation, attacker, target, origin, difficulty, weights) {
+  // Relic attack auras apply to this seat's Vessel attacks, so score the
+  // effective Attack the engine will actually use.
+  const power = attacker.attack + (observation.own.attackBonus ?? 0);
   if (target.type === "nexus") {
-    const damage = Math.max(0, attacker.attack);
+    const armor = observation.foe.nexusArmor ?? 0;
+    const raw = Math.max(0, power);
+    const damage = raw <= 0 ? 0 : armor > 0 ? Math.max(1, raw - armor) : raw;
     const lethal = damage >= observation.foe.vitality;
     return {
       score: lethal ? 1000 : damage * 2.2 * weights.nexusFocus,
@@ -342,7 +395,7 @@ function evaluateAttack(observation, attacker, target, origin, difficulty, weigh
   const defender = observation.units.find((u) => u.id === target.unitId);
   if (!defender) return null;
 
-  const packet = previewDamage(attacker.attack, attacker.element, defender.element);
+  const packet = previewDamage(power, attacker.element, defender.element);
   const dealt = Math.min(packet.damage, defender.guard);
   const kills = defender.guard - packet.damage <= 0;
   const distance = distanceBetween(origin, defender);
@@ -424,6 +477,86 @@ function enemyResponsePenalty(observation, unit, cell, weights) {
 }
 
 /**
+ * Score a one-shot Action. Pure, and restricted to public information plus
+ * the AI's own hand.
+ */
+function evaluateAction(observation, card, targetId, weights) {
+  const effect = card?.effect;
+  if (!effect) return { score: -Infinity };
+  const cost = card.cost ?? 0;
+  const own = observation.seat;
+
+  if (effect.kind === "damage" || effect.kind === "heal" || effect.kind === "buff") {
+    const target = observation.units.find((u) => u.id === targetId);
+    if (!target) return { score: -Infinity };
+    const friendly = target.owner === own;
+
+    if (effect.kind === "damage") {
+      if (friendly) return { score: -Infinity };
+      const packet = previewDamage(effect.amount, card.element, target.element);
+      const dealt = Math.min(packet.damage, target.guard);
+      const kills = target.guard - packet.damage <= 0;
+      let score = dealt * 1.2 + (kills ? unitValue(target) * 1.15 : 0) - cost * 0.35;
+      if (packet.relation === "advantage") score += 1.5 * weights.elementPlay;
+      if (kills && observation.foe.unitCount === 1) score += 8 * weights.nexusFocus;
+      return { score, kills, damage: dealt, relation: packet.relation };
+    }
+
+    if (effect.kind === "heal") {
+      if (!friendly) return { score: -Infinity };
+      const healed = Math.min(Math.max(0, target.maxGuard - target.guard), effect.amount);
+      // Healing an undamaged Vessel does literally nothing: never offer it.
+      if (healed <= 0) return { score: -Infinity };
+      return { score: healed * 0.85 * weights.defense - cost * 0.25, healed };
+    }
+
+    if (!friendly) return { score: -Infinity };
+    return {
+      score:
+        (effect.attack ?? 0) * 1.4 * weights.aggression +
+        (effect.guard ?? 0) * 0.8 * weights.defense -
+        cost * 0.3,
+    };
+  }
+
+  switch (effect.kind) {
+    case "damageAll": {
+      const enemies = observation.units.filter((unit) => unit.owner !== own);
+      // A board wipe against an empty board is a wasted card, not a style choice.
+      if (enemies.length === 0) return { score: -Infinity };
+      let score = -cost * 0.35;
+      let kills = 0;
+      for (const unit of enemies) {
+        const packet = previewDamage(effect.amount, card.element, unit.element);
+        score += Math.min(packet.damage, unit.guard) * 1.1;
+        if (unit.guard - packet.damage <= 0) {
+          kills += 1;
+          score += unitValue(unit) * 1.1;
+        }
+      }
+      return { score, kills };
+    }
+    case "nexusDamage": {
+      const armor = observation.foe.nexusArmor ?? 0;
+      const damage = armor > 0 ? Math.max(1, effect.amount - armor) : effect.amount;
+      const lethal = damage >= observation.foe.vitality;
+      return {
+        score: lethal ? 1000 : damage * 2.3 * weights.nexusFocus - cost * 0.3,
+        lethal,
+        damage,
+      };
+    }
+    case "draw":
+      if (observation.own.deckCount === 0) return { score: -Infinity };
+      return { score: effect.amount * 1.9 - cost * 0.3 };
+    default:
+      return { score: -Infinity };
+  }
+}
+
+const RELIC_VALUE = Object.freeze({ attackAura: 4, armorAura: 3, guardAura: 2.5, mendAura: 2.5 });
+
+/**
  * Score one plan. Pure: observation plus candidate, no match state.
  */
 export function evaluatePlan(plan, observation, difficulty, weights) {
@@ -471,6 +604,17 @@ export function evaluatePlan(plan, observation, difficulty, weights) {
           ? enemyResponsePenalty(observation, unit, plan.cell, weights)
           : 0;
       return { ...position, score: position.score - response - 0.4 };
+    }
+    case "playAction": {
+      const card = observation.own.hand.find((c) => c.instanceId === plan.instanceId);
+      if (!card) return { score: -Infinity };
+      return evaluateAction(observation, card, plan.targetId, weights);
+    }
+    case "playRelic": {
+      const card = observation.own.hand.find((c) => c.instanceId === plan.instanceId);
+      if (!card) return { score: -Infinity };
+      const base = RELIC_VALUE[card.effect?.kind] ?? 2;
+      return { score: base - (card.cost ?? 0) * 0.4 };
     }
     case "mulligan": {
       const card = observation.own.hand.find((c) => c.cardId === plan.cardId);
@@ -585,6 +729,10 @@ export function describePlan(plan) {
       return "Repositioning, then attacking.";
     case "move":
       return "Repositioning.";
+    case "playAction":
+      return "Casting an Action.";
+    case "playRelic":
+      return "Setting a Relic.";
     case "mulligan":
       return "Using a mulligan.";
     case "endTurn":

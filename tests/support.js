@@ -15,9 +15,12 @@ import { createMatch, createUnit, insertUnit, cellIndex, applyCommand } from "..
 import { TURN_MS } from "../src/game/constants.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const starterPath = path.join(here, "..", "src", "cards", "starter-set.json");
+const readCards = (name) =>
+  JSON.parse(readFileSync(path.join(here, "..", "src", "cards", name), "utf8"));
 
-export const RAW_CARDS = JSON.parse(readFileSync(starterPath, "utf8"));
+export const RAW_VESSELS = readCards("starter-set.json");
+export const RAW_EXTRAS = readCards("actions-relics.json");
+export const RAW_CARDS = [...RAW_VESSELS, ...RAW_EXTRAS];
 export const CATALOG = createCatalog(RAW_CARDS);
 
 export const CARD = Object.fromEntries(CATALOG.cards.map((c) => [c.id, c]));
