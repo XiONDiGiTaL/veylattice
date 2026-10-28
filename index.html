@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111426">
+<meta name="description" content="Veylattice: an original tactical elemental card battler."><title>Veylattice | Tactical Card Battler</title><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="topbar"><div><p class="eyebrow">TACTICAL CARD BATTLER</p><h1>VEY<span>LATTICE</span></h1></div><div class="top-actions"><span class="pill">EARLY PROTOTYPE</span><button id="restart-btn" class="button secondary">New Match</button></div></header>
+<main><section class="status-strip"><div class="player-stat"><span class="label">OPPONENT VITALITY</span><strong id="enemy-vitality">30</strong></div><div class="center-stat"><span class="label">TURN</span><strong id="turn-number">1</strong><span id="turn-owner">Your turn</span></div><div class="player-stat align-right"><span class="label">YOUR VITALITY</span><strong id="player-vitality">30</strong></div></section>
+<section class="game-layout"><aside class="side-panel"><div class="panel-heading"><h2>Flux</h2><span id="flux-count">1 / 1</span></div><div id="flux-track" class="flux-track"></div><p class="muted">Flux refills at the start of your turn. Maximum increases by one each turn.</p><div class="divider"></div><h3>Selected card</h3><div id="selected-card" class="selected-card empty">Choose a card from your hand.</div><p id="game-message" class="message" role="status" aria-live="polite">Select a Vessel, then choose an empty square on your half of the board.</p><button id="end-turn-btn" class="button primary full">End Turn</button></aside>
+<section class="board-section"><div class="board-caption"><span>THE VEYLATTICE</span><span>7 × 7 GRID</span></div><div id="board" class="board" role="grid" aria-label="Tactical battlefield"></div><div class="legend"><span><i class="legend-dot friendly"></i>Your Vessels</span><span><i class="legend-dot enemy"></i>Opponent Vessels</span><span><i class="legend-dot legal"></i>Legal square</span></div></section></section>
+<section class="hand-section"><div class="section-title"><div><p class="eyebrow">YOUR HAND</p><h2>Cards in hand <span id="hand-count">5</span></h2></div><div class="deck-count">Deck <strong id="deck-count">25</strong></div></div><div id="hand" class="hand" aria-label="Cards in hand"></div></section><footer><span>VEY LATTICE · HTML PROTOTYPE</span><span>Rules and balance are provisional.</span></footer></main>
+<script type="module" src="./src/main.js"></script></body></html>
