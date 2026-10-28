@@ -5,13 +5,15 @@
 - Repository: `XiONDiGiTaL/Veylattice` → **renamed to lowercase `XiONDiGiTaL/veylattice`** in session S-M2-B so the
   GitHub Pages path matches the published URL. GitHub keeps redirects for the old slug.
 - Branch: `main`. Remote: `https://github.com/XiONDiGiTaL/veylattice.git`.
-- The M1 change set (S-M1-A) and the M2-003/M2-004 change set (S-M2-B) are committed together as
-  `1bb92f7` (`feat: tactical AI opponent, player profiles and cloud persistence`), pushed to
-  `origin/main`.
+- Commits: `1bb92f7` (S-M2-B: AI, profiles, cloud persistence) and `00575e7` (S-M2-C: Actions,
+  Relics, accounts, combat presentation), both pushed to `origin/main`.
 - Live site: **https://xiondigital.net/veylattice/** (GitHub Pages project site under the account's
-  existing Pages custom domain). Verified after the build: `/` and every asset returned 200, the page
-  booted with 49 cells and 6 cards, the AI took its turn through the deployed bundle, and a profile
-  write returned `200` from the live origin with no console errors.
+  existing Pages custom domain). After S-M2-C: `/`, both card JSON files, `src/main.js`,
+  `src/net/account.js`, `src/net/rpc.js`, `src/game/engine.js` and `styles.css` all returned 200, the
+  base site still returned 200, a fresh-cache load rendered Action/Vessel kinds and the account panel
+  with no console errors, and a Lodestone Survey cast succeeded on the live origin.
+- Pages caches JS for up to four hours (`max-age=14400`), so a warm browser can briefly run a cached
+  module against new HTML. If behaviour looks stale after a deploy, hard-refresh before debugging.
 - GitHub Pages settings: source `main`, path `/`, `https_enforced` was requested but the API returned
   `https_enforced: false`; the site nevertheless serves HTTPS (certificate approved for
   `xiondigital.net`/`www.xiondigital.net`). Re-check the enforce-HTTPS toggle in repository settings.
