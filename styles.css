@@ -1262,3 +1262,675 @@ body.reduce-motion * {
 @media (prefers-reduced-motion: reduce) {
   .cell.target::after { animation: none; }
 }
+
+/* ==================================================================
+   Main menu
+   ================================================================== */
+
+.brand-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.brand-word {
+  display: block;
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.brand-word span { color: var(--accent); }
+
+.view[hidden] { display: none; }
+
+.menu-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(20px, 4vw, 56px);
+  align-items: center;
+  padding: clamp(18px, 4vw, 48px) 0;
+}
+
+.menu-title {
+  margin: 6px 0 12px;
+  font-size: clamp(30px, 5vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  background: linear-gradient(120deg, #e8ecf8 25%, var(--accent) 70%, var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.menu-lede {
+  max-width: 56ch;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.menu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 22px 0 10px;
+}
+
+.button.large { padding: 14px 22px; font-size: 14px; }
+
+.button.accent {
+  background: linear-gradient(140deg, rgba(110, 231, 168, 0.22), rgba(122, 215, 255, 0.22));
+  border-color: rgba(110, 231, 168, 0.5);
+}
+
+.menu-secondary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.menu-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(20, 24, 39, 0.62);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+}
+
+.menu-link:hover {
+  border-color: var(--accent);
+  background: rgba(26, 32, 51, 0.85);
+  transform: translateY(-2px);
+}
+
+.menu-link span { font-size: 12px; color: var(--muted); }
+
+.menu-unavailable {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(42, 51, 80, 0.8);
+}
+
+.menu-stage {
+  position: relative;
+  min-height: clamp(220px, 25vw, 320px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(60% 50% at 50% 78%, rgba(122, 215, 255, 0.16), transparent 70%),
+    linear-gradient(180deg, #0e1322, #0a0e1a 70%);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 20px 16px 34px;
+  perspective: 900px;
+}
+
+.menu-models {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 34px);
+  width: 100%;
+  transform-style: preserve-3d;
+}
+
+.menu-model {
+  --u-base: clamp(4.6px, 1vw, 8px);
+  width: calc(var(--u-base) * 15);
+  display: grid;
+  align-items: end;
+  justify-items: center;
+}
+.menu-model:nth-child(2) { --u-base: clamp(5.8px, 1.35vw, 10.5px); }
+.menu-model:nth-child(3) { --u-base: clamp(4.2px, 0.9vw, 7px); }
+.menu-model .vox-model { animation: vox-breathe 4.4s ease-in-out infinite; }
+.menu-model:nth-child(2) .vox-model { animation-delay: -1.2s; }
+.menu-model:nth-child(3) .vox-model { animation-delay: -2.1s; }
+.menu-model:nth-child(4) .vox-model { animation-delay: -0.6s; }
+
+.menu-stage-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background:
+    repeating-linear-gradient(90deg, rgba(122, 215, 255, 0.11) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(180deg, rgba(122, 215, 255, 0.11) 0 1px, transparent 1px 26px),
+    linear-gradient(180deg, transparent, rgba(10, 14, 26, 0.9));
+  pointer-events: none;
+}
+
+/* ==================================================================
+   Voxel models (CSS 3D)
+   ================================================================== */
+
+.model-stage {
+  --u-base: 3.4px;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  perspective: 340px;
+}
+
+.vox-model {
+  --u: calc(var(--u-base, 2.4px) * var(--scale, 1));
+  position: relative;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(-15deg) rotateY(-33deg);
+  pointer-events: none;
+}
+
+.vox-body {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: vox-breathe 3.8s ease-in-out infinite;
+}
+
+.vox-group {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.vox-box {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--h);
+  transform-style: preserve-3d;
+  transform: var(--t) translate(-50%, -50%);
+}
+
+.vox-face {
+  position: absolute;
+  display: block;
+  background: var(--c);
+  border: 1px solid rgba(6, 9, 18, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.vox-front {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateZ(calc(var(--d) / 2));
+}
+
+.vox-right {
+  width: var(--d);
+  height: 100%;
+  left: calc((var(--w) - var(--d)) / 2);
+  top: 0;
+  transform: translateX(calc(var(--w) / 2)) rotateY(90deg);
+  filter: brightness(0.66);
+}
+
+.vox-top {
+  width: 100%;
+  height: var(--d);
+  left: 0;
+  top: calc((var(--h) - var(--d)) / 2);
+  transform: translateY(calc(var(--h) / -2)) rotateX(90deg);
+  filter: brightness(1.22);
+}
+
+.vox-box.is-glow .vox-front,
+.vox-box.is-eye .vox-front {
+  box-shadow: 0 0 7px var(--c);
+}
+
+.vox-box.is-accent .vox-front { filter: brightness(1.1); }
+
+.model-shadow {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 44%;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
+  pointer-events: none;
+}
+
+@keyframes vox-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(calc(var(--u) * -0.6)); }
+}
+
+/* Floating Vessels hover higher and settle more slowly. */
+.cell .unit.spirit .vox-body,
+.cell .unit.otherworldly .vox-body { animation-duration: 5.2s; }
+
+@keyframes vox-attack {
+  0% { transform: translateY(0) rotateZ(0deg); }
+  30% { transform: translateY(calc(var(--u) * -1.4)) rotateZ(-7deg); }
+  60% { transform: translateY(calc(var(--u) * 0.4)) rotateZ(5deg); }
+  100% { transform: translateY(0) rotateZ(0deg); }
+}
+
+.cell.fx-lunge .vox-body { animation: vox-attack 380ms cubic-bezier(0.3, 0.9, 0.3, 1); }
+.cell.fx-hit .vox-body { animation: vox-flinch 320ms ease-in-out; }
+
+@keyframes vox-flinch {
+  0%, 100% { transform: translateY(0) rotateZ(0deg); }
+  25% { transform: translateY(calc(var(--u) * 0.8)) rotateZ(6deg); }
+  60% { transform: translateY(calc(var(--u) * 0.4)) rotateZ(-4deg); }
+}
+
+.cell.fx-spawn .vox-body { animation: vox-summon 340ms ease-out; }
+
+@keyframes vox-summon {
+  0% { opacity: 0; transform: translateY(calc(var(--u) * 4)) scale(0.6); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* The unit tile keeps its numbers readable underneath the model. */
+.unit {
+  position: relative;
+  justify-content: flex-end;
+  gap: 1px;
+  padding: 2px 3px 3px;
+}
+
+.unit-name {
+  display: block;
+  padding-right: 0;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unit-stats {
+  display: flex;
+  gap: 4px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.unit-stats .stat.atk::before { content: "ATK "; color: var(--muted); }
+.unit-stats .stat.gd::before { content: "GD "; color: var(--muted); }
+.unit-stats .stat { font-variant-numeric: tabular-nums; }
+
+.unit-name,
+.unit-stats { position: relative; z-index: 2; }
+
+/* Element and readiness become corner markers so the model gets the centre. */
+.unit .element-badge {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 3;
+  background: rgba(10, 14, 26, 0.72);
+}
+
+.unit-flag {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 3;
+  padding: 1px 3px;
+  border-radius: 4px;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  background: rgba(10, 14, 26, 0.72);
+}
+
+/* Only your own unready Vessels are dimmed; enemy units are unready by
+   definition while it is your turn, so dimming them would be noise. */
+.unit.friendly.unready .model-stage { opacity: 0.6; }
+.unit.friendly.unready .unit-name { color: var(--muted); }
+
+.legend-dot.unready { background: #6c789c; }
+
+.guard-bar {
+  position: relative;
+  z-index: 2;
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(10, 14, 26, 0.85);
+  overflow: hidden;
+}
+
+.guard-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ok), var(--accent));
+  transition: width 260ms ease;
+}
+
+.unit.enemy .guard-bar i { background: linear-gradient(90deg, #ff9aa4, var(--danger)); }
+
+/* ==================================================================
+   Board zones
+   ================================================================== */
+
+.board-wrap {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+  width: min(100%, 680px);
+}
+
+.board-wrap .board { width: 100%; }
+
+.board-gutter { position: relative; }
+
+.gutter-label {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: #55628c;
+  text-align: center;
+}
+
+.gutter-label.enemy { color: rgba(255, 138, 149, 0.75); }
+.gutter-label.friendly { color: rgba(122, 215, 255, 0.8); }
+
+/* Zone tints use :where() so the interaction colours below always win. */
+:where(.cell).zone-opponent {
+  background: linear-gradient(180deg, rgba(255, 107, 122, 0.10), rgba(15, 21, 36, 0.95));
+  border-color: #38263a;
+}
+
+:where(.cell).zone-contested {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 209, 102, 0.07) 0 5px, rgba(15, 21, 36, 0.95) 5px 10px);
+  border-color: #3a3626;
+}
+
+:where(.cell).zone-home {
+  background: linear-gradient(180deg, rgba(122, 215, 255, 0.09), rgba(15, 21, 36, 0.95));
+  border-color: #24384f;
+}
+
+:where(.cell).deploy-blocked {
+  border-style: dashed;
+  border-color: rgba(122, 215, 255, 0.4);
+  opacity: 0.62;
+}
+
+.cell.legal {
+  border-style: solid;
+  box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.5), 0 0 12px rgba(110, 231, 168, 0.18);
+}
+
+/* ==================================================================
+   Back row, prompt bar, tutorial
+   ================================================================== */
+
+.back-row {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(181, 139, 255, 0.07), rgba(20, 24, 39, 0.6));
+  padding: 14px 16px;
+}
+
+.back-row-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.relic-slot {
+  border: 1px dashed rgba(122, 215, 255, 0.35);
+  border-radius: 10px;
+  min-height: 84px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  background: rgba(12, 16, 28, 0.6);
+}
+
+.relic-slot.filled {
+  border-style: solid;
+  border-color: var(--accent-2);
+  background: linear-gradient(150deg, rgba(181, 139, 255, 0.18), rgba(12, 16, 28, 0.85));
+  box-shadow: 0 0 18px rgba(181, 139, 255, 0.15);
+}
+
+.slot-index {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: #6c789c;
+}
+
+.slot-body { display: flex; flex-direction: column; gap: 2px; }
+.slot-body strong { font-size: 14px; }
+.slot-element { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.slot-effect { font-size: 11px; color: var(--muted); }
+.slot-empty { margin: 0; font-size: 12px; color: #5b678c; }
+
+.turn-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(11, 13, 22, 0.94);
+  backdrop-filter: blur(6px);
+}
+
+.message {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  color: #d5ddf3;
+}
+
+.message::before {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  vertical-align: 1px;
+  border: 1px solid currentColor;
+  color: var(--muted);
+}
+
+.message[data-state="idle"]::before { content: "READY"; }
+.message[data-state="deploy"]::before { content: "DEPLOY"; color: var(--ok); }
+.message[data-state="target"]::before { content: "TARGET"; color: var(--accent-2); }
+.message[data-state="command"]::before { content: "MOVE / ATTACK"; color: var(--accent); }
+.message[data-state="waiting"]::before { content: "OPPONENT"; color: var(--danger); }
+.message[data-state="over"]::before { content: "FINISHED"; color: var(--danger); }
+
+.tutorial-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(110, 231, 168, 0.45);
+  border-radius: var(--radius);
+  background: linear-gradient(120deg, rgba(110, 231, 168, 0.12), rgba(20, 24, 39, 0.75));
+}
+
+.tutorial-panel[hidden] { display: none; }
+.tutorial-copy { flex: 1; min-width: 0; }
+.tutorial-copy h3 { margin: 0 0 4px; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.tutorial-actions { display: flex; gap: 8px; }
+
+/* ==================================================================
+   How to Play and Roster
+   ================================================================== */
+
+.guide-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: clamp(14px, 3vw, 34px) 0 18px;
+}
+
+.guide-head h2 { font-size: clamp(20px, 3vw, 30px); }
+
+.guide-steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.guide-steps li {
+  counter-increment: step;
+  position: relative;
+  padding: 16px 18px 16px 52px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(20, 24, 39, 0.68);
+}
+
+.guide-steps li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.guide-steps h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.guide-steps p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
+
+.guide-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 20px 0 8px;
+}
+
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 14px;
+  padding-bottom: 30px;
+}
+
+.roster-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(20, 24, 39, 0.7);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-stage {
+  --u-base: 8px;
+  height: 176px;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding-bottom: 14px;
+  perspective: 700px;
+  background: radial-gradient(60% 46% at 50% 82%, rgba(122, 215, 255, 0.16), transparent 72%), linear-gradient(180deg, #0d1220, #0a0e1a);
+}
+
+.roster-card.fire .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(255, 133, 81, 0.2), transparent 72%), linear-gradient(180deg, #150e12, #0a0e1a); }
+.roster-card.water .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(99, 199, 255, 0.2), transparent 72%), linear-gradient(180deg, #0c1420, #0a0e1a); }
+.roster-card.earth .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(216, 178, 106, 0.2), transparent 72%), linear-gradient(180deg, #14110c, #0a0e1a); }
+.roster-card.metal .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(185, 198, 232, 0.2), transparent 72%), linear-gradient(180deg, #101420, #0a0e1a); }
+.roster-card.wood .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(111, 208, 140, 0.2), transparent 72%), linear-gradient(180deg, #0d150f, #0a0e1a); }
+
+.roster-meta { padding: 12px 14px 16px; border-top: 1px solid var(--line); }
+.roster-meta h3 { margin: 8px 0 4px; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.roster-meta p { margin: 0 0 10px; }
+
+.roster-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.roster-stats strong { color: var(--text); font-size: 13px; }
+
+.tab:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .menu-hero { grid-template-columns: minmax(0, 1fr); }
+  .menu-stage { order: -1; min-height: 220px; }
+}
+
+@media (max-width: 640px) {
+  .board-gutter { display: none; }
+  .board-wrap { grid-template-columns: minmax(0, 1fr); }
+  /* Phone tiles are ~43 px: let the model grow upward past the stage box so it
+     still reads, since the space above it only holds a corner badge. */
+  .model-stage { --u-base: 2.6px; overflow: visible; }
+  .unit-stats { font-size: 8px; gap: 2px; }
+  .unit-stats .stat.atk::before { content: "A"; }
+  .unit-stats .stat.gd::before { content: "G"; }
+  .unit-flag { display: none; }
+  .unit .element-badge { font-size: 7px; padding: 0 2px; }
+  .menu-model { --u-base: 3.4px; }
+  .menu-model:nth-child(2) { --u-base: 4.4px; }
+  .menu-model:nth-child(3) { --u-base: 3px; }
+  .roster-stage { --u-base: 4.2px; height: 132px; }
+  .back-row-slots { grid-template-columns: minmax(0, 1fr); }
+  .unit .guard-bar { height: 2px; }
+}

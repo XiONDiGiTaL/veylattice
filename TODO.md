@@ -86,7 +86,19 @@ Not claimed: no Google/Discord sign-in (providers disabled and credentials unava
 Depends on M1-005, M2-001a. Paths: src/main.js (`playEvents`), styles.css.
 Acceptance met: CSS voxel cubes per unit; attack lunges driven by pre-command snapshots; impact flash and shake; floating damage numbers with advantage/retaliation variants; Guard values counted down rather than swapped; lethal hits leave a crumbling ghost chip; Nexus strikes shake the board; Action casts, heals, buffs and summons have distinct feedback; reduced-motion and the in-game toggle skip everything.
 Evidence: browser checks confirmed `.fx-lunge`, `.fx-hit`, `.dmg-float`, `.dmg-float.retaliation`, `.fx-ghost`, `.fx-spawn`, `.fx-cast-hit`, `.fx-shake` appearing during real engine events, and a Guard value animating `5/8 → 2/8` mid-tick.
-Not claimed: no sprite or GLB models; units are CSS cubes on a tile, and no animation frame was captured as a screenshot (transient effects outlive the capture latency).
+Not claimed: no sprite or GLB assets; no animation frame was captured as a screenshot (transient effects outlive the capture latency). The unit *models* themselves were replaced under M2-009.
+
+### M2-008 | DONE | Main menu, How to Play and guided first match (UX-001)
+Depends on M1-005. Paths: index.html, styles.css, src/main.js, src/ui/tutorial.js, tests/tutorial.test.js.
+Acceptance met: the app boots to a menu and does not start a match by itself; Practice, Guided first match and a live-only Return to match; How to Play (8 steps) opens on a first visit and is always reachable; Vessel Roster page; Settings remains the profile view; "not in this build" items are labelled instead of offered as buttons; no active menu control is a dead end; a guided match runs on a real practice match and advances from engine events; Skip always available; `endTurn` always escapes a blocked step; contextual state prompt with Cancel and Escape; refusals name the rule that blocked them.
+Evidence: `npm test` -> 83/83 pass including the tutorial suite; browser run at `http://127.0.0.1:8123/` — first load opened How to Play, menu/roster/guide rendered with no console or network errors, tutorial advanced 1->4 in a live match and displayed its blocked-step hint.
+Not claimed: no in-match pause overlay (the header Menu button covers navigation); no per-archetype animated intro.
+
+### M2-009 | DONE | Unique voxel models for all 18 official Vessels
+Depends on M1-005. Paths: src/render/models.js, src/render/voxel.js, src/main.js, tests/models.test.js.
+Acceptance met: every official Vessel id has its own model definition (11-14 boxes, 2+ animation groups, unique silhouette); element palettes give each element its own material language and low quadrupeds carry an explicit scale; the board renders `data-model-id` per unit and the roster page renders the same modules; a missing model returns `null` and draws a labelled placeholder rather than a generic cube; models are presentation-only and cannot mutate a match.
+Evidence: `tests/models.test.js` (roster completeness, no shared silhouettes, palette-key validity, catalog/element agreement, five distinct element palettes, `null` for unknown ids); browser run showed six different Vessels rendering their own models on the board and all 18 on the roster page.
+Not claimed: CSS-3D boxes, not GLB meshes, so there is no skeletal animation — attacks lunge and tilt the body instead of swinging a limb; per-limb weapon swings, victory poses and a GLB pipeline remain for M7-004. There is no WebGL path to fall back from.
 
 ### M3-001 | TODO | Stash, deck builder, shop, Singles and recycling UI
 Depends on M2-002. Paths: UI, collection modules, tests/.
@@ -132,9 +144,10 @@ Acceptance: three authored pairings, orthogonal same-controller checks, nonstack
 Depends on M2-002, M7-002. Paths: creator/validation/persistence/UI/tests.
 Acceptance: deterministic paid-for power budget, safe editable/generated text, save/edit/delete/deck integration, no official bonds or reward eligibility; offline custom play separate from prebuilt Practice.
 
-### M7-004 | TODO | Unique voxel models and accessible frames
-Depends on M1-005; production integration follows stable rules. Paths: rendering/assets/UI; docs/UNIT_VISUAL_DESIGNS.md.
-Acceptance: 18 original identifiable silhouettes, appropriate animation states, legible elemental/rarity frames, actual tactical-camera review, measured mobile performance, reduced-motion support and asset provenance. Before model production starts, add docs/VOXEL_PIPELINE.md (construction, export, material and validation pipeline); docs/VOXEL_ART_BIBLE.md and docs/UNIT_VISUAL_DESIGNS.md already exist, docs/CARD_FRAMES.md covers frame direction.
+### M7-004 | IN_PROGRESS | Voxel models, animation states and accessible frames
+Depends on M1-005. Paths: rendering/assets/UI; docs/UNIT_VISUAL_DESIGNS.md.
+Delivered by M2-009: 18 original identifiable silhouettes, a dependency-free CSS-3D renderer, idle/attack/summon/damage states at the whole-body level, reduced-motion support, and a roster page that uses the same modules as the board.
+Remaining: per-limb animation (weapon swings, head turns), victory/defeat-specific poses, legible elemental/rarity card frames, a measured mobile performance pass, and either a documented voxel-to-GLB export pipeline (docs/VOXEL_PIPELINE.md) or a written decision to stay on CSS-3D. docs/VOXEL_ART_BIBLE.md and docs/UNIT_VISUAL_DESIGNS.md exist; docs/CARD_FRAMES.md covers frame direction.
 
 ### M7-005 | TODO | Keyboard and assistive control pass
 Depends on M1-005. Acceptance: arrow-key grid traversal, focus return after commands, screen-reader announcements for combat results, no hue-only signalling (element abbreviations already present).

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b0d16">
-<meta name="description" content="Veylattice: an original tactical elemental card battler with a deterministic rules engine and tactical AI opponents.">
+<meta name="description" content="Veylattice: an original tactical elemental card battler with a deterministic rules engine, tactical AI opponents and handcrafted voxel Vessels.">
 <meta name="color-scheme" content="dark">
 <title>Veylattice | Tactical Elemental Card Battler</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d16'/%3E%3Cpath d='M16 4l4 8 8 4-8 4-4 8-4-8-8-4 8-4z' fill='%237ad7ff'/%3E%3C/svg%3E">
@@ -12,14 +12,17 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">
-    <p class="eyebrow">TACTICAL ELEMENTAL CARD BATTLER</p>
-    <h1>VEY<span>LATTICE</span></h1>
-  </div>
+  <button class="brand brand-button" type="button" id="brand-home" title="Return to the main menu">
+    <span class="eyebrow">TACTICAL ELEMENTAL CARD BATTLER</span>
+    <span class="brand-word">VEY<span>LATTICE</span></span>
+  </button>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button id="tab-battle" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="view-battle">Battle</button>
-    <button id="tab-profile" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-profile">Profile &amp; Settings</button>
+    <button id="tab-menu" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="view-menu">Menu</button>
+    <button id="tab-battle" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-battle" disabled>Battle</button>
+    <button id="tab-guide" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-guide">How to Play</button>
+    <button id="tab-roster" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-roster">Roster</button>
+    <button id="tab-profile" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-profile">Settings</button>
   </nav>
 
   <div class="top-actions">
@@ -30,16 +33,142 @@
         <small id="profile-chip-sync">Local only</small>
       </span>
     </button>
-    <button id="restart-btn" class="button secondary" type="button">New Match</button>
   </div>
 </header>
 
 <main>
+  <!-- ============================ MAIN MENU ============================ -->
+  <section id="view-menu" class="view" role="tabpanel" aria-labelledby="tab-menu">
+    <div class="menu-hero">
+      <div class="menu-copy">
+        <p class="eyebrow">TACTICAL ELEMENTAL CARD BATTLER</p>
+        <h1 class="menu-title">Command the Lattice.</h1>
+        <p class="menu-lede">
+          Deploy elemental Vessels onto a 7×7 battlefield, spend Flux on Actions and Relics,
+          and break the enemy Nexus before yours falls. Every move is validated by one
+          deterministic rules engine — the AI plays through exactly the same gate you do.
+        </p>
+
+        <div class="menu-actions">
+          <button id="menu-continue" class="button primary large" type="button" hidden>
+            Return to match
+          </button>
+          <button id="menu-practice" class="button primary large" type="button">
+            Practice match
+          </button>
+          <button id="menu-tutorial" class="button accent large" type="button">
+            Guided first match
+          </button>
+        </div>
+        <p id="menu-context" class="muted small" role="status"></p>
+
+        <div class="menu-secondary">
+          <button id="menu-guide" class="menu-link" type="button">
+            <strong>How to Play</strong>
+            <span>Rules, board, Flux and combat in eight short steps</span>
+          </button>
+          <button id="menu-roster" class="menu-link" type="button">
+            <strong>Vessel Roster</strong>
+            <span>Inspect all 18 handcrafted voxel models</span>
+          </button>
+          <button id="menu-settings" class="menu-link" type="button">
+            <strong>Profile &amp; Settings</strong>
+            <span>Name, avatar, AI opponent, interface options</span>
+          </button>
+        </div>
+
+        <div class="menu-unavailable">
+          <p class="eyebrow">NOT IN THIS BUILD</p>
+          <p class="muted small">
+            Deck Builder · Collection · Shop · Online lobby. These are specified milestones,
+            not working features, so they are not offered as buttons.
+          </p>
+        </div>
+      </div>
+
+      <div class="menu-stage" aria-hidden="true">
+        <div id="menu-models" class="menu-models"></div>
+        <div class="menu-stage-floor"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ HOW TO PLAY ============================ -->
+  <section id="view-guide" class="view" role="tabpanel" aria-labelledby="tab-guide" hidden>
+    <div class="guide-head">
+      <div>
+        <p class="eyebrow">HOW TO PLAY</p>
+        <h2>Win by breaking the enemy Nexus</h2>
+        <p class="muted">
+          Both Nexuses start at 30 Vitality. Vessels do not win the game on their own —
+          they exist to clear a path so one of them can strike the enemy Nexus from its home row.
+        </p>
+      </div>
+      <button id="guide-start" class="button primary" type="button">Start a guided match</button>
+    </div>
+
+    <ol class="guide-steps">
+      <li>
+        <h3>The objective</h3>
+        <p>Reduce the opposing Nexus from 30 Vitality to 0. Your Nexus is the marker under your side of the board.</p>
+      </li>
+      <li>
+        <h3>Vessels</h3>
+        <p>A Vessel is a unit with Attack, Guard, movement and range. Guard is persistent damage — it does not heal back at end of turn, so trades matter.</p>
+      </li>
+      <li>
+        <h3>Where you summon</h3>
+        <p>Your three home rows are your deployment zone, tinted on the board. Select a Vessel card and every legal tile lights up. You may summon one Vessel per turn and hold at most four.</p>
+      </li>
+      <li>
+        <h3>Actions and Relics</h3>
+        <p>Actions resolve an effect once and go to the discard pile. Relics are persistent and occupy one of your two back-row slots, where they keep buffing your side.</p>
+      </li>
+      <li>
+        <h3>Movement and combat</h3>
+        <p>Select one of your Vessels to see reachable tiles. Move, then attack anything in range. Adjacent defenders retaliate, so a bad attack costs you Guard too.</p>
+      </li>
+      <li>
+        <h3>Flux</h3>
+        <p>Flux pays for cards. It refills at the start of your turn and grows by one each turn, up to ten. Running out of Flux does not stop you moving or attacking.</p>
+      </li>
+      <li>
+        <h3>Ending a turn</h3>
+        <p>Press End Turn, or let the two-minute timer expire. Either way the turn advances exactly once and the opponent acts.</p>
+      </li>
+      <li>
+        <h3>Striking the Nexus</h3>
+        <p>Once the opponent controls no Vessels, move one of yours onto their home row and attack the Nexus directly. That is how matches end.</p>
+      </li>
+    </ol>
+
+    <div class="guide-foot">
+      <button id="guide-back" class="button secondary" type="button">Back to menu</button>
+      <p class="muted small">Revisit this page any time from the header. Practice never requires an account.</p>
+    </div>
+  </section>
+
+  <!-- ============================ ROSTER ============================ -->
+  <section id="view-roster" class="view" role="tabpanel" aria-labelledby="tab-roster" hidden>
+    <div class="guide-head">
+      <div>
+        <p class="eyebrow">THE 18 OFFICIAL VESSELS</p>
+        <h2>Every model is built from its own voxels</h2>
+        <p class="muted">
+          These are the same models the battlefield renders — not separate illustrations.
+          Shared material palettes per element, individually authored silhouettes.
+        </p>
+      </div>
+      <button id="roster-menu" class="button secondary" type="button">Back to menu</button>
+    </div>
+    <div id="roster-grid" class="roster-grid"></div>
+  </section>
+
   <!-- ============================ BATTLE ============================ -->
-  <section id="view-battle" class="view" role="tabpanel" aria-labelledby="tab-battle">
+  <section id="view-battle" class="view" role="tabpanel" aria-labelledby="tab-battle" hidden>
     <section class="status-strip" aria-label="Match status">
       <div class="player-stat">
-        <span class="label">YOU · SEAT 1</span>
+        <span class="label">YOU · NEXUS</span>
         <strong id="player-vitality">30</strong>
       </div>
       <div class="center-stat">
@@ -48,7 +177,7 @@
         <span id="timer" class="timer" role="timer" aria-live="off">2:00</span>
       </div>
       <div class="player-stat align-right">
-        <span class="label">OPPONENT · SEAT 2</span>
+        <span class="label">OPPONENT NEXUS</span>
         <strong id="enemy-vitality">30</strong>
       </div>
     </section>
@@ -66,34 +195,32 @@
       </div>
     </section>
 
-    <section class="game-layout">
+    <div class="game-layout">
       <aside class="side-panel">
         <div class="panel-heading">
           <h2>Flux</h2>
           <span id="flux-count">1 / 1</span>
         </div>
         <div id="flux-track" class="flux-track" aria-label="Flux available"></div>
-        <p class="muted">Flux refills at the start of your turn and caps at ten.</p>
-        <div class="divider"></div>
-        <div class="panel-heading">
-          <h3>Your Relics</h3>
-          <span id="relic-count" class="muted small">0 / 2</span>
-        </div>
-        <ul id="relic-list" class="relic-list" aria-label="Relics in play"></ul>
+        <p class="muted small">Refills at the start of your turn and grows by one, up to ten.</p>
+
         <div class="divider"></div>
         <h3>Selection</h3>
         <div id="selected-card" class="selected-card empty">Select a card or a Vessel.</div>
-        <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
+
         <div class="button-stack">
           <button id="play-card-btn" class="button primary full" type="button" disabled>Play selected card</button>
           <button id="mulligan-btn" class="button secondary full" type="button" disabled>Mulligan selected card (1 Flux)</button>
           <button id="end-turn-btn" class="button primary full" type="button">End Turn</button>
+          <button id="cancel-btn" class="button secondary full" type="button" disabled>Cancel selection</button>
         </div>
+
         <div class="divider"></div>
         <dl class="counters">
           <div><dt>Deck</dt><dd id="deck-count">30</dd></div>
           <div><dt>Discard</dt><dd id="discard-count">0</dd></div>
           <div><dt>Vessels</dt><dd id="unit-count">0 / 4</dd></div>
+          <div><dt>Relics</dt><dd id="relic-count">0 / 2</dd></div>
         </dl>
       </aside>
 
@@ -102,7 +229,14 @@
           <span class="nexus-label">OPPONENT NEXUS</span>
           <span class="nexus-hint">Strike from the enemy home row when it controls no Vessels</span>
         </button>
-        <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+        <div class="board-wrap">
+          <div class="board-gutter" aria-hidden="true">
+            <span class="gutter-label enemy" style="top:0;height:42.8%">OPPONENT</span>
+            <span class="gutter-label neutral" style="top:42.8%;height:14.3%">CONTESTED</span>
+            <span class="gutter-label friendly" style="top:57.1%;height:42.9%">YOUR ZONE</span>
+          </div>
+          <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+        </div>
         <button id="player-nexus" class="nexus friendly" type="button">
           <span class="nexus-label">YOUR NEXUS</span>
           <span class="nexus-hint">Defended by your Vessels</span>
@@ -114,8 +248,36 @@
           <span><i class="legend-dot move"></i>Legal move</span>
           <span><i class="legend-dot attack"></i>Legal attack</span>
           <span><i class="legend-dot target"></i>Action target</span>
+          <span><i class="legend-dot unready"></i>Your Vessel, not ready yet</span>
         </div>
       </section>
+    </div>
+
+    <div class="turn-bar">
+      <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
+      <button id="turn-bar-cancel" class="button secondary small" type="button" hidden>Cancel</button>
+    </div>
+
+    <section id="tutorial-panel" class="tutorial-panel" aria-live="polite" hidden>
+      <div class="tutorial-copy">
+        <p class="eyebrow">GUIDED MATCH · STEP <span id="tutorial-step">1</span>/<span id="tutorial-total">6</span></p>
+        <h3 id="tutorial-title">Select a Vessel</h3>
+        <p id="tutorial-body" class="muted small"></p>
+      </div>
+      <div class="tutorial-actions">
+        <button id="tutorial-skip" class="button secondary small" type="button">Skip tutorial</button>
+      </div>
+    </section>
+
+    <section class="back-row" aria-label="Back row">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">BACK ROW</p>
+          <h2>Relic slots <span id="back-row-count" class="muted small">0 / 2</span></h2>
+        </div>
+        <p class="muted small">Persistent cards. Set from your hand; they keep buffing your side.</p>
+      </div>
+      <div id="back-row" class="back-row-slots"></div>
     </section>
 
     <section class="hand-section">
@@ -286,6 +448,7 @@
     </div>
     <div class="inline-row center">
       <button id="result-restart" class="button primary" type="button">Play Again</button>
+      <button id="result-menu" class="button secondary" type="button">Main Menu</button>
       <button id="result-profile" class="button secondary" type="button">Profile</button>
     </div>
   </div>

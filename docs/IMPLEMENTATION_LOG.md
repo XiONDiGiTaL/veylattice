@@ -363,3 +363,83 @@ compose positions; the hook was removed before committing and `grep __veylattice
 - No transient animation screenshot: effects outlive the capture latency, so the README describes the
   presentation instead of illustrating a frame.
 - Effect queue ordering, revive/death triggers and buff expiry remain for full M2-001.
+
+## Session 2026-10-28 · S-M2-D · Menu, onboarding, board readability and the 18 voxel models
+
+**Base revision:** `5551093` (S-M2-C), branch `main`, clean working tree at session start.
+**Environment:** Windows, Git Bash, Node v24.19.0, Python 3.14 static server on
+`http://127.0.0.1:8123/` (PID recorded, stopped at the end). No database or deployment credentials used.
+
+### Reported defects and root causes
+
+| # | Symptom | Root cause | Correction |
+|---|---|---|---|
+| 1 | Opening the site started a match immediately; nothing explained the game | `boot()` called `newMatch()` unconditionally and `ui.view` defaulted to `battle` | `boot()` renders the menu; `ui.view` starts at `menu`; first visit opens How to Play |
+| 2 | Units were one coloured cube per element | `renderBoard()` built a fixed six-face `.voxel` span using `--vox` from the element | 18 authored models in `src/render/models.js`, built by `src/render/voxel.js` |
+| 3 | Deployment zones and the back row were invisible or sidebar-only | Zones existed in the engine but not in the DOM; Relics were a `<ul>` in the sidebar | Row tints, a named gutter, dashed blocked tiles, and a two-slot back row |
+| 4 | Choosing an unaffordable Vessel said "choose a highlighted cell" with zero legal cells | The hand handler never asked the engine whether any cell was legal | `vesselSelectionMessage()` counts cells from `getLegalActions` and names the blocking rule |
+| 5 | A successful summon left the previous prompt on screen | `dispatch()` only set a message on failure | Each action sets its own result message |
+| 6 | The guided tutorial stalled on step one | Steps listened for `endTurn`; the engine emits `turnEnd` | Normalised in `dispatch()` |
+| 7 | Mobile tiles lost the model entirely | `ATK 4 · GD 3/3` wrapped to three lines inside a 43 px cell, collapsing the stage | Split stat spans with `::before` labels that shorten to `A`/`G`; `tickGuard()` updates only Guard |
+
+### Implemented
+
+- `index.html`: menu, guide and roster views; header nav with a disabled-until-a-match Battle tab;
+  prompt bar, tutorial panel, back-row section; removed the stray "opponent deployment" caption that
+  pointed above the Nexus.
+- `styles.css`: menu hero and stage, CSS-3D model rules (`--u-base` × `--scale`), zone tints using
+  `:where()` so interaction colours always win, back-row slots, prompt state chips, tutorial panel,
+  roster grid, mobile overrides.
+- `src/render/models.js`: 18 Vessel definitions (11–14 boxes, animation groups, element palette plus
+  per-model overrides, explicit `scale` for low quadrupeds).
+- `src/render/voxel.js`: dependency-free CSS-3D builder; three faces per box; unknown ids get a clearly
+  labelled placeholder.
+- `src/ui/tutorial.js`: pure guided-match steps and `advanceTutorial` / `skipTutorial` / `tutorialStep`.
+- `src/main.js`: `VIEWS` and `showView` for five views, `renderMenuState`, `renderMenuModels`,
+  `renderRoster`, `renderTutorial`, `tutorialHint`, `renderPrompt`, `cancelSelection`,
+  `vesselSelectionMessage`, `summonBlockReason`, Escape handling, per-action result messages.
+- `src/game/` was **not modified**. No rule, constant or engine behaviour changed.
+
+### Rule-consistency decision
+
+The supplied concept shows four back-row zones (two set/activate plus two summon columns). `GAME_RULES.md`
+fixes **two Relics per seat** and defines no set/activate Action zone, so implementing four live zones
+would have been a silent rules change. The back row therefore implements the two canonical Relic slots
+and the divergence is recorded in `CHANGELOG.md`, `TODO.md` and this log.
+
+A second, related observation: the canonical Flux curve gives 1 Flux on turn one and the cheapest Vessel
+costs 2, so turns one and two cannot summon. This is canonical, not a defect; the guide says so and the
+tutorial shows a state-aware hint. It is flagged as a balance question rather than "fixed".
+
+### Tests
+
+```
+npm test  ->  83 tests, 83 pass, 0 fail  (~0.6 s)
+```
+
+New: `tests/models.test.js` (7) and `tests/tutorial.test.js` (7). The existing 69 tests were not
+modified and still pass.
+
+### Browser verification (recorded)
+
+- First load opened How to Play; after that the menu is the default view.
+- Menu, guide and roster each rendered with **zero console and zero network entries**.
+- Guided practice match: ended turns, the AI acted through the engine, `Ironwrought Hound`,
+  `Hollowroot Oracle`, `Bell of the Unmoored`, `Mireglass Stalker` and `Gilt-Ash Bargainer` all rendered
+  their own `data-model-id`; an AI `Argent Nightlancer` rendered on its own tile.
+- Selecting a 3-Flux Vessel with 2 Flux reported `… costs 3 Flux and you have 2` instead of promising a
+  tile; with 3 Flux it reported `21 legal tiles are highlighted`, and the summon produced
+  `deployed to C6 — it acts from your next turn`.
+- Tutorial advanced 1 → 4 and displayed the blocked-step hint at step 2.
+- Back row rendered two empty slots (`SLOT 1`, `SLOT 2`).
+- Mobile 390×844: 43 px tiles, model visible, `A2 G5/5` on one line, gutter hidden.
+- Screenshots regenerated into `screenshots/`.
+
+### Not verified / limitations
+
+- No GLB or skeletal animation; attacks lunge and tilt the whole body. Per-limb swings would need the
+  weapon/head groups to be rotated around a joint origin, which is not implemented.
+- No real 120-second browser expiry (engine tests cover it).
+- No deck builder, shop, collection or online play; the menu labels them as absent.
+- A full match to a victory screen was not played in this session; the match engine and its full-match
+  tests were unchanged, and earlier sessions did reach the result overlay.

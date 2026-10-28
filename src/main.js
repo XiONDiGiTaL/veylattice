@@ -48,6 +48,33 @@ import {
   signOutOfAccount,
 } from "./net/profile.js";
 import { formatCode, normaliseCode, readSession, rotateRecoveryCode } from "./net/account.js";
+import { modelFor } from "./render/models.js";
+import { buildPlaceholderModel, buildVoxelModel } from "./render/voxel.js";
+import {
+  TUTORIAL_STEPS,
+  advanceTutorial,
+  createTutorial,
+  skipTutorial,
+  tutorialStep,
+} from "./ui/tutorial.js";
+
+const GUIDE_SEEN_KEY = "veylattice.guide.seen.v1";
+
+function tutorialSeen() {
+  try {
+    return localStorage.getItem(GUIDE_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markGuideSeen() {
+  try {
+    localStorage.setItem(GUIDE_SEEN_KEY, "1");
+  } catch {
+    /* storage can be disabled; the guide still works */
+  }
+}
 
 const HUMAN_SEAT = 0;
 const AI_SEAT = 1;
@@ -70,7 +97,9 @@ const ui = {
   selectedUnit: null,
   message: "Summon a Vessel into your three starting rows.",
   log: [],
-  view: "battle",
+  view: "menu",
+  tutorial: null,
+  tutorialMode: false,
   aiBusy: false,
   aiGeneration: 0,
   recorded: false,
@@ -337,7 +366,7 @@ function currentArchetype() {
   return resolveArchetype(ui.profile?.settings?.archetype);
 }
 
-function newMatch() {
+function newMatch(options = {}) {
   ui.aiGeneration += 1;
   ui.aiBusy = false;
   ui.recorded = false;
@@ -350,10 +379,19 @@ function newMatch() {
   ui.selectedCard = null;
   ui.selectedUnit = null;
   ui.log = [];
-  setMessage(
-    `${currentArchetype().label} on ${currentDifficulty().label.toLowerCase()} difficulty. Summon into your three starting rows and advance on the enemy Nexus.`,
-  );
+  $('#result-overlay').hidden = true;
+  ui.tutorialMode = options.guided === true;
+  ui.tutorial = ui.tutorialMode ? createTutorial() : null;
+  if (ui.tutorialMode) {
+    setMessage("Guided match: follow the checklist above the battlefield.");
+  } else {
+    setMessage(
+      `${currentArchetype().label} on ${currentDifficulty().label.toLowerCase()} difficulty. Summon into your three home rows, then advance on the enemy Nexus.`,
+    );
+  }
   render();
+  showView("battle");
+  if (ui.match.active === AI_SEAT) runAiTurn();
 }
 
 function dispatch(command) {
@@ -369,6 +407,14 @@ function dispatch(command) {
     return false;
   }
   logEvents(result.events, "You");
+  // The tutorial only watches events the engine already accepted. The engine
+  // calls a passed turn `turnEnd`; the guide speaks of it as ending the turn.
+  for (const event of result.events) {
+    if (ui.tutorial && !ui.tutorial.done) {
+      const tutorialEvent = event.type === "turnEnd" ? "endTurn" : event.type;
+      ui.tutorial = advanceTutorial(ui.tutorial, tutorialEvent);
+    }
+  }
   render();
   playEvents(result.events, before);
   return true;
@@ -529,9 +575,12 @@ function onCellClick(x, y) {
       if (dispatch({ type: "summon", instanceId: ui.selectedCard, x, y })) {
         ui.selectedCard = null;
         ui.selectedUnit = null;
+        setMessage(`${entry.name} deployed to ${coordLabel(x, y)} — it acts from your next turn.`);
+        render();
       }
     } else {
-      setMessage(`Illegal summon square ${coordLabel(x, y)}: use an empty cell in your deployment rows.`);
+      setMessage(summonBlockReason(entry, x, y));
+      render();
     }
     return;
   }
@@ -557,6 +606,8 @@ function onCellClick(x, y) {
     if (occupant && occupant.owner !== unit.owner) {
       if (dispatch({ type: "attack", unitId: unit.id, targetId: occupant.id })) {
         ui.selectedUnit = null;
+        setMessage(`${unit.name} struck ${occupant.name} at ${coordLabel(x, y)}.`);
+        render();
       }
       return;
     }
@@ -583,7 +634,7 @@ function playSelectedCard() {
     return;
   }
   if (entry.category === "vessel") {
-    setMessage("Choose a highlighted cell to summon this Vessel.");
+    setMessage(vesselSelectionMessage(entry, entry.instanceId));
     return;
   }
   if (!entry.playable) {
@@ -594,17 +645,71 @@ function playSelectedCard() {
     if (entry.targeting !== "none") {
       setMessage(`Choose a highlighted target for ${entry.name}.`);
       return;
-    }
-    if (dispatch({ type: "playAction", instanceId: entry.instanceId })) {
+    }    if (dispatch({ type: "playAction", instanceId: entry.instanceId })) {
       ui.selectedCard = null;
       ui.selectedUnit = null;
+      setMessage(`${entry.name} resolved and went to the discard pile.`);
+      render();
     }
     return;
   }
   if (dispatch({ type: "playRelic", instanceId: entry.instanceId })) {
     ui.selectedCard = null;
     ui.selectedUnit = null;
+    setMessage(`${entry.name} is set in your back row.`);
+    render();
   }
+}
+
+/**
+ * Tell the player where a Vessel can go, or exactly why it cannot be summoned yet.
+ * The count comes from the engine's own enumeration, so the message can never
+ * promise a tile the engine would reject.
+ */
+function vesselSelectionMessage(def, instanceId) {
+  const match = ui.match;
+  const player = match.players[HUMAN_SEAT];
+  const summon = getLegalActions(match).summons.find((s) => s.instanceId === instanceId);
+  const cells = summon?.cells.length ?? 0;
+  if (cells > 0) {
+    return `${def.name}: ${ELEMENT_LABELS[def.element]} Vessel, ${def.cost} Flux. ${cells} legal tiles are highlighted.`;
+  }
+  if (player.summonUsed >= 1) {
+    return `${def.name}: you have already summoned this turn. End the turn to summon again.`;
+  }
+  const count = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
+  if (count >= MAX_UNITS_PER_SEAT) {
+    return `${def.name}: you already control ${MAX_UNITS_PER_SEAT} Vessels — the maximum.`;
+  }
+  if (player.flux < def.cost) {
+    return `${def.name} costs ${def.cost} Flux and you have ${player.flux}. End the turn to gain Flux.`;
+  }
+  return `${def.name}: no legal summon tile right now.`;
+}
+
+/** Explain *why* a summon failed using the rule that rejected it. */
+function summonBlockReason(card, x, y) {
+  const match = ui.match;
+  const player = match.players[HUMAN_SEAT];
+  if (unitAt(match, x, y)) return `${coordLabel(x, y)} already holds a Vessel.`;
+  if (y < BOARD_SIZE - 3) {
+    return `${coordLabel(x, y)} is outside your deployment zone — summon inside your three home rows.`;
+  }
+  if (player.summonUsed >= 1) return "You have already summoned this turn. End the turn to summon again.";
+  const count = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
+  if (count >= MAX_UNITS_PER_SEAT) return `You already control ${MAX_UNITS_PER_SEAT} Vessels — the maximum.`;
+  if (player.flux < (card?.cost ?? 0)) {
+    return `${card?.name ?? "That card"} costs ${card?.cost ?? 0} Flux and you have ${player.flux}.`;
+  }
+  return `${coordLabel(x, y)} is not a legal summon tile.`;
+}
+
+function cancelSelection() {
+  if (!ui.selectedCard && !ui.selectedUnit) return;
+  ui.selectedCard = null;
+  ui.selectedUnit = null;
+  setMessage("Selection cleared.");
+  render();
 }
 
 function onNexusClick() {
@@ -671,14 +776,14 @@ function floatText(host, text, className = "") {
 function tickGuard(unitId, from, to) {
   const unit = ui.match?.units?.[unitId];
   const cell = unit ? cellAt(unit.x, unit.y) : null;
-  const node = cell?.querySelector(".unit-stats");
+  const node = cell?.querySelector(".unit-stats .gd");
   if (!node || from === to) return;
   const target = Math.max(0, to);
   const started = performance.now();
   const render = (now) => {
     const t = Math.min(1, (now - started) / 280);
     const value = Math.round(from + (target - from) * t);
-    node.textContent = `ATK ${unit.attack} · GD ${value}/${unit.maxGuard}`;
+    node.textContent = `${value}/${unit.maxGuard}`;
     if (t < 1) requestAnimationFrame(render);
   };
   requestAnimationFrame(render);
@@ -701,7 +806,7 @@ async function playEvents(events, before) {
         break;
       }
       case "playRelic": {
-        pulse($("#relic-list"), "fx-buff", 520);
+        pulse($("#back-row"), "fx-buff", 520);
         break;
       }
       case "attack": {
@@ -798,6 +903,7 @@ function renderBoard() {
   const board = $("#board");
   board.replaceChildren();
   const match = ui.match;
+  if (!match) return;
   const interact = humanCanAct();
   const attacks = interact && ui.selectedUnit ? getLegalAttacks(match, ui.selectedUnit) : [];
   const attackIds = new Set(attacks.filter((a) => a.type === "unit").map((a) => a.unitId));
@@ -807,6 +913,7 @@ function renderBoard() {
 
   // A selected Action highlights the only cells the engine would accept.
   const card = interact && ui.selectedCard ? selectedCardEntry() : null;
+  const summonCard = card?.category === "vessel" ? card : null;
   const targetKeys = new Set();
   if (card?.category === "action" && card.targeting !== "none") {
     for (const id of card.targetIds) {
@@ -818,10 +925,11 @@ function renderBoard() {
   for (let y = 0; y < BOARD_SIZE; y += 1) {
     for (let x = 0; x < BOARD_SIZE; x += 1) {
       const occupant = unitAt(match, x, y);
-      const legalSummon =
-        interact && ui.selectedCard ? canSummon(match, ui.selectedCard, x, y) : false;
-      const classes = ["cell"];
+      const legalSummon = summonCard ? canSummon(match, summonCard.instanceId, x, y) : false;
+      const zone = y <= 2 ? "zone-opponent" : y <= 3 ? "zone-contested" : "zone-home";
+      const classes = ["cell", zone];
       if (legalSummon) classes.push("legal");
+      else if (summonCard && !occupant && y > BOARD_SIZE - 4) classes.push("deploy-blocked");
       if (moveKeys.has(`${x},${y}`)) classes.push("move");
       if (occupant && attackIds.has(occupant.id)) classes.push("attack");
       if (targetKeys.has(`${x},${y}`)) classes.push("target");
@@ -833,9 +941,9 @@ function renderBoard() {
         role: "gridcell",
         "aria-label": `${coordLabel(x, y)}${
           occupant
-            ? `, ${occupant.name}, Attack ${occupant.attack}, Guard ${occupant.guard} of ${occupant.maxGuard}`
+            ? `, ${occupant.name}, Attack ${occupant.attack}, Guard ${Math.max(0, occupant.guard)} of ${occupant.maxGuard}`
             : ", empty"
-        }`,
+        }${legalSummon ? ", legal summon tile" : ""}`,
         onclick: () => onCellClick(x, y),
       });
 
@@ -845,32 +953,36 @@ function renderBoard() {
           text: ELEMENT_ABBR[occupant.element] ?? "??",
         });
         const name = el("strong", { class: "unit-name", text: occupant.name });
-        const stats = el("span", {
-          class: "unit-stats",
-          text: `ATK ${occupant.attack} · GD ${Math.max(0, occupant.guard)}/${occupant.maxGuard}`,
-        });
-        const flags = [];
-        if (!occupant.ready) flags.push("UNREADY");
-        else if (!occupant.hasAttacked && !occupant.hasMoved) flags.push("READY");
-        const voxel = el(
+        const stats = el("span", { class: "unit-stats" }, [
+          el("span", { class: "stat atk", text: String(occupant.attack) }),
+          el("span", { class: "stat gd", text: `${Math.max(0, occupant.guard)}/${occupant.maxGuard}` }),
+        ]);
+        const guardPct = occupant.maxGuard > 0 ? (Math.max(0, occupant.guard) / occupant.maxGuard) * 100 : 0;
+        const guardBar = el("span", { class: "guard-bar", "aria-hidden": "true" }, [
+          el("i", { style: `width:${guardPct.toFixed(1)}%` }),
+        ]);
+        const model = modelFor(occupant.cardId);
+        const stage = el("span", { class: "model-stage", "aria-hidden": "true" }, [
+          model ? buildVoxelModel(model, { className: "on-board" }) : buildPlaceholderModel(occupant.name),
+          el("i", { class: "model-shadow" }),
+        ]);
+        // Readiness is shown by dimming the model plus the selection panel text;
+        // a text flag would eat the corner of an already small tile.
+        const unit = el(
           "span",
-          { class: "voxel", "data-element": occupant.element, "aria-hidden": "true" },
+          {
+            class: `unit ${occupant.owner === HUMAN_SEAT ? "friendly" : "enemy"} ${occupant.element} ${
+              occupant.ready ? "ready" : "unready"
+            }`,
+          },
           [
-            el("i", { class: "v-front" }),
-            el("i", { class: "v-back" }),
-            el("i", { class: "v-left" }),
-            el("i", { class: "v-right" }),
-            el("i", { class: "v-top" }),
-            el("i", { class: "v-bottom" }),
+            stage,
+            badge,
+            name,
+            stats,
+            guardBar,
           ],
         );
-        const unit = el("span", { class: `unit ${occupant.owner === HUMAN_SEAT ? "friendly" : "enemy"}` }, [
-          voxel,
-          badge,
-          name,
-          stats,
-          flags.length ? el("span", { class: "unit-flag", text: flags.join(" · ") }) : null,
-        ]);
         cell.append(unit);
       } else if (showCoords) {
         cell.append(el("span", { class: "coord", text: coordLabel(x, y) }));
@@ -903,9 +1015,7 @@ function renderHand() {
         if (!ui.selectedCard) {
           setMessage("Selection cleared.");
         } else if (kind === "vessel") {
-          setMessage(
-            `${def.name}: ${ELEMENT_LABELS[def.element]} Vessel, ${def.cost} Flux. Choose a highlighted cell.`,
-          );
+          setMessage(vesselSelectionMessage(def, card.instanceId));
         } else if (kind === "relic") {
           setMessage(`${def.name}: press Play selected card to set this Relic (${def.cost} Flux).`);
         } else {
@@ -1045,27 +1155,141 @@ function renderTimer() {
 }
 
 function renderRelics() {
-  const list = $("#relic-list");
-  if (!list || !ui.match) return;
+  const slots = $("#back-row");
+  if (!slots || !ui.match) return;
   const relics = ui.match.players[HUMAN_SEAT].relics;
-  list.replaceChildren();
-  if (relics.length === 0) {
-    list.append(
-      el("li", { class: "relic-empty", text: "No Relics set. They are persistent cards in your deck." }),
+  slots.replaceChildren();
+  for (let index = 0; index < MAX_RELICS_PER_SEAT; index += 1) {
+    const relic = relics[index];
+    const def = relic ? ui.match.catalog.get(relic.cardId) : null;
+    slots.append(
+      el("div", { class: `relic-slot${def ? " filled" : ""}` }, [
+        el("span", { class: "slot-index", text: `SLOT ${index + 1}` }),
+        def
+          ? el("div", { class: "slot-body" }, [
+              el("strong", { text: def.name }),
+              el("span", { class: "slot-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
+              el("span", { class: "slot-effect", text: effectSummary(def) }),
+            ])
+          : el("p", { class: "slot-empty", text: "Empty — set a Relic from your hand" }),
+      ]),
     );
-  } else {
-    for (const relic of relics) {
-      const def = ui.match.catalog.get(relic.cardId);
-      if (!def) continue;
-      list.append(
-        el("li", {}, [
-          el("strong", { text: def.name }),
-          el("span", { text: effectSummary(def).replace("Relic · ", "") }),
-        ]),
-      );
-    }
   }
-  $("#relic-count").textContent = `${relics.length} / ${MAX_RELICS_PER_SEAT}`;
+  const label = `${relics.length} / ${MAX_RELICS_PER_SEAT}`;
+  $("#relic-count").textContent = label;
+  $("#back-row-count").textContent = label;
+}
+
+/* ----------------------------- menu & guide ----------------------------- */
+
+function renderMenuState() {
+  const live = Boolean(ui.match) && !isOver(ui.match);
+  const continueButton = $("#menu-continue");
+  if (continueButton) continueButton.hidden = !live;
+  const battleTab = $("#tab-battle");
+  if (battleTab) battleTab.disabled = !ui.match;
+  const context = $("#menu-context");
+  if (!context) return;
+  if (!ui.match) {
+    context.textContent = "No match in progress. Practice is free, unranked, and needs no account.";
+  } else if (isOver(ui.match)) {
+    context.textContent = `Last match finished — ${ui.match.result?.winnerSeat === HUMAN_SEAT ? "victory" : "defeat"}. Starting again records a new result.`;
+  } else {
+    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === HUMAN_SEAT ? "your move" : "opponent acting"}.`;
+  }
+}
+
+function renderMenuModels() {
+  const host = $("#menu-models");
+  if (!host || host.childElementCount > 0) return;
+  const showcase = [
+    "vessel_verdant_colossus",
+    "vessel_ashen_crownblade",
+    "vessel_wyrm_drowned_vault",
+    "vessel_star_eater",
+  ];
+  for (const id of showcase) {
+    const model = modelFor(id);
+    if (!model) continue;
+    host.append(el("div", { class: "menu-model" }, [buildVoxelModel(model, { className: "hero" })]));
+  }
+}
+
+function renderRoster() {
+  const grid = $("#roster-grid");
+  if (!grid || !ui.catalog || grid.childElementCount > 0) return;
+  for (const vessel of ui.catalog.cards.filter((card) => card.category === "vessel")) {
+    const model = modelFor(vessel.id);
+    grid.append(
+      el("article", { class: `roster-card ${vessel.element}` }, [
+        el("div", { class: "roster-stage" }, [
+          model
+            ? buildVoxelModel(model, { label: vessel.name })
+            : buildPlaceholderModel(vessel.name),
+        ]),
+        el("div", { class: "roster-meta" }, [
+          el("span", { class: `element-badge ${vessel.element}`, text: ELEMENT_LABELS[vessel.element] ?? vessel.element }),
+          el("h3", { text: vessel.name }),
+          el("p", { class: "muted small", text: vessel.role ?? vessel.subtypes?.join(", ") ?? "Vessel" }),
+          el("dl", { class: "roster-stats" }, [
+            el("div", { html: `ATK <strong>${vessel.attack}</strong>` }),
+            el("div", { html: `GD <strong>${vessel.guard}</strong>` }),
+            el("div", { html: `MV <strong>${vessel.movement}</strong>` }),
+            el("div", { html: `RG <strong>${vessel.range}</strong>` }),
+          ]),
+        ]),
+      ]),
+    );
+  }
+}
+
+function renderTutorial() {
+  const panel = $("#tutorial-panel");
+  if (!panel) return;
+  const step = tutorialStep(ui.tutorial);
+  panel.hidden = !step;
+  if (!step) return;
+  $("#tutorial-step").textContent = String(ui.tutorial.step + 1);
+  $("#tutorial-total").textContent = String(TUTORIAL_STEPS.length);
+  $("#tutorial-title").textContent = step.title;
+  const hint = tutorialHint(step);
+  $("#tutorial-body").textContent = hint ? `${step.body} ${hint}` : step.body;
+}
+
+/** State-aware nudge so a guided step is never silently impossible. */
+function tutorialHint(step) {
+  if (!ui.match || !humanCanAct()) return "";
+  const legal = getLegalActions(ui.match);
+  if (step.id === "summon" && legal.summons.length === 0) {
+    return "No Vessel in hand can be summoned right now — end the turn to keep going.";
+  }
+  if (step.id === "move" && legal.units.every((entry) => entry.moves.length === 0)) {
+    return "Your Vessel cannot move yet — end the turn to ready it.";
+  }
+  if (step.id === "attack" && legal.units.every((entry) => entry.attacks.length === 0)) {
+    return "Nothing is in range yet — end the turn when you are ready.";
+  }
+  return "";
+}
+
+function renderPrompt() {
+  const node = $("#game-message");
+  if (!node) return;
+  node.textContent = ui.message;
+  const entry = ui.selectedCard ? selectedCardEntry() : null;
+  let state = "idle";
+  if (!ui.match) state = "idle";
+  else if (ui.match.phase === "over") state = "over";
+  else if (ui.match.active !== HUMAN_SEAT || ui.aiBusy) state = "waiting";
+  else if (entry?.category === "vessel") state = "deploy";
+  else if (entry?.category === "action" && entry.targeting !== "none") state = "target";
+  else if (ui.selectedUnit) state = "command";
+  node.dataset.state = state;
+  const selecting = Boolean(ui.selectedCard || ui.selectedUnit);
+  const cancel = $("#cancel-btn");
+  if (cancel) cancel.disabled = !(humanCanAct() && selecting);
+  const barCancel = $("#turn-bar-cancel");
+  if (barCancel) barCancel.hidden = !(humanCanAct() && selecting);
 }
 
 function renderOpponent() {
@@ -1096,6 +1320,7 @@ function renderLog() {
 }
 
 function render() {
+  renderMenuState();
   const match = ui.match;
   if (!match) return;
   renderBoard();
@@ -1105,6 +1330,8 @@ function render() {
   renderOpponent();
   renderRelics();
   renderLog();
+  renderTutorial();
+  renderPrompt();
 
   const human = match.players[HUMAN_SEAT];
   $("#player-vitality").textContent = String(human.vitality);
@@ -1251,33 +1478,79 @@ function updateSettings(patch) {
   render();
 }
 
-function showView(view) {
+const VIEWS = Object.freeze({
+  menu: "#view-menu",
+  battle: "#view-battle",
+  guide: "#view-guide",
+  roster: "#view-roster",
+  profile: "#view-profile",
+});
+
+function showView(requested) {
+  const view = requested === "battle" && !ui.match ? "menu" : requested;
   ui.view = view;
-  const battle = view === "battle";
-  $("#view-battle").hidden = !battle;
-  $("#view-profile").hidden = battle;
-  $("#tab-battle").classList.toggle("active", battle);
-  $("#tab-profile").classList.toggle("active", !battle);
-  $("#tab-battle").setAttribute("aria-selected", String(battle));
-  $("#tab-profile").setAttribute("aria-selected", String(!battle));
-  if (battle) render();
-  else renderProfileForm();
+  for (const [name, selector] of Object.entries(VIEWS)) {
+    const node = $(selector);
+    if (node) node.hidden = name !== view;
+    const tab = $(`#tab-${name}`);
+    if (tab) {
+      tab.classList.toggle("active", name === view);
+      tab.setAttribute("aria-selected", String(name === view));
+    }
+  }
+  if (view === "battle") render();
+  else if (view === "profile") renderProfileForm();
+  else if (view === "roster") renderRoster();
+  else if (view === "menu") renderMenuState();
+  else if (view === "guide") markGuideSeen();
+  if (typeof window !== "undefined" && window.scrollTo) {
+    window.scrollTo({ top: 0, behavior: ui.profile?.settings?.reducedMotion ? "auto" : "smooth" });
+  }
 }
 
 /* ------------------------------ wiring ------------------------------ */
 
 function bind() {
-  $("#tab-battle").addEventListener("click", () => showView("battle"));
-  $("#tab-profile").addEventListener("click", () => showView("profile"));
+  for (const name of Object.keys(VIEWS)) {
+    const tab = $(`#tab-${name}`);
+    if (tab) tab.addEventListener("click", () => showView(name));
+  }
   $("#profile-chip").addEventListener("click", () => showView("profile"));
+  $("#brand-home").addEventListener("click", () => showView("menu"));
 
-  $("#restart-btn").addEventListener("click", () => {
-    newMatch();
-    if (ui.match.active === AI_SEAT) runAiTurn();
+  $("#menu-practice").addEventListener("click", () => newMatch());
+  $("#menu-tutorial").addEventListener("click", () => newMatch({ guided: true }));
+  $("#menu-continue").addEventListener("click", () => showView("battle"));
+  $("#menu-guide").addEventListener("click", () => showView("guide"));
+  $("#menu-roster").addEventListener("click", () => showView("roster"));
+  $("#menu-settings").addEventListener("click", () => showView("profile"));
+  $("#guide-start").addEventListener("click", () => newMatch({ guided: true }));
+  $("#guide-back").addEventListener("click", () => showView("menu"));
+  $("#roster-menu").addEventListener("click", () => showView("menu"));
+  $("#cancel-btn").addEventListener("click", cancelSelection);
+  $("#turn-bar-cancel").addEventListener("click", cancelSelection);
+  $("#tutorial-skip").addEventListener("click", () => {
+    ui.tutorial = skipTutorial(ui.tutorial);
+    markGuideSeen();
+    setMessage("Tutorial skipped. The full rules stay available under How to Play.");
+    render();
   });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (ui.view !== "battle") return;
+    if (ui.selectedCard || ui.selectedUnit) {
+      event.preventDefault();
+      cancelSelection();
+    }
+  });
+
   $("#result-restart").addEventListener("click", () => {
     $("#result-overlay").hidden = true;
     newMatch();
+  });
+  $("#result-menu").addEventListener("click", () => {
+    $("#result-overlay").hidden = true;
+    showView("menu");
   });
   $("#result-profile").addEventListener("click", () => {
     $("#result-overlay").hidden = true;
@@ -1522,8 +1795,11 @@ async function boot() {
       ? "Signed in. Your record follows the recovery code, not this browser."
       : "Guest profile. Create an account to carry this name, avatar and record to another device.",
   );
-  newMatch();
-  if (ui.match.active === AI_SEAT) runAiTurn();
+  renderMenuModels();
+  renderMenuState();
+  renderProfileForm();
+  // First visit: open the rules page rather than dropping straight into a match.
+  showView(tutorialSeen() ? "menu" : "guide");
 }
 
 boot();

@@ -2,7 +2,7 @@
 
 Status: target architecture. HTML/CSS/vanilla JS ES modules and JSON remain the baseline; Three.js/GLB follow tested gameplay.
 
-**Implemented as of 2026-10-28 (M1 + M2-001a/002a/003/004/006/007):** static frontend on GitHub Pages
+**Implemented as of 2026-10-28 (M1 + M2-001a/002a/003/004/006/007/008/009):** static frontend on GitHub Pages
 at `xiondigital.net/veylattice/`; deterministic rules engine with typed Action and Relic effects, and an
 AI in `src/game/` that plays them; local-first persistence with a dedicated Supabase project
 (`jjtfnduodxtulxvviasf`) for name/avatar/settings/stats, plus portable accounts keyed by a recovery code;
@@ -19,9 +19,21 @@ Use persisted turn deadlines, compare-and-swap state versions and a scheduled ti
 1. Immutable versioned content definitions and schemas (`src/game/content.js` — implemented).
 2. Pure shared rules reducer: state + validated command + time/RNG context => state/events. No DOM/network calls (`src/game/engine.js` — implemented).
 3. AI legal-command enumeration, heuristic/search policy and reproducible seeds (`src/game/ai.js` — implemented; consumes a filtered observation, never the state).
-4. Controllers/renderers: DOM and later independent 3D presentation (`src/main.js` — implemented).
-5. Transport/auth adapters, server-side command processor and audience-specific projections (target).
-6. Persistence, immutable economy ledger and content migration/version management (profile slice implemented in `src/net/` + `supabase/migrations/`).
+4. Controllers/renderers: DOM views and a presentation-only model layer (`src/main.js`, `src/render/` — implemented). `src/ui/tutorial.js` is a pure state machine for the guided match.
+5. Presentation is a projection: `renderBoard()` reads `ui.match` plus `humanCanAct()` and asks the engine for legality; `buildVoxelModel(model)` turns data into DOM and can neither read nor write match state.
+6. Transport/auth adapters, server-side command processor and audience-specific projections (target).
+7. Persistence, immutable economy ledger and content migration/version management (profile slice implemented in `src/net/` + `supabase/migrations/`).
+
+### Voxel rendering (implemented)
+
+`src/render/models.js` holds the roster as **data**: each Vessel is a list of boxes in voxel units with an
+element palette, animation-group tags and an optional `scale`. `src/render/voxel.js` builds a DOM node per
+box with three visible faces (front, right, top) inside a `preserve-3d` scene, sized by
+`--u-base × --scale` so one definition serves a 40 px tile and a 130 px roster card. There is no Three.js,
+no GLB pipeline and no WebGL context, so there is also no WebGL fallback to maintain. Animation attaches to
+`.vox-body` (idle breathing, attack lunge, damage flinch, summon drop) and is disabled under
+`prefers-reduced-motion` or the in-game toggle. Adding a Vessel means adding a definition, not editing the
+renderer; an unknown id produces a labelled placeholder rather than a silent cube.
 
 ### Implemented data flow (offline match)
 

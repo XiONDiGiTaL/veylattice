@@ -17,7 +17,11 @@ node --test "tests/*.test.js"
 | `tests/cards.test.js` | Actions and Relics: casts, targeting, heal caps, buffs, sweeps, Nexus armour, Relic limit, auras, AI play, no-op rejection |
 | `tests/match.test.js` | Full scripted match to completion, same-seed replay determinism, board/registry consistency |
 | `tests/profile.test.js` | Name/avatar/settings/stats sanitisation, forged identities, record maths |
+| `tests/models.test.js` | Voxel roster completeness, no shared silhouettes, palette keys, element palettes, explicit placeholder for unknown ids, 49-tile board split 21/7/21 |
+| `tests/tutorial.test.js` | Guided-match step order, event filtering, `endTurn` escape, completion clamping, idempotent skip |
 | `tests/support.js` | Shared catalog loading (Vessels + Actions/Relics), seeded RNG, controlled hands, positional setup |
+
+Current result: `npm test` → **83 tests, 83 pass, 0 fail** (~0.6 s).
 
 Rules for new tests:
 
@@ -41,6 +45,21 @@ Rules for new tests:
   (M2-005).
 - Economy, pack composition and odds (M3-002/M4-002).
 - Server authority, idempotent settlement, RLS denial and reconnect (M4/M5).
+
+## Model checks
+
+Models are data plus a renderer, so they are testable without a browser:
+
+- every `category: "vessel"` card id has an entry in `VOXEL_MODELS`, and no model
+  references a non-Vessel id;
+- no two models share a silhouette signature (no recolours);
+- every box uses a real palette key, every model has at least two animation
+  groups and enough scaled height to read on a tile;
+- `modelFor(unknownId)` returns `null` so the UI draws a labelled placeholder;
+- the UI's row-to-zone split matches `deploymentBounds` (21 / 7 / 21 tiles).
+
+Visual review is still manual: open **Roster**, confirm 18 distinct silhouettes,
+and confirm a summoned Vessel on the board carries the matching `data-model-id`.
 
 ## Presentation checks
 
@@ -66,6 +85,13 @@ changes the previews and the Relic panel.
 Account checks: create an account, rename the profile, sign out, sign back in
 with the recovery code and confirm the account's name returns; rotate the code
 and confirm the old one is refused.
+
+Flow checks: a first visit must open **How to Play**, not a match; **Practice
+match** must create the board only on click; **Return to match** must appear only
+while a match is live; the Battle tab must be disabled before a match exists; the
+Vessel Roster must render 18 models; the guided match must advance a step for the
+action it asks for, show a hint when that action is currently impossible, and
+never block on Skip. Escape and both Cancel buttons must clear a selection.
 
 A 120-second expiry should be confirmed against the engine tests; waiting out a
 real deadline in the browser is optional and must be reported honestly if

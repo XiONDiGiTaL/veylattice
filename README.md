@@ -7,7 +7,7 @@
 Grid movement · persistent Guard · five-element counter-cycle · a tactical AI that plays by the rules
 
 [![Play now](https://img.shields.io/badge/▶_PLAY_NOW-xiondigital.net%2Fveylattice-7ad7ff?style=for-the-badge)](https://xiondigital.net/veylattice/)
-[![Tests](https://img.shields.io/badge/tests-69_passing-6ee7a8?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-83_passing-6ee7a8?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-b58bff?style=flat-square)](#architecture)
 [![License](https://img.shields.io/badge/license-All_Rights_Reserved-9aa6c4?style=flat-square)](LICENSE)
 
@@ -30,23 +30,67 @@ cross-device recovery code, animated voxel combat, and automated tests all ship 
 
 | Playable now | Not built yet |
 |---|---|
-| 7×7 tactical board with orthogonal movement and line of sight | Card collection, deck builder, shop, packs |
-| Persistent Guard, simultaneous retaliation, lethal trades | Online lobbies and server-authoritative matches |
-| Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Lore Bonds, arenas, Forge, Codex |
-| **8 Action cards** (damage, sweep, heal, buff, draw, Nexus) | Full 3D voxel models (units are CSS voxel cubes on a tile) |
-| **4 Relic cards** with persistent auras | Ranked ladder and seasonal rewards |
-| Typed, data-only effects — no card can carry code | Google / Discord sign-in (needs OAuth credentials) |
+| Main menu, How to Play, guided first match — no auto-launch into a game | Card collection, deck builder, shop, packs |
+| 7×7 board with tinted deployment zones and a contested middle row | Online lobbies and server-authoritative matches |
+| Persistent Guard, simultaneous retaliation, lethal trades | Lore Bonds, arenas, Forge, Codex |
+| Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Ranked ladder and seasonal rewards |
+| **8 Action cards** (damage, sweep, heal, buff, draw, Nexus) | Google / Discord sign-in (needs OAuth credentials) |
+| **4 Relic cards** in a visible two-slot back row | Set/activate Action zones (no rule specifies them yet) |
+| Typed, data-only effects — no card can carry code | Terrain that changes rules rather than decoration |
 | Flux economy 1→10, one summon, four-Vessel cap | — |
 | 120-second deadline with automatic turn pass | — |
 | Tactical AI: 4 difficulties × 3 styles, plays Actions and Relics | — |
-| Voxel combat: lunges, impact, floating damage, Guard ticks, deaths | — |
+| **18 individually modelled 3D Vessels** in a CSS-3D renderer | — |
+| Combat: lunges, impact, floating damage, Guard ticks, deaths | — |
+| Contextual prompts, cancel/Escape, legality reasons | — |
 | Profiles, avatars, match record, **portable accounts** | — |
-| 69 automated tests + offline-first play | — |
+| 83 automated tests + offline-first play | — |
 
-> **Honest status:** Seat 2 is a real AI opponent with no access to your hand. The card pool is 18
-> Vessels plus 8 Actions and 4 Relics, so the canonical deck rules — including the five-Action
-> minimum — are now enforced with **no exception profile**: the old `PRACTICE_DECK_RULES` escape
-> hatch is gone.
+> **Honest status:** Seat 2 is a real AI opponent with no access to your hand. The game opens on a
+> menu; nothing starts until you press a button. Every Vessel on the board is its own voxel model —
+> there is no generic fallback in the shipped roster, and a missing model renders a labelled
+> placeholder instead of a silent cube.
+
+---
+
+## ▸ The menu, the tutorial and the roster
+
+<div align="center">
+
+![Main menu](screenshots/menu.png)
+
+</div>
+
+The app no longer drops you into a match. The menu offers **Practice match**, **Guided first match**,
+and — only while a game is genuinely in progress — **Return to match**. Deck Builder, Collection, Shop
+and Online are listed as *not in this build* rather than shown as buttons that do nothing.
+
+On a first visit the **How to Play** page opens by itself: eight short steps covering the objective,
+what a Vessel is, where you may summon, Actions and Relics, movement and combat, Flux, ending a turn,
+and how a Nexus actually dies. It stays reachable from the header forever, and completion is stored
+locally — practice never requires an account.
+
+<div align="center">
+
+![How to Play](screenshots/guide.png)
+
+</div>
+
+**The guided match is the real game.** It does not script a board. It watches the events the engine
+emits (`summon`, `move`, `attack`, `turnEnd`…) and advances a five-step checklist over a live practice
+match, with a state-aware nudge when a step cannot be completed yet — for example *"No Vessel in hand
+can be summoned right now — end the turn to keep going."* Ending the turn always advances a step, so
+the tutorial can never trap you, and Skip is always one click away.
+
+<div align="center">
+
+![Vessel roster](screenshots/roster.png)
+
+</div>
+
+**The Roster page renders the same model files the battlefield uses** — not illustrations. All 18
+official Vessels have their own voxel definition: 11–14 boxes each, distinct silhouettes, grouped for
+animation, and a per-model palette blended from its element.
 
 ---
 
@@ -146,6 +190,37 @@ card that tries to smuggle behaviour is rejected before a match can start.
 Relics are persistent, capped at two per seat, and their auras are computed in one place
 (`relicAuras`) so the HUD, the previews, the engine and the AI cannot disagree. A Guard aura applies
 to Vessels already on the table *and* to every future summon, so the bonus does not depend on timing.
+
+### The 3D Vessels
+
+There are no GLB files and no Three.js dependency: the renderer is **CSS 3D**, about 120 lines in
+[`src/render/voxel.js`](src/render/voxel.js). Each box becomes a node with three visible faces
+(front, right, top) inside a `preserve-3d` scene, scaled by a single CSS variable — the same markup is
+40 px on a phone tile and 130 px in the roster. It costs no downloads and works on the static host.
+
+Models are **data**, in [`src/render/models.js`](src/render/models.js): a list of boxes in voxel units
+with a group (`body`, `head`, `weapon`, `tail`…), size, offset and palette key. Behaviour is not in
+the data, and the renderer cannot change a match — it is handed a card id and draws it.
+
+| Element | Material language |
+|---|---|
+| Wood | layered bark, leaf plates, branch crowns |
+| Fire | ember-lit fractures, heated metal, sparks |
+| Earth | stone mass, mineral strata, masonry |
+| Metal | forged plate, etched alloy, sharp geometry |
+| Water | translucent blue, fins, submerged motifs |
+
+Subtype drives the silhouette too: Beasts are quadrupeds with low centres of mass, Constructs are
+blocky and jointed, Dragons are long and serpentine, Spirits float with no legs, and Otherworldly
+Vessels break anatomy outright (the Star-Eater is a hovering eclipse core with ring shards).
+
+A test enforces the roster: every official Vessel has a model, no two models share a silhouette, every
+box uses a real palette key, and a missing id returns `null` rather than a silent cube.
+
+> **Balance note, not a bug:** the canonical Flux curve gives 1 Flux on your first turn and the
+> cheapest Vessel costs 2, so turns one and two are spent on cheap Actions, a mulligan or passing.
+> The tutorial says so explicitly. Changing that is a balance decision for `GAME_RULES.md`, not a UI
+> tweak.
 
 ### Combat presentation
 
@@ -305,11 +380,16 @@ src/net/             browser persistence
   rpc.js               one guarded PostgREST transport
   profile.js           sanitise, local-first save, cloud sync, avatar pipeline
   account.js           recovery-code accounts (create, load, save, rotate)
+src/render/          presentation-only model layer
+  models.js            18 Vessel voxel definitions + element palettes
+  voxel.js             CSS-3D model builder (no dependencies)
+src/ui/              UI state machines that are worth testing on their own
+  tutorial.js          guided-match steps and the pure advance reducer
 src/main.js          HUD controller + presentation layer (events → animation)
 src/cards/           starter Vessels, Actions and Relics as validated JSON
-index.html           Battle + Profile & Settings views
-styles.css           themed UI, voxel cubes, combat keyframes, reduced motion
-tests/               Node test runner, 69 tests, zero dependencies
+index.html           Menu, How to Play, Roster, Battle and Settings views
+styles.css           themed UI, voxel models, board zones, combat keyframes, reduced motion
+tests/               Node test runner, 83 tests, zero dependencies
 supabase/migrations/ profile + account schemas and RPCs
 docs/                rules, research, adaptation matrix, accounts, session log
 ```
@@ -340,7 +420,7 @@ npm test            # node --test "tests/*.test.js"
 
 ### Tests
 
-`npm test` → **69 passing, 0 failing** (~0.45 s). Coverage includes:
+`npm test` → **83 passing, 0 failing** (~0.6 s). Coverage includes:
 
 | Area | Examples |
 |---|---|
@@ -354,6 +434,8 @@ npm test            # node --test "tests/*.test.js"
 | Deadlines | boundary rejection, committed actions preserved |
 | AI | information isolation, hidden-hand invariance, time budget, legality, tier differentiation, Actions/Relics played through the engine, no pointless casts, full AI-vs-AI match |
 | Profiles | name/avatar/settings/stats sanitisation, forged ids, streak maths |
+| Voxel roster | all 18 official ids modelled, no shared silhouettes, palette keys resolve, missing model reports `null`, board is 49 tiles split 21/7/21 across the zones |
+| Guided match | step order, unrelated events ignored, `endTurn` always escapes, completion clamps, skip is idempotent, every step watches a real engine event |
 
 Tests I did **not** run are listed as unrun in [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md),
 not as passes.
@@ -394,8 +476,10 @@ clearly labelled local profile and accounts report that cloud sync is disabled.
 | **M2-001** typed Action and Relic effects, relic auras | ✅ done |
 | **M2-002** canonical deck rules, practice exception removed | ✅ done |
 | **M2-003** tactical AI, difficulties, styles | ✅ done |
-| **M2-004** portable accounts, recovery codes, cross-device restore | ✅ done |
-| **M2-005** voxel combat presentation | ✅ done |
+| **M2-006** portable accounts, recovery codes, cross-device restore | ✅ done |
+| **M2-007** voxel combat presentation | ✅ done |
+| **M2-008 / UX-001** menu, How to Play, guided first match, un-auto-launched boot | ✅ done |
+| **M2-009** unique voxel models for all 18 Vessels and the roster page | ✅ done |
 | **M3** collection, deck builder, shop, packs | next |
 | **M4** trusted backend, authoritative matches, throttling | planned |
 | **M5** lobbies and Tag | planned |
