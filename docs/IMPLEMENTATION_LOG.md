@@ -265,3 +265,25 @@ database without affecting Sohbet or the base site, and document it with screens
    simultaneous death, revive readiness).
 2. **M2-002** canonical decks with Actions, then delete `PRACTICE_DECK_RULES`.
 3. **M2-005** cloud write abuse guard, then **M3** collection/deck builder.
+
+### Deployment verification (same session)
+
+| Step | Observed |
+|---|---|
+| `git commit` | `1bb92f7` — 34 files, 6 995 insertions |
+| `git push -u origin main` (after rename) | `12ffb0b..1bb92f7 main -> main` |
+| GitHub API: set `visibility: public` | `private: false` |
+| GitHub API: rename repo | `full_name: XiONDiGiTaL/veylattice` |
+| GitHub API: enable Pages (`main`, `/`, legacy) | `html_url: http://xiondigital.net/veylattice/`, certificate `approved` for `xiondigital.net` |
+| Poll `https://xiondigital.net/veylattice/` | 404 ×5, then **200** on attempt 6 (~75 s) |
+| Asset probes | `styles.css`, `src/main.js`, `src/game/ai.js`, `src/net/profile.js`, `src/cards/starter-set.json`, `screenshots/battle.png` → all **200** |
+| Base site | `https://xiondigital.net/` still **200** |
+| Live page runtime | 49 grid cells, 6 cards, opponent "The Vanguard", profile chip "Synced" |
+| Live AI turn | Ended turn → AI mulliganed and ended its turn → control returned at round 2 |
+| Live profile write | `POST .../rpc/veylattice_profile_save` → **200**; UI showed "Saved to cloud" |
+| Live console | No errors, no warnings (`preview_logs`, `kind: all`) |
+
+Notes: Pages inherited the account's custom domain, so `/veylattice/` required no DNS change and no
+edit to the base site. The API reported `https_enforced: false` even though it was requested; HTTPS
+works via the approved certificate. Profiles are per-origin, so a profile created on
+`localhost:8000` is separate from one created on the deployed origin — there is no import/export yet.

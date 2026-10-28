@@ -5,10 +5,16 @@
 - Repository: `XiONDiGiTaL/Veylattice` → **renamed to lowercase `XiONDiGiTaL/veylattice`** in session S-M2-B so the
   GitHub Pages path matches the published URL. GitHub keeps redirects for the old slug.
 - Branch: `main`. Remote: `https://github.com/XiONDiGiTaL/veylattice.git`.
-- The M1 change set (S-M1-A) and the M2-003/M2-004 change set (S-M2-B) are committed together in the
-  commit recorded at the bottom of `docs/IMPLEMENTATION_LOG.md`.
+- The M1 change set (S-M1-A) and the M2-003/M2-004 change set (S-M2-B) are committed together as
+  `1bb92f7` (`feat: tactical AI opponent, player profiles and cloud persistence`), pushed to
+  `origin/main`.
 - Live site: **https://xiondigital.net/veylattice/** (GitHub Pages project site under the account's
-  existing Pages custom domain). Verified with HTTP requests after enabling Pages.
+  existing Pages custom domain). Verified after the build: `/` and every asset returned 200, the page
+  booted with 49 cells and 6 cards, the AI took its turn through the deployed bundle, and a profile
+  write returned `200` from the live origin with no console errors.
+- GitHub Pages settings: source `main`, path `/`, `https_enforced` was requested but the API returned
+  `https_enforced: false`; the site nevertheless serves HTTPS (certificate approved for
+  `xiondigital.net`/`www.xiondigital.net`). Re-check the enforce-HTTPS toggle in repository settings.
 - Environment: Windows/Git Bash, Node v24.19.0, Python 3.14 for static serving. No dependencies are
   installed for the app; tests use Node's built-in runner.
 
