@@ -10,6 +10,13 @@
   setting or base-site file was modified.
 - Pages caches JS for up to four hours (`max-age=14400`), so a warm browser can briefly run a cached
   module against new HTML. Hard-refresh before debugging "stale" behaviour after a deploy.
+- Latest commits: `a239bc9` (S-M2-D: menu, onboarding, board readability, 18 voxel models) and a
+  docs follow-up recording it, both pushed to `origin/main`.
+- Live verification after S-M2-D, in a fresh incognito context: first visit opened How to Play; menu
+  rendered 4 decorative models (50 boxes); Roster rendered 18 cards / 18 models / 209 boxes; a practice
+  match created 49 cells and summoned a `Mireglass Stalker` with `data-model-id` and 12 boxes; **zero
+  console errors**; `models.js`, `voxel.js`, `tutorial.js` and `styles.css` all 200. Apex site 200,
+  `sohbet.xiondigital.net` 200.
 - Environment: Windows / Git Bash, Node v24.19.0, Python 3.14 for static serving. The app has **no
   runtime dependencies**; tests use Node's built-in runner.
 
