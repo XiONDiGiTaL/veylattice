@@ -1,0 +1,9 @@
+[
+  {"id":"emberfall_caldera","name":"Emberfall Caldera","affinityElement":"fire","passiveEffect":{"targetElement":"fire","stat":"attack","amount":1},"terrainTypes":["lava","obsidian"],"hazards":[{"id":"lava_burn","trigger":"end_of_turn_on_tile","damage":1,"telegraphed":true}],"status":"concept"},
+  {"id":"drowned_reliquary","name":"Drowned Reliquary","affinityElement":"water","passiveEffect":{"targetElement":"water","stat":"guard","amount":1},"terrainTypes":["flooded","stone"],"hazards":[{"id":"flooded_movement","trigger":"movement_validation","effect":"grounded_movement_restriction","telegraphed":true}],"status":"concept"},
+  {"id":"verdant_crucible","name":"Verdant Crucible","affinityElement":"wood","passiveEffect":{"targetElement":"wood","stat":"guard","amount":1},"terrainTypes":["overgrown","living_cover"],"hazards":[],"status":"concept"},
+  {"id":"ironwake_foundry","name":"Ironwake Foundry","affinityElement":"metal","passiveEffect":{"targetElement":"metal","stat":"attack","amount":1},"terrainTypes":["machinery","metal_grating"],"hazards":[{"id":"moving_machinery","trigger":"scheduled_round_change","effect":"temporary_obstruction","telegraphed":true}],"status":"concept"},
+  {"id":"shattered_crownlands","name":"Shattered Crownlands","affinityElement":"earth","passiveEffect":{"targetElement":"earth","stat":"guard","amount":1},"terrainTypes":["stone_cover","rubble"],"hazards":[],"status":"concept"},
+  {"id":"astral_breach","name":"Astral Breach","affinityElement":null,"passiveEffect":null,"terrainTypes":["unstable"],"hazards":[{"id":"reality_shear","trigger":"scheduled_round_change","effect":"marked_cells_change_state","telegraphed":true}],"status":"concept"},
+  {"id":"confluence_garden","name":"Confluence Garden","affinityElement":null,"passiveEffect":null,"terrainTypes":["wood_zone","fire_zone","earth_zone","metal_zone","water_zone"],"hazards":[],"status":"concept"}
+]
