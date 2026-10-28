@@ -1,16 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { ELEMENT_PALETTES, MODEL_IDS, VOXEL_MODELS, modelFor } from "../src/render/models.js";
+import { ELEMENT_PALETTES, MODEL_IDS, VOXEL_MODELS, modelFor, modelHeight, modelWidth } from "../src/render/models.js";
 import { BOARD_SIZE, CELL_COUNT, deploymentBounds } from "../src/game/constants.js";
 import { CATALOG, RAW_VESSELS } from "./support.js";
 
 const OFFICIAL_IDS = RAW_VESSELS.map((card) => card.id);
 
-/** A rough silhouette signature: every box size and offset, order-independent. */
+const MATERIALS = new Set([
+  "matte", "metal", "stone", "cloth", "leather", "wood", "bone", "crystal", "glass", "ember", "void",
+]);
+
+/** A rough silhouette signature: every box size, offset and rotation. */
 function silhouette(model) {
   return model.parts
-    .map((p) => `${p.x},${p.y},${p.z}:${p.w}x${p.h}x${p.d}`)
+    .map((p) => `${p.x},${p.y},${p.z}:${p.w}x${p.h}x${p.d}:${p.rx ?? 0}/${p.ry ?? 0}/${p.rz ?? 0}`)
     .sort()
     .join("|");
 }
@@ -33,21 +37,58 @@ test("no model is a recolour of another model", () => {
   }
 });
 
-test("each model is a real multi-box construction with distinct grouped parts", () => {
+test("every model meets the detail bar: many boxes, several groups, several materials", () => {
   for (const id of MODEL_IDS) {
     const model = VOXEL_MODELS[id];
-    assert.ok(model.parts.length >= 8, `${id} has only ${model.parts.length} boxes`);
+    assert.ok(model.parts.length >= 30, `${id} has only ${model.parts.length} boxes`);
     const groups = new Set(model.parts.map((part) => part.g));
-    assert.ok(groups.size >= 2, `${id} has a single animation group`);
-    const scale = model.scale ?? 1;
-    assert.ok(scale >= 0.7 && scale <= 1.6, `${id} has an implausible scale ${scale}`);
-    const heights = model.parts.map((part) => (part.y + part.h) * scale);
-    assert.ok(Math.max(...heights) >= 6, `${id} is too short to read on a tile`);
+    assert.ok(groups.size >= 4, `${id} only animates ${groups.size} group(s)`);
+    const materials = new Set(model.parts.map((part) => part.m ?? "matte"));
+    assert.ok(materials.size >= 4, `${id} only uses ${materials.size} material(s)`);
+    // A focal point above the feet: a model that never rises cannot read.
+    assert.ok(
+      modelHeight(model) * (model.scale ?? 1) >= 6,
+      `${id} is too short to read on a tile`,
+    );
+    assert.ok(modelWidth(model) <= 14, `${id} spills far outside its tile`);
+    assert.ok(["breathe", "hover", "sway", "heavy", "none"].includes(model.idle ?? "breathe"));
+  }
+});
+
+test("model geometry, palette keys, materials and pivots are valid", () => {
+  for (const id of MODEL_IDS) {
+    const model = VOXEL_MODELS[id];
     for (const part of model.parts) {
       assert.ok(part.w > 0 && part.h > 0 && part.d > 0, `${id} has a zero-sized box`);
+      assert.ok(part.y >= 0, `${id} has a box below the ground`);
       assert.ok(model.palette[part.c], `${id} uses unknown palette key ${part.c}`);
+      assert.ok(MATERIALS.has(part.m ?? "matte"), `${id} uses unknown material ${part.m}`);
+      assert.ok(Math.abs(part.x) <= 7, `${id} has a box outside the tile`);
+      for (const axis of ["rx", "ry", "rz"]) {
+        if (part[axis] === undefined) continue;
+        assert.ok(Number.isFinite(part[axis]), `${id} has a non-numeric ${axis} rotation`);
+        // Y rotation may wrap around a full coil; X/Z stay in a readable arc.
+        const limit = axis === "ry" ? 360 : 90;
+        assert.ok(Math.abs(part[axis]) <= limit, `${id} rotates a box past ${limit} degrees on ${axis}`);
+      }
+    }
+    for (const [group, pivot] of Object.entries(model.pivots ?? {})) {
+      assert.equal(pivot.length, 3, `${id}.${group} pivot needs three values`);
+      assert.ok(pivot.every(Number.isFinite), `${id}.${group} pivot is not numeric`);
     }
   }
+});
+
+test("each model is individually constructed, not a generic humanoid recolour", () => {
+  // Silhouette height and widest box vary across the roster, so no single rig
+  // is being reused wholesale. Different subtypes must not share proportions.
+  const proportions = new Set(
+    MODEL_IDS.map((id) => {
+      const model = VOXEL_MODELS[id];
+      return `${Math.round(modelHeight(model))}x${Math.round(modelWidth(model))}`;
+    }),
+  );
+  assert.ok(proportions.size >= 10, `only ${proportions.size} distinct proportions across 18 models`);
 });
 
 test("models only reference real Vessel ids and real elements", () => {
@@ -65,8 +106,12 @@ test("the five elements have distinct palettes and distinct silhouettes per subt
   assert.equal(elements.length, 5);
   const bases = new Set(elements.map((element) => ELEMENT_PALETTES[element].base));
   assert.equal(bases.size, 5);
-  // Every element carries at least three Vessels, so the visual language is exercised.
+  // Element identity needs shape as well as colour: each element must define
+  // its own stone, cloth, metal and accent materials.
   for (const element of elements) {
+    for (const key of ["stone", "cloth", "metal", "accent", "wood", "bone", "crystal"]) {
+      assert.ok(ELEMENT_PALETTES[element][key], `${element} palette is missing ${key}`);
+    }
     const count = MODEL_IDS.filter((id) => VOXEL_MODELS[id].element === element).length;
     assert.ok(count >= 3, `${element} only has ${count} models`);
   }

@@ -193,29 +193,57 @@ to Vessels already on the table *and* to every future summon, so the bonus does 
 
 ### The 3D Vessels
 
-There are no GLB files and no Three.js dependency: the renderer is **CSS 3D**, about 120 lines in
+There are no GLB files and no Three.js dependency: the renderer is **CSS 3D**, in
 [`src/render/voxel.js`](src/render/voxel.js). Each box becomes a node with three visible faces
-(front, right, top) inside a `preserve-3d` scene, scaled by a single CSS variable — the same markup is
-40 px on a phone tile and 130 px in the roster. It costs no downloads and works on the static host.
+(front, right, top) inside a `preserve-3d` scene, scaled by one CSS variable — the same markup is a
+43 px tile on a phone and 170 px in the roster. It downloads nothing and works on the static host.
 
-Models are **data**, in [`src/render/models.js`](src/render/models.js): a list of boxes in voxel units
-with a group (`body`, `head`, `weapon`, `tail`…), size, offset and palette key. Behaviour is not in
-the data, and the renderer cannot change a match — it is handed a card id and draws it.
+Models are **data**, split by element under [`src/render/vessels/`](src/render/vessels): a list of
+boxes in voxel units with an animation group (`body`, `head`, `weapon`, `armL/R`, `tail`, `cloak`…),
+size, offset, colour key, **material** and optional rotation. The renderer is handed a card id; it
+cannot change a match.
+
+**728 boxes across the 18 official Vessels** (30–59 each), and every one of them is individually
+authored against [`docs/UNIT_VISUAL_DESIGNS.md`](docs/UNIT_VISUAL_DESIGNS.md).
+
+- **Materials, not tints.** Each palette defines a whole material world per element — ceramic, cloth,
+  leather, bark, stone, brass, bone, crystal, glass, void — and each material shades its three faces
+  differently (steel gets a hard top and a dark side; cloth stays matte). Depth survives greyscale.
+- **Articulated groups.** Boxes are grouped around authored pivots, so an attack swings the weapon
+  around the wrist, snaps the head around the neck and lashes the tail — not just a whole-body tilt.
+- **Angled geometry.** Fins, banners, lances, antlers and blade snouts are rotated boxes, so
+  silhouettes are not all axis-aligned stacks.
+- **Idle languages.** `breathe`, `heavy` (deliberate, slow), `sway` (serpentine), `hover` (floating)
+  and `none`, chosen per unit rather than stamped on the roster.
 
 | Element | Material language |
 |---|---|
-| Wood | layered bark, leaf plates, branch crowns |
-| Fire | ember-lit fractures, heated metal, sparks |
-| Earth | stone mass, mineral strata, masonry |
-| Metal | forged plate, etched alloy, sharp geometry |
-| Water | translucent blue, fins, submerged motifs |
+| Wood | carved bark bands, root joints, leaf fins, cream fungus |
+| Fire | blackened ceramic, ember seams, scorched bronze, upward spires |
+| Earth | sandstone strata, slate plates, mineral seams, wedge feet |
+| Metal | brushed plates, hinges, rivets, bright rims, brass inlays |
+| Water | aqua glass, wet shell, pearl bone, ribbon fins, suspended shards |
 
 Subtype drives the silhouette too: Beasts are quadrupeds with low centres of mass, Constructs are
-blocky and jointed, Dragons are long and serpentine, Spirits float with no legs, and Otherworldly
-Vessels break anatomy outright (the Star-Eater is a hovering eclipse core with ring shards).
+jointed and blocky, Dragons are long and serpentine, Spirits float with no legs, and Otherworldly
+Vessels break anatomy outright (the Star-Eater is a hovering eclipse core inside disconnected rings).
 
 A test enforces the roster: every official Vessel has a model, no two models share a silhouette, every
-box uses a real palette key, and a missing id returns `null` rather than a silent cube.
+box uses a real palette key and material, every model has 30+ boxes across 4+ animation groups and 4+
+materials, and a missing id returns `null` rather than a silent cube.
+
+### The battlefield diorama
+
+The board is still the authoritative 7×7 grid, but it is dressed as a miniature arena on a stone
+table: a raised plinth, corner posts, layered ground blocks with real thickness, props at the back edge
+of tiles, a key light from the upper left and a vignette at the table edge. The 7×7 hit targets, tile
+coordinates, deployment tints and legal-summon rings sit above the scenery and are unchanged.
+
+[`src/render/terrain.js`](src/render/terrain.js) owns the ground map and props. It is **decorative by
+contract**: every kind declares `rules: "decorative"`, the layout is point-symmetric so neither seat
+gets a prettier side, and a test asserts the rules engine and AI never import it. Water tiles are
+shallow, walkable and labelled as decoration under the arena name — the UI does not promise a
+mechanic the engine lacks.
 
 > **Balance note, not a bug:** the canonical Flux curve gives 1 Flux on your first turn and the
 > cheapest Vessel costs 2, so turns one and two are spent on cheap Actions, a mulligan or passing.

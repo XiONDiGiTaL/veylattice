@@ -97,3 +97,58 @@ A model is not complete because it exists in a 3D scene. Review:
 - Are the asset and any dependencies licensed appropriately?
 
 Failing any critical readability or originality check means the model needs revision.
+
+## 9. Implementation status (2026-10-28 art pass)
+
+This section records what the codebase actually does, so the rest of this document is read as
+direction plus a real pipeline rather than an aspiration.
+
+### Renderer
+
+- **CSS 3D, no dependencies.** `src/render/voxel.js` builds each box as one node with front, right and
+  top faces inside a `preserve-3d` scene. One CSS variable (`--u`) sets the voxel size, so the same
+  model is 43 px on a phone tile and 170 px in the roster.
+- **Material response.** Face colours are computed in JavaScript from a per-material table
+  (`matte`, `metal`, `stone`, `cloth`, `leather`, `wood`, `bone`, `crystal`, `glass`, `ember`,
+  `void`). CSS filters are deliberately not used: they flatten 3D transforms and cost draw time.
+  Per-face borders were removed after measurement — at 2–3 px per voxel a 1 px border consumed the
+  fill and turned models into noise.
+- **Articulated pivots.** A group can rotate around an authored pivot
+  (`pivots: { weapon: [x, y, z] }`): wrist, shoulder, neck, hip, tail root. Default pivots are the
+  lowest, front-most box of the group. Attack animations use the weapon, head and tail pivots.
+- **Angled parts.** `rx/ry/rz` rotate individual boxes, used for fins, banners, lances, antlers and
+  blade snouts.
+- **Camera.** Catalogue view uses a three-quarter camera (`rotateX(-13deg) rotateY(-32deg)`) with the
+  spin overridable per instance; the roster lets the player drag or arrow-key the model through a
+  full turn.
+- **Idle languages.** `breathe`, `heavy`, `hover`, `sway`, `none`, authored per unit.
+
+### Roster
+
+- All **18 official Vessels** have individually authored models, 30–59 boxes each, **728 boxes
+  total**, in `src/render/vessels/{fire,water,earth,metal,wood}.js`.
+- Every model declares 4 or more animation groups and 4 or more materials. A test enforces these
+  floors, uniqueness of silhouette (including rotations), palette-key validity, material validity,
+  pivot validity and the tile footprint.
+- Missing models are impossible for the official roster; `modelFor()` returns `null` and the board
+  renders a visibly marked placeholder instead of a silent cube.
+
+### Arena
+
+- `src/render/terrain.js` supplies an authored, point-symmetric ground map (grass, moss, ruins,
+  shallows, crystal) with per-kind elevation and props at the back edge of tiles.
+- Terrain is **decorative**: `rules: "decorative"`, no engine import, and a test that fails if the
+  rules engine or AI ever read it.
+- Presentation: stone plinth, corner posts, per-tile thickness and bevel, contact shadow under each
+  unit, key light from the upper left, edge vignette, and a 7° camera tilt on the board surface.
+
+### Not done / limitations
+
+- No GLB meshes, no GPU lighting, no shadows beyond CSS drop shadows. The "lighting" is authored
+  shading, not a light pass.
+- No skeletal deformation: limbs rotate as rigid voxel groups.
+- Props do not react to units, and there is no destructible scenery.
+- The Wyrm of the Drowned Vault and the Verdant Colossus are the weakest silhouettes in the roster at
+  tile size; both need another authored pass (clearer coil/head separation, and a lighter canopy that
+  separates from the trunk).
+- Phone tiles (43 px) prioritise stat readability; models read as colour + shape only at that size.

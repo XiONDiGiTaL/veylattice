@@ -50,6 +50,7 @@ import {
 import { formatCode, normaliseCode, readSession, rotateRecoveryCode } from "./net/account.js";
 import { modelFor } from "./render/models.js";
 import { buildPlaceholderModel, buildVoxelModel } from "./render/voxel.js";
+import { ARENA, propsAt, terrainAt } from "./render/terrain.js";
 import {
   TUTORIAL_STEPS,
   advanceTutorial,
@@ -947,6 +948,25 @@ function renderBoard() {
         onclick: () => onCellClick(x, y),
       });
 
+      // Decorative ground and props. They are painted behind the unit and never
+      // affect legality: `terrain.js` is not imported by the rules engine.
+      const terrain = terrainAt(x, y);
+      cell.dataset.terrain = terrain.id;
+      cell.style.setProperty("--lift", `${terrain.lift}px`);
+      cell.append(el("span", { class: "cell-ground", "aria-hidden": "true" }));
+      for (const prop of propsAt(x, y)) {
+        const propNode = buildVoxelModel(
+          { ...prop.model, id: `${prop.model.id}_${x}_${y}`, scale: (prop.model.scale ?? 1) * prop.scale },
+          { className: "cell-prop-model", label: "" },
+        );
+        const holder = el("span", {
+          class: `cell-prop ${prop.kind}${prop.flip ? " is-flipped" : ""}`,
+          "aria-hidden": "true",
+        });
+        holder.append(propNode);
+        cell.append(holder);
+      }
+
       if (occupant) {
         const badge = el("span", {
           class: `element-badge ${occupant.element}`,
@@ -1202,11 +1222,13 @@ function renderMenuState() {
 function renderMenuModels() {
   const host = $("#menu-models");
   if (!host || host.childElementCount > 0) return;
+  // The four clearest silhouettes in the roster, chosen for the first
+  // impression: a knight, a lancer, a fortress and a spirit.
   const showcase = [
-    "vessel_verdant_colossus",
     "vessel_ashen_crownblade",
-    "vessel_wyrm_drowned_vault",
-    "vessel_star_eater",
+    "vessel_argent_nightlancer",
+    "vessel_bastion_first_mountain",
+    "vessel_lantern_lost_choir",
   ];
   for (const id of showcase) {
     const model = modelFor(id);
@@ -1215,18 +1237,64 @@ function renderMenuModels() {
   }
 }
 
+/**
+ * Drag or arrow-key rotation for a model. The same model node is used in
+ * matches, so the showcase cannot hide an unfinished in-game asset.
+ */
+function enableModelSpin(stage, modelNode) {
+  let spin = -32;
+  let dragging = false;
+  let startX = 0;
+  let startSpin = spin;
+  const apply = () => modelNode.style.setProperty("--spin", `${spin}deg`);
+  apply();
+
+  stage.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    startX = event.clientX;
+    startSpin = spin;
+    stage.setPointerCapture?.(event.pointerId);
+    stage.classList.add("is-spinning");
+  });
+  stage.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    spin = startSpin + (event.clientX - startX) * 0.9;
+    apply();
+  });
+  const end = () => {
+    dragging = false;
+    stage.classList.remove("is-spinning");
+  };
+  stage.addEventListener("pointerup", end);
+  stage.addEventListener("pointercancel", end);
+  stage.addEventListener("pointerleave", end);
+  stage.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    spin += event.key === "ArrowLeft" ? -22 : 22;
+    apply();
+  });
+}
+
 function renderRoster() {
   const grid = $("#roster-grid");
   if (!grid || !ui.catalog || grid.childElementCount > 0) return;
   for (const vessel of ui.catalog.cards.filter((card) => card.category === "vessel")) {
     const model = modelFor(vessel.id);
+    const modelNode = model
+      ? buildVoxelModel(model, { label: vessel.name })
+      : buildPlaceholderModel(vessel.name);
+    const stage = el("div", {
+      class: "roster-stage",
+      tabindex: "0",
+      role: "group",
+      "aria-label": `${vessel.name} voxel model. Drag, or use the left and right arrow keys, to rotate.`,
+    }, [modelNode]);
+    if (model) enableModelSpin(stage, modelNode);
+    const ability = vessel.abilities?.[0]?.text ?? vessel.designDescription ?? "";
     grid.append(
       el("article", { class: `roster-card ${vessel.element}` }, [
-        el("div", { class: "roster-stage" }, [
-          model
-            ? buildVoxelModel(model, { label: vessel.name })
-            : buildPlaceholderModel(vessel.name),
-        ]),
+        stage,
         el("div", { class: "roster-meta" }, [
           el("span", { class: `element-badge ${vessel.element}`, text: ELEMENT_LABELS[vessel.element] ?? vessel.element }),
           el("h3", { text: vessel.name }),
@@ -1237,6 +1305,8 @@ function renderRoster() {
             el("div", { html: `MV <strong>${vessel.movement}</strong>` }),
             el("div", { html: `RG <strong>${vessel.range}</strong>` }),
           ]),
+          el("p", { class: "roster-flavor", text: vessel.flavorText ?? "" }),
+          el("p", { class: "roster-ability muted small", text: ability }),
         ]),
       ]),
     );
@@ -1798,6 +1868,9 @@ async function boot() {
   renderMenuModels();
   renderMenuState();
   renderProfileForm();
+  const arenaName = $("#arena-name");
+  if (arenaName) arenaName.textContent = ARENA.name;
+  $("#board")?.setAttribute("data-arena", ARENA.id);
   // First visit: open the rules page rather than dropping straight into a match.
   showView(tutorialSeen() ? "menu" : "guide");
 }

@@ -4,6 +4,51 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-28 - ART-001 - Voxel art pass: materials, pivots, 728 boxes and a diorama arena
+
+Session scope: the roster was 11–14 boxes per Vessel with one tint per element, models were lit by CSS
+filters, attacks tilted the whole body, and the board was a flat grid. No rule, card stat or engine
+file changed.
+
+- **Renderer rebuilt** (`src/render/voxel.js`). Face colours are now computed per material in JS
+  (`matte`, `metal`, `stone`, `cloth`, `leather`, `wood`, `bone`, `crystal`, `glass`, `ember`, `void`)
+  instead of CSS brightness filters, which flattened 3D transforms. Per-face 1 px borders were removed:
+  at 2–3 px per voxel they consumed the fill and made small models read as noise.
+- **Articulated groups.** Boxes carry an animation group; each group rotates around an authored pivot
+  (wrist, shoulder, neck, hip, tail root, cloak). Attacks now swing the weapon, snap the head and lash
+  the tail instead of only lunging the whole model. Groups animate for idle (`breathe`, `heavy`,
+  `hover`, `sway`) and combat (`fx-lunge`, `fx-hit`, `fx-spawn`).
+- **Angled geometry.** Parts accept `rx/ry/rz`, used for fins, banners, lances, antlers and blade snouts.
+- **18 models rewritten** into `src/render/vessels/{fire,water,earth,metal,wood}.js`: **728 boxes**
+  (30–59 each, minimum 4 animation groups and 4 materials). Element palettes now include a full
+  material set (ceramic, cloth, leather, bark, stone, brass, bone, crystal) so element identity reads
+  without colour. Humanoids gained segmented limbs, layered armour, cloth, weapons and helms; beasts,
+  dragons, constructs, spirits and otherworldly units keep their own anatomy.
+- **Arena diorama** (`src/render/terrain.js`, new): authored point-symmetric 7×7 ground map (grass,
+  moss, ruins, shallows, crystal), per-kind elevation, props at the back edge of tiles, stone plinth,
+  corner posts, per-tile thickness/bevel, unit contact shadows, key light and edge vignette, plus a 7°
+  camera tilt on the board. Every kind declares `rules: "decorative"`; the caption says so.
+- **Roster showcase upgraded**: models render at 10 px per voxel (was 8), each model can be dragged or
+  rotated with the arrow keys, and cards show role, stats, flavour text and the design description.
+- **Menu showcase curated** to the four clearest silhouettes (Crownblade, Nightlancer, Bastion,
+  Lantern) at a larger scale with ground shadows.
+- **Docs**: `docs/VOXEL_ART_BIBLE.md` gained an implementation-status section; 
+  `docs/UNIT_VISUAL_DESIGNS.md` gained a per-model status table (boxes, groups, materials, height,
+  idle, acceptance notes).
+- Tests: `npm test` → **91 tests, 91 pass, 0 fail** (~0.5 s). `tests/models.test.js` tightened to
+  enforce the detail bar (≥30 boxes, ≥4 groups, ≥4 materials, bounded footprint and rotations, valid
+  pivots, ≥10 distinct proportion sets). New `tests/terrain.test.js` (6 tests): full 49-tile coverage,
+  decorative classification, 180° symmetry, prop bounds, prop-model validity, and an architecture
+  guard that fails if `src/game/engine.js`, `ai.js` or `content.js` ever imports terrain.
+- Browser verification at `http://127.0.0.1:8123/` (Python static server, PID recorded and stopped):
+  menu, guide, roster, settings and battle all rendered with **zero console errors**; 18 roster cards
+  rendered 728 boxes; a practice match to turn 6 deployed four Vessels of different elements and the
+  models rendered on their own tiles; mobile 390×844 kept the board and stats readable at 43 px tiles.
+- Screenshots regenerated for the README: `screenshots/{menu,battle,roster,guide,profile,mobile}.png`.
+- Known limitations: CSS-3D boxes, not GLB meshes; no real light pass or dynamic shadows; rigid-group
+  limb rotation rather than skeletal deformation; the Wyrm of the Drowned Vault and the Verdant
+  Colossus remain the weakest silhouettes at tile size; phone tiles prioritise stats over model detail.
+
 ### 2026-10-28 - UX-001 / M2-008 / M2-009 - Menu, board readability and the 18 Vessel models
 
 Session scope: the app dropped straight into a match, the battlefield did not explain itself, and the "voxel units" were a single CSS cube per element. All three are addressed here; nothing was rebalanced and no canonical rule was changed.

@@ -1390,14 +1390,30 @@ body.reduce-motion * {
 }
 
 .menu-model {
-  --u-base: clamp(4.6px, 1vw, 8px);
+  --u-base: clamp(5.4px, 1.1vw, 8.6px);
   width: calc(var(--u-base) * 15);
+  position: relative;
   display: grid;
   align-items: end;
   justify-items: center;
+  padding-bottom: 6px;
 }
-.menu-model:nth-child(2) { --u-base: clamp(5.8px, 1.35vw, 10.5px); }
-.menu-model:nth-child(3) { --u-base: clamp(4.2px, 0.9vw, 7px); }
+
+.menu-model::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 62%;
+  height: 9px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
+}
+
+.menu-model:nth-child(2) { --u-base: clamp(6.6px, 1.4vw, 11px); }
+.menu-model:nth-child(3) { --u-base: clamp(5px, 1vw, 8px); }
+.menu-model:nth-child(4) { --u-base: clamp(5px, 1.05vw, 8.4px); }
 .menu-model .vox-model { animation: vox-breathe 4.4s ease-in-out infinite; }
 .menu-model:nth-child(2) .vox-model { animation-delay: -1.2s; }
 .menu-model:nth-child(3) .vox-model { animation-delay: -2.1s; }
@@ -1421,7 +1437,7 @@ body.reduce-motion * {
    ================================================================== */
 
 .model-stage {
-  --u-base: 3.4px;
+  --u-base: 3.9px;
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
@@ -1433,24 +1449,36 @@ body.reduce-motion * {
 
 .vox-model {
   --u: calc(var(--u-base, 2.4px) * var(--scale, 1));
+  --spin: -32deg;
   position: relative;
   width: 0;
   height: 0;
   transform-style: preserve-3d;
-  transform: rotateX(-15deg) rotateY(-33deg);
+  /* Three-quarter camera. Roster models can override --spin by dragging. */
+  transform: rotateX(-13deg) rotateY(var(--spin));
   pointer-events: none;
 }
 
+/* Perspective keys and rounded forms are forbidden: this is a voxel pipeline.
+   Faces are shaded per material in JS, so no CSS filter pass is required. */
 .vox-body {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  animation: vox-breathe 3.8s ease-in-out infinite;
 }
 
+.vox-model[data-idle="breathe"] .vox-body { animation: vox-breathe 4.2s ease-in-out infinite; }
+.vox-model[data-idle="heavy"] .vox-body { animation: vox-breathe 6.4s ease-in-out infinite; }
+.vox-model[data-idle="hover"] .vox-body { animation: vox-hover 5.4s ease-in-out infinite; }
+.vox-model[data-idle="sway"] .vox-body { animation: vox-sway 5.8s ease-in-out infinite; }
+.vox-model[data-idle="none"] .vox-body { animation: none; }
+
+/* Rotating a group rotates every box around that group's authored pivot: a
+   shoulder, wrist, hip, tail root or neck. */
 .vox-group {
   position: absolute;
   transform-style: preserve-3d;
+  transform-origin: var(--ox, 0) var(--oy, 0) var(--oz, 0);
 }
 
 .vox-box {
@@ -1460,15 +1488,17 @@ body.reduce-motion * {
   width: var(--w);
   height: var(--h);
   transform-style: preserve-3d;
-  transform: var(--t) translate(-50%, -50%);
+  transform: var(--t) translate(-50%, -50%) var(--r, rotateZ(0deg));
 }
 
 .vox-face {
   position: absolute;
   display: block;
   background: var(--c);
-  border: 1px solid rgba(6, 9, 18, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  /* No per-face border: at 2-3 px per voxel a border eats the fill and turns
+     the model into noise. Depth comes from the material face tones. */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  backface-visibility: hidden;
 }
 
 .vox-front {
@@ -1476,6 +1506,7 @@ body.reduce-motion * {
   top: 0;
   width: 100%;
   height: 100%;
+  background: var(--c);
   transform: translateZ(calc(var(--d) / 2));
 }
 
@@ -1484,61 +1515,100 @@ body.reduce-motion * {
   height: 100%;
   left: calc((var(--w) - var(--d)) / 2);
   top: 0;
+  background: var(--cs);
   transform: translateX(calc(var(--w) / 2)) rotateY(90deg);
-  filter: brightness(0.66);
 }
 
+/* The top face carries the bevel highlight: that single bright edge is what
+   makes a stack of cubes read as a sculpted miniature. */
 .vox-top {
   width: 100%;
   height: var(--d);
   left: 0;
   top: calc((var(--h) - var(--d)) / 2);
+  background: var(--ct);
+  border-top: 1px solid var(--ce);
   transform: translateY(calc(var(--h) / -2)) rotateX(90deg);
-  filter: brightness(1.22);
 }
 
-.vox-box.is-glow .vox-front,
-.vox-box.is-eye .vox-front {
-  box-shadow: 0 0 7px var(--c);
-}
+.vox-box.is-emissive .vox-front { box-shadow: 0 0 7px var(--c), inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.vox-box.is-emissive .vox-top { box-shadow: 0 0 6px var(--c); }
 
-.vox-box.is-accent .vox-front { filter: brightness(1.1); }
+/* Metal and stone read through sharper stiping, not brighter colour alone. */
+.vox-box[data-material="metal"] .vox-top { border-top-color: rgba(255, 255, 255, 0.35); }
+.vox-box[data-material="crystal"] .vox-front,
+.vox-box[data-material="glass"] .vox-front { opacity: 0.94; }
 
 .model-shadow {
   position: absolute;
   bottom: -1px;
   left: 50%;
-  width: 44%;
-  height: 5px;
+  width: 52%;
+  height: 6px;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), transparent);
   pointer-events: none;
 }
 
 @keyframes vox-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(calc(var(--u) * -0.6)); }
+  0%, 100% { transform: translateY(0) rotateZ(0deg); }
+  50% { transform: translateY(calc(var(--u) * -0.5)) rotateZ(calc(var(--sway) * 0.5deg)); }
 }
 
-/* Floating Vessels hover higher and settle more slowly. */
-.cell .unit.spirit .vox-body,
-.cell .unit.otherworldly .vox-body { animation-duration: 5.2s; }
+@keyframes vox-hover {
+  0%, 100% { transform: translateY(calc(var(--u) * -0.4)) rotateZ(0deg); }
+  50% { transform: translateY(calc(var(--u) * -1.2)) rotateZ(calc(var(--sway) * -0.8deg)); }
+}
+
+@keyframes vox-sway {
+  0%, 100% { transform: translateY(0) rotateZ(calc(var(--sway) * -1deg)); }
+  50% { transform: translateY(calc(var(--u) * -0.35)) rotateZ(calc(var(--sway) * 1deg)); }
+}
 
 @keyframes vox-attack {
   0% { transform: translateY(0) rotateZ(0deg); }
-  30% { transform: translateY(calc(var(--u) * -1.4)) rotateZ(-7deg); }
-  60% { transform: translateY(calc(var(--u) * 0.4)) rotateZ(5deg); }
+  26% { transform: translateY(calc(var(--u) * -1.5)) rotateZ(-7deg); }
+  58% { transform: translateY(calc(var(--u) * 0.5)) rotateZ(5deg); }
   100% { transform: translateY(0) rotateZ(0deg); }
 }
 
+/* Weapon, arm and head pivots give each attack a readable arc instead of
+   sliding the whole model forward. */
+@keyframes vox-swing {
+  0% { transform: rotateZ(0deg); }
+  32% { transform: rotateZ(-26deg); }
+  62% { transform: rotateZ(78deg); }
+  100% { transform: rotateZ(0deg); }
+}
+@keyframes vox-thrust {
+  0% { transform: translateZ(0); }
+  38% { transform: translateZ(calc(var(--u) * 3)); }
+  100% { transform: translateZ(0); }
+}
+@keyframes vox-arm {
+  0% { transform: rotateZ(0deg); }
+  40% { transform: rotateZ(-38deg); }
+  100% { transform: rotateZ(0deg); }
+}
+
 .cell.fx-lunge .vox-body { animation: vox-attack 380ms cubic-bezier(0.3, 0.9, 0.3, 1); }
+.cell.fx-lunge .vox-group[data-group="weapon"] { animation: vox-swing 420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.cell.fx-lunge .vox-group[data-group="armR"] { animation: vox-arm 420ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.cell.fx-lunge .vox-group[data-group="head"] { animation: vox-arm 380ms ease-out; }
+.cell.fx-lunge .vox-group[data-group="tail"] { animation: vox-arm 400ms ease-out reverse; }
 .cell.fx-hit .vox-body { animation: vox-flinch 320ms ease-in-out; }
+.cell.fx-hit .vox-group[data-group="head"] { animation: vox-flinch-head 320ms ease-in-out; }
 
 @keyframes vox-flinch {
   0%, 100% { transform: translateY(0) rotateZ(0deg); }
   25% { transform: translateY(calc(var(--u) * 0.8)) rotateZ(6deg); }
   60% { transform: translateY(calc(var(--u) * 0.4)) rotateZ(-4deg); }
+}
+@keyframes vox-flinch-head {
+  0%, 100% { transform: rotateZ(0deg); }
+  30% { transform: rotateZ(16deg); }
+  65% { transform: rotateZ(-8deg); }
 }
 
 .cell.fx-spawn .vox-body { animation: vox-summon 340ms ease-out; }
@@ -1551,9 +1621,26 @@ body.reduce-motion * {
 /* The unit tile keeps its numbers readable underneath the model. */
 .unit {
   position: relative;
+  z-index: 2;
   justify-content: flex-end;
   gap: 1px;
   padding: 2px 3px 3px;
+}
+
+/* A soft pool of shade behind each model separates it from the terrain
+   without dimming the model itself. */
+.unit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 6px;
+  background: radial-gradient(64% 72% at 50% 64%, rgba(7, 11, 19, 0.6), transparent 74%);
+  pointer-events: none;
+}
+
+.unit.enemy::before {
+  background: radial-gradient(64% 72% at 50% 64%, rgba(26, 8, 14, 0.62), transparent 74%);
 }
 
 .unit-name {
@@ -1688,6 +1775,222 @@ body.reduce-motion * {
 .cell.legal {
   border-style: solid;
   box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.5), 0 0 12px rgba(110, 231, 168, 0.18);
+}
+
+/* ==================================================================
+   Battlefield diorama
+   A raised stone table, layered ground blocks, props and a key light.
+   All of it is decoration painted under the interactive grid: the 7x7
+   hit targets, coordinates and legal-tile rings stay exactly where the
+   rules engine puts them.
+   ================================================================== */
+
+.board-stage {
+  position: relative;
+  width: min(100%, 600px);
+  margin: 14px auto 20px;
+  isolation: isolate;
+}
+
+/* Plinth: the arena is an object sitting on a dark table, not a rectangle. */
+.board-stage::before {
+  content: "";
+  position: absolute;
+  inset: -12px -9px -18px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, #333d52 0%, #232b3c 42%, #141a28 72%, #0b0f18 100%);
+  box-shadow:
+    0 26px 44px rgba(0, 0, 0, 0.62),
+    0 6px 0 #0a0e16,
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -14px 22px rgba(0, 0, 0, 0.5);
+  z-index: -1;
+}
+
+/* Key light from the upper left, vignette at the table edge. */
+.board-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 80% at 26% -10%, rgba(255, 238, 205, 0.07), transparent 58%),
+    radial-gradient(100% 100% at 50% 54%, transparent 52%, rgba(5, 8, 14, 0.45));
+  pointer-events: none;
+  z-index: 5;
+}
+
+.board {
+  position: relative;
+  z-index: 2;
+  /* A shallow camera tilt: enough to read as a tabletop model, small enough
+     that tile coordinates and stat text stay crisp. */
+  transform: perspective(1600px) rotateX(7deg);
+  transform-origin: 50% 40%;
+  padding: 10px;
+  gap: 3px;
+  border: 1px solid #3a465f;
+  border-radius: 13px;
+  background:
+    linear-gradient(160deg, #1b2434, #0d1220 62%, #0a0f1a),
+    #0d1322;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 5px rgba(12, 17, 28, 0.55),
+    inset 0 0 42px rgba(0, 0, 0, 0.55);
+}
+
+.board-post {
+  position: absolute;
+  width: 24px;
+  height: 30px;
+  z-index: 4;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, #2b3448 0 62%, #1a2233 62% 100%),
+    #232c3e;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.45),
+    0 10px 16px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.board-post::before {
+  content: "";
+  position: absolute;
+  inset: -5px -3px auto;
+  height: 7px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #4d5a75, #333e54);
+}
+
+.board-post.tl { left: -19px; top: -17px; }
+.board-post.tr { right: -19px; top: -17px; }
+.board-post.bl { left: -19px; bottom: -22px; }
+.board-post.br { right: -19px; bottom: -22px; }
+
+.arena-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 -2px;
+  text-align: center;
+}
+
+.arena-name {
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #d8c9a6;
+}
+
+.arena-caption em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* ---- ground blocks ------------------------------------------------- */
+
+.cell {
+  --lift: 0px;
+  isolation: isolate;
+  border-color: rgba(15, 21, 34, 0.9);
+  background: #101827;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.cell-ground {
+  position: absolute;
+  inset: 1px;
+  border-radius: 7px;
+  z-index: 0;
+  pointer-events: none;
+  transform: translateY(calc(var(--lift) * -1));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -5px 8px rgba(0, 0, 0, 0.34),
+    0 calc(var(--lift) + 3px) 0 rgba(6, 9, 15, 0.55);
+}
+
+.cell[data-terrain="grass"] .cell-ground {
+  background:
+    radial-gradient(80% 60% at 24% 18%, rgba(205, 235, 165, 0.16), transparent 62%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 8px, transparent 8px 16px),
+    linear-gradient(165deg, rgba(84, 116, 68, 0.84), rgba(44, 66, 43, 0.9));
+}
+
+.cell[data-terrain="moss"] .cell-ground {
+  background:
+    radial-gradient(60% 60% at 30% 30%, rgba(150, 190, 110, 0.24), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 7px, transparent 7px 14px),
+    linear-gradient(165deg, rgba(84, 122, 74, 0.86), rgba(42, 64, 40, 0.9));
+}
+
+.cell[data-terrain="stone"] .cell-ground {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(0, 0, 0, 0.1) 12px 24px),
+    linear-gradient(165deg, rgba(94, 104, 124, 0.9), rgba(58, 66, 84, 0.94));
+}
+
+.cell[data-terrain="water"] .cell-ground {
+  background:
+    radial-gradient(70% 40% at 30% 24%, rgba(190, 245, 255, 0.3), transparent 68%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.09) 0 2px, transparent 2px 13px),
+    linear-gradient(165deg, rgba(38, 100, 122, 0.85), rgba(21, 60, 82, 0.92));
+}
+
+.cell[data-terrain="crystal"] .cell-ground {
+  background:
+    radial-gradient(50% 50% at 50% 50%, rgba(140, 225, 255, 0.28), transparent 72%),
+    repeating-linear-gradient(60deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 11px),
+    linear-gradient(165deg, rgba(70, 92, 118, 0.9), rgba(45, 58, 80, 0.94));
+}
+
+/* Keep legal-tile feedback above the ground and props. */
+.cell.legal .cell-ground { box-shadow: inset 0 0 0 2px rgba(110, 231, 168, 0.65), 0 0 14px rgba(110, 231, 168, 0.22); }
+.cell.move .cell-ground { box-shadow: inset 0 0 0 2px rgba(122, 215, 255, 0.55), 0 0 12px rgba(122, 215, 255, 0.18); }
+.cell.attack .cell-ground { box-shadow: inset 0 0 0 2px rgba(255, 107, 122, 0.6), 0 0 12px rgba(255, 107, 122, 0.2); }
+.cell.selected .cell-ground { box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.8), 0 0 16px rgba(255, 209, 102, 0.24); }
+
+/* ---- props --------------------------------------------------------- */
+
+.cell-prop {
+  position: absolute;
+  left: 50%;
+  bottom: 44%;
+  z-index: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0.88;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.45));
+}
+
+.cell-prop.is-flipped { transform: translateX(-50%) scaleX(-1); }
+
+.cell-prop-model {
+  --u-base: 2.9px;
+  opacity: 0.95;
+}
+
+.cell-prop .vox-body { animation: none; }
+
+@media (max-width: 640px) {
+  .cell-prop-model { --u-base: 1.6px; }
+  .cell-prop { bottom: 44%; }
+  .board-post { width: 16px; height: 20px; }
+  .board-post.tl, .board-post.bl { left: -11px; }
+  .board-post.tr, .board-post.br { right: -11px; }
+  .board-post.tl, .board-post.tr { top: -11px; }
+  .board-post.bl, .board-post.br { bottom: -14px; }
+  .arena-caption em { display: none; }
 }
 
 /* ==================================================================
@@ -1877,14 +2180,44 @@ body.reduce-motion * {
 }
 
 .roster-stage {
-  --u-base: 8px;
-  height: 176px;
+  --u-base: 10px;
+  height: 200px;
   display: grid;
   align-items: end;
   justify-items: center;
   padding-bottom: 14px;
   perspective: 700px;
+  cursor: grab;
+  touch-action: pan-y;
   background: radial-gradient(60% 46% at 50% 82%, rgba(122, 215, 255, 0.16), transparent 72%), linear-gradient(180deg, #0d1220, #0a0e1a);
+}
+
+.roster-stage::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  background: radial-gradient(50% 60% at 50% 100%, rgba(0, 0, 0, 0.55), transparent 75%);
+  pointer-events: none;
+}
+
+.roster-stage { position: relative; }
+.roster-stage .vox-model { z-index: 1; transition: transform 90ms linear; }
+.roster-stage.is-spinning { cursor: grabbing; }
+.roster-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.roster-flavor {
+  margin: 10px 0 0 !important;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #9aa6c4;
+  font-style: italic;
+}
+
+.roster-ability {
+  margin: 6px 0 0 !important;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .roster-card.fire .roster-stage { background: radial-gradient(60% 46% at 50% 82%, rgba(255, 133, 81, 0.2), transparent 72%), linear-gradient(180deg, #150e12, #0a0e1a); }
@@ -1927,10 +2260,11 @@ body.reduce-motion * {
   .unit-stats .stat.gd::before { content: "G"; }
   .unit-flag { display: none; }
   .unit .element-badge { font-size: 7px; padding: 0 2px; }
-  .menu-model { --u-base: 3.4px; }
-  .menu-model:nth-child(2) { --u-base: 4.4px; }
-  .menu-model:nth-child(3) { --u-base: 3px; }
-  .roster-stage { --u-base: 4.2px; height: 132px; }
+  .menu-model { --u-base: 6px; }
+  .menu-model:nth-child(2) { --u-base: 7.4px; }
+  .menu-model:nth-child(3) { --u-base: 5.6px; }
+  .menu-model:nth-child(4) { --u-base: 5.8px; }
+  .roster-stage { --u-base: 6.4px; height: 150px; }
   .back-row-slots { grid-template-columns: minmax(0, 1fr); }
   .unit .guard-bar { height: 2px; }
 }

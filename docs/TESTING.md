@@ -17,11 +17,12 @@ node --test "tests/*.test.js"
 | `tests/cards.test.js` | Actions and Relics: casts, targeting, heal caps, buffs, sweeps, Nexus armour, Relic limit, auras, AI play, no-op rejection |
 | `tests/match.test.js` | Full scripted match to completion, same-seed replay determinism, board/registry consistency |
 | `tests/profile.test.js` | Name/avatar/settings/stats sanitisation, forged identities, record maths |
-| `tests/models.test.js` | Voxel roster completeness, no shared silhouettes, palette keys, element palettes, explicit placeholder for unknown ids, 49-tile board split 21/7/21 |
+| `tests/models.test.js` | Voxel roster completeness, unique silhouettes (incl. rotations), ≥30 boxes / ≥4 groups / ≥4 materials, palette + material + pivot validity, footprint bounds, proportion variety, element palettes, explicit placeholder for unknown ids, 49-tile board split 21/7/21 |
+| `tests/terrain.test.js` | 49-tile terrain coverage, decorative-only contract, 180° symmetry, prop bounds/validity, no engine or AI import of terrain |
 | `tests/tutorial.test.js` | Guided-match step order, event filtering, `endTurn` escape, completion clamping, idempotent skip |
 | `tests/support.js` | Shared catalog loading (Vessels + Actions/Relics), seeded RNG, controlled hands, positional setup |
 
-Current result: `npm test` → **83 tests, 83 pass, 0 fail** (~0.6 s).
+Current result: `npm test` → **91 tests, 91 pass, 0 fail** (~0.5 s).
 
 Rules for new tests:
 
@@ -70,6 +71,19 @@ the intended tiles during a real event: `.fx-lunge`, `.fx-hit`, `.fx-cast-hit`,
 `.dmg-float` carries the right number. Confirm Guard counts down instead of
 snapping, and that both `prefers-reduced-motion` and the in-game toggle suppress
 every effect.
+
+Voxel art checks (manual, per art change):
+
+- Roster shows 18 cards and each stage contains a `.vox-model` with a unique `data-model-id`;
+  box totals match the status table in `docs/UNIT_VISUAL_DESIGNS.md`.
+- Drag / arrow-key rotation works on every stage and the model does not clip out of the card.
+- On the battlefield, each unit's model reads at tile size next to its stat strip; no model is a
+  grey placeholder cube.
+- Materials differ in greyscale: metal has a bright top face and dark side, cloth stays matte,
+  crystal/ember glow. Checked by eye against the art bible, not by a pixel test.
+- Arena: 49 terrain-tinted cells, props only at the back of tiles, units draw above props, legal
+  summon / move / attack rings remain the most saturated thing on the board.
+- The arena caption states that terrain is decorative; no water or rubble tile implies a rule.
 
 ## Browser checks (manual, recorded per session)
 

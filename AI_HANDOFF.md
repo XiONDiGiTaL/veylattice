@@ -10,17 +10,58 @@
   setting or base-site file was modified.
 - Pages caches JS for up to four hours (`max-age=14400`), so a warm browser can briefly run a cached
   module against new HTML. Hard-refresh before debugging "stale" behaviour after a deploy.
-- Latest commits: `a239bc9` (S-M2-D: menu, onboarding, board readability, 18 voxel models) and a
-  docs follow-up recording it, both pushed to `origin/main`.
+- Latest commits: `a239bc9` (S-M2-D: menu, onboarding, board readability, 18 voxel models), its docs
+  follow-up, and the ART-001 art pass (see the session below). All pushed to `origin/main`.
 - Live verification after S-M2-D, in a fresh incognito context: first visit opened How to Play; menu
   rendered 4 decorative models (50 boxes); Roster rendered 18 cards / 18 models / 209 boxes; a practice
   match created 49 cells and summoned a `Mireglass Stalker` with `data-model-id` and 12 boxes; **zero
   console errors**; `models.js`, `voxel.js`, `tutorial.js` and `styles.css` all 200. Apex site 200,
   `sohbet.xiondigital.net` 200.
+- ART-001 local verification: 18 roster cards / 728 boxes, a practice match to turn 6 with four
+  different Vessels on the board, and zero console errors on menu, guide, roster, settings and battle.
 - Environment: Windows / Git Bash, Node v24.19.0, Python 3.14 for static serving. The app has **no
   runtime dependencies**; tests use Node's built-in runner.
 
-## Latest session — S-M2-D (menu, onboarding, board readability, 18 voxel models)
+## Latest session — ART-001 (voxel art pass, articulated rigs, arena diorama)
+
+`src/game/` was **not modified**. Rules, card data and engine behaviour are unchanged; this was a
+presentation and content-authoring session.
+
+1. **Renderer** (`src/render/voxel.js`) — per-material face shading computed in JS instead of CSS
+   brightness filters; per-face borders removed (they ate 2–3 px voxels); boxes carry an animation
+   group and optional rotation; groups rotate around authored pivots (wrist, shoulder, neck, tail
+   root); idle languages (`breathe`, `heavy`, `hover`, `sway`, `none`) and combat hooks
+   (`fx-lunge` swings the weapon/head/tail, `fx-hit` flinches, `fx-spawn` rises).
+2. **Roster** — 18 models rewritten into `src/render/vessels/{fire,water,earth,metal,wood}.js` with
+   shared authoring helpers in `_parts.js`: **728 boxes**, 30–59 per Vessel, ≥4 groups and ≥4
+   materials each. Element palettes now define a full material set (ceramic, cloth, leather, bark,
+   stone, brass, bone, crystal, glass, void), so identity survives greyscale.
+3. **Arena** (`src/render/terrain.js`, new) — authored point-symmetric 7×7 ground map (grass, moss,
+   ruins, shallows, crystal), per-kind elevation, props at the back edge of tiles, stone plinth,
+   corner posts, per-tile thickness, unit contact shadows, key light, vignette, 7° board tilt. Every
+   kind is `rules: "decorative"`; the caption says so; a test fails if the engine or AI imports it.
+4. **Showcase** — roster models are larger, draggable and arrow-key rotatable, and show role, stats,
+   flavour and design notes. The menu shows the four clearest silhouettes.
+5. **Docs** — `docs/VOXEL_ART_BIBLE.md` gained an implementation-status section;
+   `docs/UNIT_VISUAL_DESIGNS.md` gained a per-model table (boxes, groups, materials, height, idle,
+   acceptance notes).
+
+### Defects found and fixed this session
+
+- `boxElement` assumed a palette; prop models carry raw hex colours and threw on every board render.
+  Palettes now default to `{}` with a hex fallback.
+- The board lost its width cap when wrapped in `.board-stage` and stretched across the layout; it is
+  now `min(100%, 600px)`, centred, with clearance for the plinth.
+- Per-face 1 px borders made small voxels unreadable; removed in favour of material face tones.
+- The Wyrm's neck/head were buried inside its coil; rebuilt as coil + S-body + head above the ring.
+
+### Still weak (do not describe as finished)
+
+- The Wyrm of the Drowned Vault and the Verdant Colossus read worst at tile size; both need another
+  authored pass (head/coil separation, canopy value break).
+- Phone tiles (43 px) favour stats; models are colour + shape only there.
+
+## Previous session — S-M2-D (menu, onboarding, board readability, 18 voxel models)
 
 The app used to boot straight into a match, explain nothing, and draw each unit as one element-coloured
 CSS cube. This session replaced all three. `src/game/` was **not modified**: no rule, constant or engine
@@ -118,12 +159,15 @@ authority on legality.
 
 ### Presentation — `src/render/`, `src/ui/`, `src/main.js`
 
-- `src/render/models.js`: 18 Vessel definitions (boxes + groups + palettes + optional `scale`).
-- `src/render/voxel.js`: CSS-3D builder; three faces per box; no dependencies, no WebGL.
+- `src/render/models.js`: palettes (full material set per element), model assembly, `modelFor()`.
+- `src/render/vessels/*.js`: 18 Vessel definitions (728 boxes, groups, materials, pivots, rotations).
+- `src/render/voxel.js`: CSS-3D builder; three shaded faces per box; pivots and angled parts; no
+  dependencies, no WebGL.
+- `src/render/terrain.js`: decorative arena map + prop models; must never be imported by `src/game/`.
 - `src/ui/tutorial.js`: pure guided-match state machine (`TUTORIAL_STEPS`, `advanceTutorial`,
   `skipTutorial`, `tutorialStep`).
-- `src/main.js`: menu/guide/roster/battle/settings views, board projection, prompts, event-driven combat
-  animation (`playEvents(events, before)`), AI pacing.
+- `src/main.js`: menu/guide/roster/battle/settings views, board projection, ground/prop rendering,
+  roster spin, prompts, event-driven combat animation (`playEvents(events, before)`), AI pacing.
 
 ### Profiles and persistence — `src/net/`
 
@@ -131,20 +175,23 @@ authority on legality.
 - Recovery-code accounts (`src/net/account.js` + `supabase/migrations/0002_accounts.sql`); see
   `docs/ACCOUNTS.md`. Dedicated Supabase project `jjtfnduodxtulxvviasf`; no table grants, RPC-only.
 
-### Tests — 83/83 passing
+### Tests — 91/91 passing
 
-`npm test` → 83 pass, 0 fail. Files: `tests/` `elemental`, `content`, `cards`, `engine`, `match`, `ai`,
-`profile`, `models`, `tutorial`, plus `support.js`.
+`npm test` → 91 pass, 0 fail. Files: `tests/` `elemental`, `content`, `cards`, `engine`, `match`, `ai`,
+`profile`, `models`, `terrain`, `tutorial`, plus `support.js`.
 
 ## Not implemented (do not claim otherwise)
 
 - No card collection, deck builder, shop, packs, rewards, ranked, arenas, Lore Bonds, Forge or Codex.
 - No online play, lobbies or server-authoritative matches. Practice is local only.
-- **No terrain rules.** Zones are visual (deployment / contested); nothing on the board modifies combat.
+- **No terrain rules.** Zones are visual (deployment / contested); the arena ground map is decorative
+  and declares that in code. Nothing on the board modifies combat.
 - No set/activate Action back-row zones; no rule specifies them, so only the two Relic slots exist.
 - No Google/Discord sign-in (providers disabled, credentials unavailable — see `docs/ACCOUNTS.md`).
 - No rate limiting on account/profile creation (TODO M2-005).
-- Models are CSS-3D boxes: no GLB, no skeletal animation, no per-limb swing. Whole-body lunges only.
+- Models are CSS-3D boxes: no GLB, no GPU lighting or dynamic shadows, no skeletal deformation. Limbs
+  are rigid voxel groups rotating around authored pivots, which is why attacks do swing the weapon and
+  head, but there are no per-frame skinned poses.
 - No keyboard grid traversal (TODO M7-005). No in-match pause overlay.
 - No measured AI win rate against humans; no balance claims are justified.
 - A real 120-second browser expiry has not been waited out; engine tests cover the boundary.
@@ -165,7 +212,7 @@ authority on legality.
 ## Commands
 
 ```bash
-npm test                                  # 83 tests, Node built-in runner
+npm test                                  # 91 tests, Node built-in runner
 node --check src/main.js src/game/ai.js   # syntax sanity
 python -m http.server 8123 --bind 127.0.0.1   # then http://127.0.0.1:8123/
 ```
@@ -179,18 +226,19 @@ Previously used preview servers: 8123/8124/8130. Check ownership before killing 
   serialises per command). `structuredClone` is required.
 - The 1-Flux opening with a 2-Flux cheapest Vessel makes turns one and two thin. **This is canonical**
   (`GAME_RULES.md`) — the tutorial explains it. Changing it is a balance decision, not a UI fix.
-- CSS-3D model cost scales with box count × units on screen. 18 models at 11–14 boxes each is fine at
-  four Vessels per seat; measure before adding many more.
+- CSS-3D model cost scales with box count × units on screen. The roster is now 728 boxes (30–59 per
+  Vessel, 3 DOM faces each). Eight units on the board plus ~15 props measured fine in the desktop
+  preview, but this is the first thing to profile before raising box counts or adding more props.
 - `structuredClone`/`crypto.randomUUID` require a modern browser; there are no polyfills.
 
 ## Next three executable steps
 
-1. **M3-001** — deck builder and collection UI on top of the existing catalog/deck validators
-   (`validateDeck`, `buildPracticeDeck`), using clearly labelled demo data until server integration.
+1. **ART-002** — second pass on the Wyrm of the Drowned Vault and the Verdant Colossus, then a
+   silhouette gate for all 18 at tile size (not roster size), with screenshots as evidence.
 2. **M2-001 remainder** — effect queue with explicit ordering, revive/return, death triggers, temporary
    buff expiry and loop protection, with simultaneous-death tests.
-3. **M7-004 remainder** — per-limb animation (weapon/head groups already exist in the model data) and a
-   measured mobile performance pass, or a written decision to stay on CSS-3D.
+3. **ART-003** — two more authored arenas as pure reskins (no terrain rules) plus a Match Setup
+   selector, keeping `terrain.js` decorative.
 
 ## End-of-session requirement
 

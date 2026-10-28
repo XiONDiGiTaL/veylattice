@@ -443,3 +443,89 @@ modified and still pass.
 - No deck builder, shop, collection or online play; the menu labels them as absent.
 - A full match to a victory screen was not played in this session; the match engine and its full-match
   tests were unchanged, and earlier sessions did reach the result overlay.
+
+## Session 2026-10-28 · ART-001 · Voxel art pass, articulated rigs and the arena diorama
+
+**Base revision:** `769a65c` (S-M2-D docs) plus the uncommitted S-M2-D change set.
+**Environment:** Windows, Git Bash, Node v24.19.0, Python static server on `127.0.0.1:8123`,
+Chromium preview at 1440×1200 and 390×844.
+
+### Requested scope
+
+Raise the visual bar of the game: detailed RPG-style voxel miniatures, a coherent dark-fantasy art
+direction, articulated animation, a battlefield that reads as a miniature diorama, a real model
+showcase, and a per-model art specification — without changing rules, card identities or data.
+
+### What changed
+
+| File | Change |
+|---|---|
+| `src/render/voxel.js` | Material-based face shading in JS, group pivots, angled boxes, idle/combat animation hooks, prop support |
+| `src/render/models.js` | Palettes extended to a full material world per element; assembles element modules |
+| `src/render/vessels/{fire,water,earth,metal,wood}.js` | 18 individually authored models, 728 boxes total |
+| `src/render/vessels/_parts.js` | `box` / `pair` / `both` authoring helpers (new) |
+| `src/render/terrain.js` | Authored ground map, props and decorative contract (new) |
+| `src/main.js` | Ground/prop rendering per cell, arena name, roster spin/inspection, curated menu showcase |
+| `styles.css` | Material faces, pivots, idle/attack animations, diorama plinth/posts/ground/props, roster stage |
+| `index.html` | Arena caption, board stage and corner posts, roster rotation hint |
+| `tests/models.test.js` | Detail bar, materials, pivots, rotations, proportions |
+| `tests/terrain.test.js` | Coverage, symmetry, decorative contract, prop validity (new) |
+| `docs/VOXEL_ART_BIBLE.md`, `docs/UNIT_VISUAL_DESIGNS.md` | Implementation status and per-model table |
+| `screenshots/*.png` | Regenerated from the running build |
+
+### Verified working
+
+- All 18 official Vessels resolve to an authored model, render on the battlefield and in the roster,
+  and are visually distinct in silhouette (asserted including rotations).
+- The board renders 49 interactive tiles over a decorative diorama: layered ground blocks, props,
+  plinth, corner posts, unit contact shadows, key light and vignette.
+- Deployment, selection, movement, attack, Actions, Relics, turn flow and the AI are unchanged and
+  still pass their suites; terrain is not imported by `src/game/`.
+- Roster models rotate by drag and arrow keys; the stage uses the same node the match uses.
+
+### Commands and results
+
+```
+npm test  ->  91 tests, 91 pass, 0 fail  (~0.5 s)
+```
+
+`models.test.js`: 9 tests, including the new ≥30-box / ≥4-group / ≥4-material floor.
+`terrain.test.js`: 6 tests. Existing engine, cards, profile, match and tutorial suites unchanged.
+
+### Browser verification (recorded)
+
+- `http://127.0.0.1:8123/` — menu, guide, roster, settings, battle: **zero console errors**.
+- Roster: 18 cards, 18 `data-model-id` nodes, 728 `.vox-box` nodes.
+- Practice match to turn 6: four Vessels on the board at once (Wyrm of the Drowned Vault, Mireglass
+  Stalker, Argent Nightlancer, Cloudbreak Coil) each rendered on their own tile; Flux, Vitality and
+  the AI turn loop behaved as before.
+- Mobile 390×844: 43 px tiles, board fully visible, stat line readable, caption collapses to the
+  arena name, plinth/posts scale down.
+
+### Defects found and fixed during the session
+
+- `boxElement` assumed a palette; prop models carry raw hex colours and threw on every board render
+  (`Cannot read properties of undefined`). Palettes now default to `{}` with a hex fallback.
+- The board lost its width cap when wrapped in the new `.board-stage` and stretched across the
+  layout; the stage is now `min(100%, 600px)` and centred.
+- Per-face borders made 1–2 px voxels unreadable; removed in favour of material face tones.
+- The Wyrm's neck and head were hidden inside the coil at tile size; rebuilt as a coil + S-body with
+  the head above the ring. Still the weakest silhouette.
+
+### Remaining bugs / limitations
+
+- CSS-3D boxes only: no GLB assets, no GPU lighting, no dynamic shadows, rigid-group limb rotation.
+- The Verdant Colossus still reads as a trunk with a cap at tile size; its canopy needs a distinct
+  value break. The Wyrm needs a clearer head/coil separation.
+- Props are static and can be visually overlapped by a Vessel's model; units always draw above them.
+- Phone tiles favour stat readability; models are colour + shape only at 43 px.
+- No full match to a victory screen was played in this session (engine tests unchanged).
+
+### Next executable steps
+
+1. **ART-002** — second pass on the Wyrm and Colossus, then a silhouette-gate review of all 18 at
+   tile size (black-fill screenshots), not just at roster size.
+2. **ART-003** — arena variety: pick two more authored arenas from `docs/ARENA_SYSTEM.md` as pure
+   reskins (no terrain rules), with a selector in Match Setup.
+3. **M2-001/M2-002 remainder** — effect queue ordering and validated prebuilt decks, which are still
+   the blockers for a real collection/economy loop.

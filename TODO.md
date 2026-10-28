@@ -144,10 +144,16 @@ Acceptance: three authored pairings, orthogonal same-controller checks, nonstack
 Depends on M2-002, M7-002. Paths: creator/validation/persistence/UI/tests.
 Acceptance: deterministic paid-for power budget, safe editable/generated text, save/edit/delete/deck integration, no official bonds or reward eligibility; offline custom play separate from prebuilt Practice.
 
+### ART-001 | DONE | Voxel art pass: materials, pivots and the arena diorama
+Depends on M2-009. Paths: src/render/voxel.js, src/render/models.js, src/render/vessels/*, src/render/terrain.js, src/main.js, styles.css, tests/models.test.js, tests/terrain.test.js.
+Acceptance met: 18 models rebuilt to 728 boxes (30-59 each, 4+ groups, 4+ materials); per-material face shading computed instead of CSS filters; groups rotate around authored pivots so attacks swing the weapon, head and tail; angled parts for fins/banners/lances; idle languages per unit; authored point-symmetric arena ground map with props, plinth, posts, elevation and unit shadows; roster rotation and richer inspection; decorative contract enforced by tests.
+Evidence: `npm test` -> 91/91 pass; browser run at 127.0.0.1:8123 with zero console errors, 18 roster cards / 728 boxes, four Vessels on the board at turn 6, mobile 390x844 checked; screenshots regenerated.
+Not claimed: no GLB, no GPU lighting, no dynamic shadows, no skeletal deformation; Wyrm and Colossus remain weak at tile size; phone tiles favour stats over model detail.
+
 ### M7-004 | IN_PROGRESS | Voxel models, animation states and accessible frames
 Depends on M1-005. Paths: rendering/assets/UI; docs/UNIT_VISUAL_DESIGNS.md.
-Delivered by M2-009: 18 original identifiable silhouettes, a dependency-free CSS-3D renderer, idle/attack/summon/damage states at the whole-body level, reduced-motion support, and a roster page that uses the same modules as the board.
-Remaining: per-limb animation (weapon swings, head turns), victory/defeat-specific poses, legible elemental/rarity card frames, a measured mobile performance pass, and either a documented voxel-to-GLB export pipeline (docs/VOXEL_PIPELINE.md) or a written decision to stay on CSS-3D. docs/VOXEL_ART_BIBLE.md and docs/UNIT_VISUAL_DESIGNS.md exist; docs/CARD_FRAMES.md covers frame direction.
+Delivered by M2-009 and ART-001: 18 original identifiable silhouettes, a dependency-free CSS-3D renderer, per-material shading, articulated pivots (weapon/head/tail/arm swings on attack), idle languages, summon/hit/defeat states, reduced-motion support, and a roster page that uses the same modules as the board.
+Remaining: victory/defeat-specific poses per unit, legible elemental/rarity card frames, a measured performance pass at the 728-box budget, a silhouette gate at tile size, and either a documented voxel-to-GLB export pipeline (docs/VOXEL_PIPELINE.md) or a written decision to stay on CSS-3D. docs/VOXEL_ART_BIBLE.md and docs/UNIT_VISUAL_DESIGNS.md now carry implementation status; docs/CARD_FRAMES.md covers frame direction.
 
 ### M7-005 | TODO | Keyboard and assistive control pass
 Depends on M1-005. Acceptance: arrow-key grid traversal, focus return after commands, screen-reader announcements for combat results, no hue-only signalling (element abbreviations already present).

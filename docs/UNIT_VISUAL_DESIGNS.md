@@ -65,3 +65,33 @@ Actions: unique card illustration focal motif plus reusable effect families. Ret
 
 ## Frame and presentation requirements
 Common uses restrained elemental edging; Rare+ adds layered bevels/engraved corner motifs, tier symbol and optional restrained foil. Keep element shape emblem, rarity icon, cost, Attack, current/max Guard and text readable without hue. Battlefield units display a small stable stat strip below the model; selecting one shows full card details on the mat panel, including damage, buffs and effect sources. Rare finish never changes gameplay stats by itself. Verify all 18 models together as black silhouettes before approving final assets.
+
+## Implementation status (2026-10-28)
+
+Every entry below is a model that exists in `src/render/vessels/` and is rendered by the same code
+path the battlefield uses. Counts are asserted by `tests/models.test.js`.
+
+| Model id | Boxes | Groups | Materials | Height (voxels) | Idle | Status note |
+|---|---:|---:|---:|---:|---|---|
+| `vessel_ashen_crownblade` | 59 | 8 | 5 | 13.9 | breathe | Crown crest, half-cape, oversized ember-cut blade on a wrist pivot. |
+| `vessel_cinder_maw` | 49 | 4 | 6 | 9.8 | heavy | Furnace chimney, split jaws, glowing rib cavities. |
+| `vessel_star_eater` | 34 | 4 | 5 | 8.8 | hover | Eclipse core inside disconnected rings; no head or limbs by design. |
+| `vessel_mireglass_stalker` | 46 | 4 | 6 | 6.5 | breathe | Stepped glass carapace, six gill fins, paddle tail. |
+| `vessel_wyrm_drowned_vault` | 38 | 4 | 6 | 10.1 | sway | Coil ring, S-body, crown of three bells. **Weakest silhouette at tile size.** |
+| `vessel_lantern_lost_choir` | 32 | 4 | 7 | 7.7 | hover | Hexagonal cage, pearl flame, three orbiting masks. |
+| `vessel_unwritten_guest` | 30 | 4 | 5 | 9.8 | hover | Rain-glass slabs, offset faceplate, upward cloak panels. |
+| `vessel_dustveil_matriarch` | 48 | 4 | 5 | 6.8 | heavy | Six legs, mineral mane, layered mandibles. |
+| `vessel_bastion_first_mountain` | 36 | 4 | 6 | 8.4 | heavy | Pillar arms, strata bands, amber core recess. |
+| `vessel_gilt_ash_bargainer` | 40 | 7 | 6 | 10.0 | breathe | Cracked double mask, one horn, suspended balance scale. |
+| `vessel_rootbound_witness` | 32 | 4 | 6 | 10.2 | breathe | Carved eye, root tendrils, three unequal crown stones. |
+| `vessel_argent_nightlancer` | 53 | 8 | 6 | 13.8 | breathe | Lamellar skirt, crescent brow, lance on a wrist pivot. |
+| `vessel_tidemark_astrologer` | 36 | 5 | 6 | 9.6 | breathe | Astrolabe rings, broken halo, star-notch mask. |
+| `vessel_ironwrought_hound` | 45 | 4 | 5 | 6.0 | breathe | Piston ankles, rib plates, offset amber lens. |
+| `vessel_cloudbreak_coil` | 31 | 6 | 4 | 8.9 | hover | S-spine, forked lightning crest, turbine fins. |
+| `vessel_hollowroot_oracle` | 43 | 4 | 6 | 11.9 | breathe | Bark-strip robe, hollow mask with seed light, three-lamp staff. |
+| `vessel_verdant_colossus` | 43 | 5 | 5 | 9.0 | heavy | Root legs, mossy stone fist, square-cut canopy. **Canopy needs more separation from the trunk.** |
+| `vessel_bell_unmoored` | 33 | 4 | 4 | 8.0 | hover | Inverted bell, jade clapper through a side opening, five charms. |
+
+The renderer shades each material differently, rotates groups around authored pivots (weapon, head,
+tail, arms) and supports angled boxes, so these are assembled miniatures rather than recoloured
+stacks. Known weak points are marked above; they are acceptance notes, not completed work.

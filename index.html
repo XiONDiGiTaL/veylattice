@@ -157,6 +157,7 @@
         <p class="muted">
           These are the same models the battlefield renders — not separate illustrations.
           Shared material palettes per element, individually authored silhouettes.
+          Drag a model, or focus it and press the arrow keys, to inspect it from any angle.
         </p>
       </div>
       <button id="roster-menu" class="button secondary" type="button">Back to menu</button>
@@ -229,13 +230,23 @@
           <span class="nexus-label">OPPONENT NEXUS</span>
           <span class="nexus-hint">Strike from the enemy home row when it controls no Vessels</span>
         </button>
+        <p class="arena-caption">
+          <span class="arena-name" id="arena-name">The Verdant Sanctum</span>
+          <em>Miniature arena · terrain is decorative · deployment zones are tinted</em>
+        </p>
         <div class="board-wrap">
           <div class="board-gutter" aria-hidden="true">
             <span class="gutter-label enemy" style="top:0;height:42.8%">OPPONENT</span>
             <span class="gutter-label neutral" style="top:42.8%;height:14.3%">CONTESTED</span>
             <span class="gutter-label friendly" style="top:57.1%;height:42.9%">YOUR ZONE</span>
           </div>
-          <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+          <div class="board-stage">
+            <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+            <span class="board-post tl" aria-hidden="true"></span>
+            <span class="board-post tr" aria-hidden="true"></span>
+            <span class="board-post bl" aria-hidden="true"></span>
+            <span class="board-post br" aria-hidden="true"></span>
+          </div>
         </div>
         <button id="player-nexus" class="nexus friendly" type="button">
           <span class="nexus-label">YOUR NEXUS</span>
