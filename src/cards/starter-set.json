@@ -1,14 +1,410 @@
 [
-{"id":"vessel_ashen_crownblade","name":"Ashen Crownblade","category":"vessel","element":"fire","subtypes":["warrior"],"cost":3,"attack":6,"guard":4,"movement":1,"range":1,"abilities":[],"rarity":"uncommon","modelId":"ashen_crownblade","animationSet":"humanoid_swordfighter","flavorText":"A fallen champion whose blade still burns."},
-{"id":"vessel_mireglass_stalker","name":"Mireglass Stalker","category":"vessel","element":"water","subtypes":["beast"],"cost":2,"attack":4,"guard":3,"movement":2,"range":1,"abilities":[],"rarity":"common","modelId":"mireglass_stalker","animationSet":"quadruped","flavorText":"It follows the ripples left by fear."},
-{"id":"vessel_hollowroot_oracle","name":"Hollowroot Oracle","category":"vessel","element":"wood","subtypes":["mystic"],"cost":3,"attack":2,"guard":5,"movement":1,"range":2,"abilities":[],"rarity":"common","modelId":"hollowroot_oracle","animationSet":"mystic","flavorText":"Its roots remember every footstep."},
-{"id":"vessel_bastion_first_mountain","name":"Bastion of the First Mountain","category":"vessel","element":"earth","subtypes":["construct"],"cost":4,"attack":2,"guard":8,"movement":1,"range":1,"abilities":[],"rarity":"rare","modelId":"bastion_first_mountain","animationSet":"construct","flavorText":"The valley grew around its patience."},
-{"id":"vessel_argent_nightlancer","name":"Argent Nightlancer","category":"vessel","element":"metal","subtypes":["warrior"],"cost":3,"attack":5,"guard":4,"movement":1,"range":1,"abilities":[],"rarity":"uncommon","modelId":"argent_nightlancer","animationSet":"humanoid_spearfighter","flavorText":"One precise strike can end a long war."},
-{"id":"vessel_cinder_maw","name":"Cinder-Maw","category":"vessel","element":"fire","subtypes":["demon"],"cost":5,"attack":8,"guard":3,"movement":1,"range":1,"abilities":[],"rarity":"rare","modelId":"cinder_maw","animationSet":"quadruped","flavorText":"The furnace inside it never learned restraint."},
-{"id":"vessel_wyrm_drowned_vault","name":"Wyrm of the Drowned Vault","category":"vessel","element":"water","subtypes":["dragon"],"cost":6,"attack":7,"guard":5,"movement":2,"range":1,"abilities":[],"rarity":"epic","modelId":"wyrm_drowned_vault","animationSet":"serpentine","flavorText":"Its hoard is measured in sunken centuries."},
-{"id":"vessel_verdant_colossus","name":"Verdant Colossus","category":"vessel","element":"wood","subtypes":["ancient"],"cost":6,"attack":4,"guard":8,"movement":1,"range":1,"abilities":[],"rarity":"epic","modelId":"verdant_colossus","animationSet":"construct","flavorText":"A forest stands wherever it kneels."},
-{"id":"vessel_ironwrought_hound","name":"Ironwrought Hound","category":"vessel","element":"metal","subtypes":["construct"],"cost":3,"attack":4,"guard":5,"movement":2,"range":1,"abilities":[],"rarity":"common","modelId":"ironwrought_hound","animationSet":"quadruped","flavorText":"Its nose detects weakness in steel and flesh."},
-{"id":"vessel_dustveil_matriarch","name":"Dustveil Matriarch","category":"vessel","element":"earth","subtypes":["beast"],"cost":4,"attack":3,"guard":6,"movement":1,"range":1,"abilities":[],"rarity":"uncommon","modelId":"dustveil_matriarch","animationSet":"quadruped","flavorText":"Her tracks vanish before the dust settles."},
-{"id":"vessel_lantern_lost_choir","name":"Lantern of the Lost Choir","category":"vessel","element":"water","subtypes":["spirit"],"cost":3,"attack":3,"guard":4,"movement":1,"range":2,"abilities":[],"rarity":"uncommon","modelId":"lantern_lost_choir","animationSet":"floating","flavorText":"A small light that recalls forgotten names."},
-{"id":"vessel_star_eater","name":"The Star-Eater","category":"vessel","element":"fire","subtypes":["otherworldly"],"cost":9,"attack":10,"guard":6,"movement":1,"range":2,"abilities":[],"rarity":"mythic","modelId":"star_eater","animationSet":"otherworldly","flavorText":"At the edge of night, even constellations fall silent."}
+  {
+    "category": "vessel",
+    "id": "vessel_ashen_crownblade",
+    "name": "Ashen Crownblade",
+    "element": "fire",
+    "subtypes": [
+      "warrior"
+    ],
+    "cost": 3,
+    "attack": 6,
+    "guard": 4,
+    "movement": 1,
+    "range": 1,
+    "rarity": "uncommon",
+    "modelId": "ashen_crownblade",
+    "animationSet": "humanoid_swordfighter",
+    "flavorText": "A fallen champion whose blade still burns.",
+    "designDescription": "Frontline duelist with a broad ember-edged sword, scorched ivory armor, and a crown-shaped voxel helm.",
+    "role": "frontline duelist",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_ashen_legion"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_mireglass_stalker",
+    "name": "Mireglass Stalker",
+    "element": "water",
+    "subtypes": [
+      "beast"
+    ],
+    "cost": 2,
+    "attack": 4,
+    "guard": 3,
+    "movement": 2,
+    "range": 1,
+    "rarity": "common",
+    "modelId": "mireglass_stalker",
+    "animationSet": "quadruped",
+    "flavorText": "It follows the ripples left by fear.",
+    "designDescription": "Lean amphibious predator with translucent teal plates, long foreclaws, and a low silhouette built for fast flanking.",
+    "role": "mobile ambusher",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_drowned_covenant"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_hollowroot_oracle",
+    "name": "Hollowroot Oracle",
+    "element": "wood",
+    "subtypes": [
+      "mystic"
+    ],
+    "cost": 3,
+    "attack": 2,
+    "guard": 5,
+    "movement": 1,
+    "range": 2,
+    "rarity": "common",
+    "modelId": "hollowroot_oracle",
+    "animationSet": "mystic",
+    "flavorText": "Its roots remember every footstep.",
+    "designDescription": "A robed root-seer with a hollow timber mask, suspended seed-lights, and a staff grown from a single pale branch.",
+    "role": "ranged support",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_root_revelation"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_bastion_first_mountain",
+    "name": "Bastion of the First Mountain",
+    "element": "earth",
+    "subtypes": [
+      "construct"
+    ],
+    "cost": 4,
+    "attack": 2,
+    "guard": 8,
+    "movement": 1,
+    "range": 1,
+    "rarity": "rare",
+    "modelId": "bastion_first_mountain",
+    "animationSet": "construct",
+    "flavorText": "The valley grew around its patience.",
+    "designDescription": "A towering square-shouldered stone sentinel with layered cliff armor, mineral seams, and a tiny glowing core.",
+    "role": "defensive anchor",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_argent_nightlancer",
+    "name": "Argent Nightlancer",
+    "element": "metal",
+    "subtypes": [
+      "warrior"
+    ],
+    "cost": 3,
+    "attack": 5,
+    "guard": 4,
+    "movement": 1,
+    "range": 1,
+    "rarity": "uncommon",
+    "modelId": "argent_nightlancer",
+    "animationSet": "humanoid_spearfighter",
+    "flavorText": "One precise strike can end a long war.",
+    "designDescription": "A disciplined general in silver-black lamellar armor, carrying a long narrow lance and a banner clasp shaped like a crescent.",
+    "role": "precision fighter",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_ashen_legion"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_cinder_maw",
+    "name": "Cinder-Maw",
+    "element": "fire",
+    "subtypes": [
+      "demon"
+    ],
+    "cost": 5,
+    "attack": 8,
+    "guard": 3,
+    "movement": 1,
+    "range": 1,
+    "rarity": "rare",
+    "modelId": "cinder_maw",
+    "animationSet": "quadruped",
+    "flavorText": "The furnace inside it never learned restraint.",
+    "designDescription": "A furnace-backed demon hound with split obsidian jaws, molten ribs, and short heavy limbs that leave ember marks.",
+    "role": "high-damage bruiser",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_wyrm_drowned_vault",
+    "name": "Wyrm of the Drowned Vault",
+    "element": "water",
+    "subtypes": [
+      "dragon"
+    ],
+    "cost": 6,
+    "attack": 7,
+    "guard": 5,
+    "movement": 2,
+    "range": 1,
+    "rarity": "epic",
+    "modelId": "wyrm_drowned_vault",
+    "animationSet": "serpentine",
+    "flavorText": "Its hoard is measured in sunken centuries.",
+    "designDescription": "A long deep-sea dragon with pearl-blue scale blocks, a crown of broken ship bells, and fins like torn sails.",
+    "role": "mobile heavy threat",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_drowned_covenant"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_verdant_colossus",
+    "name": "Verdant Colossus",
+    "element": "wood",
+    "subtypes": [
+      "ancient"
+    ],
+    "cost": 6,
+    "attack": 4,
+    "guard": 8,
+    "movement": 1,
+    "range": 1,
+    "rarity": "epic",
+    "modelId": "verdant_colossus",
+    "animationSet": "construct",
+    "flavorText": "A forest stands wherever it kneels.",
+    "designDescription": "A hulking walking grove of dark bark, mossy stone, thick root legs, and a crown of square-cut branches.",
+    "role": "living bulwark",
+    "abilities": [],
+    "loreBondIds": [
+      "bond_root_revelation"
+    ]
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_ironwrought_hound",
+    "name": "Ironwrought Hound",
+    "element": "metal",
+    "subtypes": [
+      "construct"
+    ],
+    "cost": 3,
+    "attack": 4,
+    "guard": 5,
+    "movement": 2,
+    "range": 1,
+    "rarity": "common",
+    "modelId": "ironwrought_hound",
+    "animationSet": "quadruped",
+    "flavorText": "Its nose detects weakness in steel and flesh.",
+    "designDescription": "A compact articulated steel hound with exposed piston joints, a wedge-shaped muzzle, and a single amber sensor.",
+    "role": "mobile interceptor",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_dustveil_matriarch",
+    "name": "Dustveil Matriarch",
+    "element": "earth",
+    "subtypes": [
+      "beast"
+    ],
+    "cost": 4,
+    "attack": 3,
+    "guard": 6,
+    "movement": 1,
+    "range": 1,
+    "rarity": "uncommon",
+    "modelId": "dustveil_matriarch",
+    "animationSet": "quadruped",
+    "flavorText": "Her tracks vanish before the dust settles.",
+    "designDescription": "A broad desert beetle-lion with sandstone plates, layered mandibles, and a mantle of drifting mineral dust.",
+    "role": "durable blocker",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_lantern_lost_choir",
+    "name": "Lantern of the Lost Choir",
+    "element": "water",
+    "subtypes": [
+      "spirit"
+    ],
+    "cost": 3,
+    "attack": 3,
+    "guard": 4,
+    "movement": 1,
+    "range": 2,
+    "rarity": "uncommon",
+    "modelId": "lantern_lost_choir",
+    "animationSet": "floating",
+    "flavorText": "A small light that recalls forgotten names.",
+    "designDescription": "A floating blue-glass lantern wrapped in ribbon-like water and tiny mask fragments that orbit its core.",
+    "role": "ranged spirit",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_star_eater",
+    "name": "The Star-Eater",
+    "element": "fire",
+    "subtypes": [
+      "otherworldly"
+    ],
+    "cost": 9,
+    "attack": 10,
+    "guard": 6,
+    "movement": 1,
+    "range": 2,
+    "rarity": "mythic",
+    "modelId": "star_eater",
+    "animationSet": "otherworldly",
+    "flavorText": "At the edge of night, even constellations fall silent.",
+    "designDescription": "A vast angular void-being with a floating eclipse core, disconnected voxel rings, and a silhouette that bends inward.",
+    "role": "late-game finisher",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_tidemark_astrologer",
+    "name": "Tidemark Astrologer",
+    "element": "metal",
+    "subtypes": [
+      "mystic"
+    ],
+    "cost": 4,
+    "attack": 3,
+    "guard": 4,
+    "movement": 1,
+    "range": 3,
+    "rarity": "uncommon",
+    "modelId": "tidemark_astrologer",
+    "animationSet": "mystic",
+    "flavorText": "She charts the future in the gaps between falling stars.",
+    "designDescription": "A masked sky-reader carrying a rotating brass astrolabe, segmented robe panels, and a thin halo of silver markers.",
+    "role": "long-range caster",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_gilt_ash_bargainer",
+    "name": "Gilt-Ash Bargainer",
+    "element": "earth",
+    "subtypes": [
+      "demon"
+    ],
+    "cost": 4,
+    "attack": 5,
+    "guard": 4,
+    "movement": 1,
+    "range": 1,
+    "rarity": "rare",
+    "modelId": "gilt_ash_bargainer",
+    "animationSet": "humanoid",
+    "flavorText": "Every oath has a price; every price leaves a mark.",
+    "designDescription": "A horned contract-broker with cracked gold masks, heavy stone cuffs, and parchment strips sealed into its armor.",
+    "role": "balanced disruptor",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_cloudbreak_coil",
+    "name": "Cloudbreak Coil",
+    "element": "metal",
+    "subtypes": [
+      "dragon"
+    ],
+    "cost": 5,
+    "attack": 6,
+    "guard": 4,
+    "movement": 2,
+    "range": 1,
+    "rarity": "rare",
+    "modelId": "cloudbreak_coil",
+    "animationSet": "serpentine",
+    "flavorText": "Its iron whiskers split thunder before the storm arrives.",
+    "designDescription": "A serpentine sky-dragon with segmented steel scales, turbine-like fins, and a forked crest shaped like lightning rods.",
+    "role": "fast striker",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_rootbound_witness",
+    "name": "Rootbound Witness",
+    "element": "earth",
+    "subtypes": [
+      "ancient"
+    ],
+    "cost": 5,
+    "attack": 3,
+    "guard": 7,
+    "movement": 1,
+    "range": 2,
+    "rarity": "rare",
+    "modelId": "rootbound_witness",
+    "animationSet": "construct",
+    "flavorText": "It has watched kingdoms rise from dust and return to it.",
+    "designDescription": "An ancient monolith wrapped in thick roots, with carved stone eyes and a crown of weathered standing stones.",
+    "role": "ranged defender",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_bell_unmoored",
+    "name": "Bell of the Unmoored",
+    "element": "wood",
+    "subtypes": [
+      "spirit"
+    ],
+    "cost": 4,
+    "attack": 2,
+    "guard": 5,
+    "movement": 2,
+    "range": 2,
+    "rarity": "uncommon",
+    "modelId": "bell_unmoored",
+    "animationSet": "floating",
+    "flavorText": "Its toll guides the lost, though none agree where they arrive.",
+    "designDescription": "A floating temple bell grown through with roots, hung with small wooden charms and pale green motes.",
+    "role": "mobile utility spirit",
+    "abilities": [],
+    "loreBondIds": []
+  },
+  {
+    "category": "vessel",
+    "id": "vessel_unwritten_guest",
+    "name": "The Unwritten Guest",
+    "element": "water",
+    "subtypes": [
+      "otherworldly"
+    ],
+    "cost": 7,
+    "attack": 7,
+    "guard": 7,
+    "movement": 1,
+    "range": 2,
+    "rarity": "mythic",
+    "modelId": "unwritten_guest",
+    "animationSet": "otherworldly",
+    "flavorText": "Every witness recalls a different shape standing in the rain.",
+    "designDescription": "An uncanny figure made from suspended rain-glass shards, with a blank faceplate and a cloak that flows upward.",
+    "role": "versatile late-game threat",
+    "abilities": [],
+    "loreBondIds": []
+  }
 ]
