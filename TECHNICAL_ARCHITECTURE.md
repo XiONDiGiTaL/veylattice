@@ -1,16 +1,34 @@
 # Technical Architecture
 
-## Initial stack
-HTML5, CSS, vanilla JavaScript ES modules, JSON card data. LocalStorage/IndexedDB only when persistence is needed. Vitest is a candidate for tests once tooling is introduced. Three.js and glTF/GLB are planned after the rules loop is stable.
+Status: target architecture, not deployed infrastructure. HTML/CSS/vanilla JS ES modules and JSON remain the baseline; Three.js/GLB follow tested gameplay.
 
-## Separation of concerns
-1. Domain data: card definitions and validated IDs.
-2. Match state: players, decks, hands, discard, board, turn, Flux, Vitality.
-3. Rules: elemental modifiers, movement, targeting, combat, effects, win condition.
-4. Controller: translates UI intent into rules commands.
-5. Presentation: DOM now; Three.js later.
-6. Persistence: local settings/decks if needed.
+## Static frontend and trusted backend
+Host frontend assets on GitHub Pages and the website at /Veylattice/. Use relative module/content URLs and base-aware invite links. Do not configure a CNAME for a subpath. Prefer query/hash navigation so direct routes do not need SPA rewrites. Authentication redirects must preserve deployment base and be allowlisted.
+Proposed backend: Supabase Auth, Postgres, Realtime, and Edge Functions for atomic commands/AI validation; optional Vercel HTTP endpoints only if necessary. Do not design around in-process timers or an always-running WebSocket server inside a short-lived function. Realtime transports notifications/presence; durable match state, event sequence and server command validation remain authoritative.
+Use persisted turn deadlines, compare-and-swap state versions and a scheduled timeout worker. Every incoming command first materializes overdue transitions. The worker advances abandoned games even without connected browsers. Backend project selection, quotas, migrations and deployment require explicit approval.
 
-Rules modules must not access the DOM. UI must not decide legality or resolve combat. Validate actions at the engine boundary, return structured success/failure, and do not mutate card-definition objects. Keep random sources injectable for tests.
+## Layers
+1. Immutable versioned content definitions and schemas.
+2. Pure shared rules reducer: state + validated command + time/RNG context => state/events. No DOM/network calls.
+3. AI legal-command enumeration, heuristic/search policy and reproducible seeds.
+4. Controllers/renderers: DOM and later independent 3D presentation.
+5. Transport/auth adapters, server-side command processor and audience-specific projections.
+6. Persistence, immutable economy ledger and content migration/version management.
 
-Early builds should be static-hostable on GitHub Pages and use relative paths. Do not require server secrets or a backend for the single-player prototype. Add tooling only when useful and document commands.
+## Proposed tables
+profiles(user_id PK/display settings); wallets(user_id PK/balance); wallet_ledger(id, user_id, delta, reason, operation_id UNIQUE); collection(user_id, card_id, finish, quantity, composite PK); discovered_cards(user_id, canonical_card_id, first_obtained_at); decks/deck_cards; rooms/room_seats; matches/match_seats; match_events(match_id, seq UNIQUE within match); match_snapshots; match_results(match_id UNIQUE); seasons; season_progress(user_id, season_id composite PK); pack_definitions/content_versions; shop_rotations; pack_openings(operation_id UNIQUE); offer_redemptions.
+Use foreign keys, nonnegative checks and appropriately sized integer quantities; do not impose an arbitrary inventory cap. Discoveries survive recycling to zero. Wallet/collection changes are atomic with ledger/opening records. Do not accept client-set balances, rarity, prices, rewards, deck ownership or rank.
+
+## Security boundaries
+Enable RLS on every exposed table. Users read their own inventory/decks/progression and update only allowlisted profile/deck fields through validated paths. Wallet, pack contents, outcomes, rank, room ownership and match state cannot be freely written by clients. Service-role secrets remain server-only; a public publishable/anon key is not a privilege boundary. Use authenticated private room channels and enforce seat/team membership. Room codes alone never authorize access.
+Each command includes matchId, expectedVersion and unique commandId; server derives actor from JWT and stored seat. Serialize per match and reject duplicates/stale/illegal commands. Rate-limit joins, commands, purchases and pack opening. Return only each seat's hand; deck order, opponent hand, private AI state and hidden RNG must never be broadcast. Teammates see each other's hands only if the chosen mode explicitly allows it (default no).
+Pack opening uses server cryptographic randomness; injectable deterministic RNG is for tests and replayable gameplay, not client-chosen pack rolls. Never expose a pack RNG seed that predicts future purchases. Reward-bearing AI executes through trusted command validation; browser-only AI results are not eligible. Idempotent match settlement prevents reconnect/retry farming.
+
+## Lobby reference findings
+Inspected Meldra src/server/index.ts: Node WebSocket relay, two clients per room, opaque forwarding and host-browser authority. Inspected Leapbuddies js/net.js: Supabase Realtime broadcast/presence, room codes, host/guest callbacks and timeouts. Reuse UX patterns and transport concepts, not credentials, namespaces or host-trusted reward logic. Veylattice needs four seats, authenticated membership, durable recovery, private state and trusted progression. No changes to either reference repository are part of this directive.
+
+## Operational requirements
+UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules versions pinned to matches; migrations and rollback instructions; config.example without secrets; structured errors and redacted logs. IndexedDB stores preferences and cached content, not authoritative currency. Cross-domain saves follow authenticated user identity, not localStorage origin. Offline practice remains functional when backend is unavailable; disable rewards/shop writes with clear messaging. Test both root and /Veylattice/ asset paths.
+
+## Public documentation basis
+GitHub Pages is static hosting: https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages . Supabase RLS/security guidance: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/docs/guides/database/secure-data . These links explain platform/security constraints, not implementation completion.

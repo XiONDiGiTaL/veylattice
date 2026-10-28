@@ -1,53 +1,35 @@
 # AI Build Instructions
 
-Build Veylattice, an original HTML-first tactical card battler. Read README.md, PROJECT_BRIEF.md, GAME_RULES.md, TECHNICAL_ARCHITECTURE.md, and the relevant files under docs/ before substantial changes. Inspect current code first; preserve working behavior. Implement one coherent milestone at a time. Keep deterministic rules separate from DOM/rendering code. Add tests for rules changes and report only tests actually run. Do not add services, secrets, accounts, or a backend without approval. Do not create empty files to imitate a directory tree.
+Build Veylattice, an original HTML-first tactical collectible card battler. Inspect existing code before editing. This is a production specification, not evidence that features are implemented. Preserve working behavior; implement and test one coherent milestone at a time.
 
-## Vocabulary
-- Vessel: creature/unit
-- Action: one-shot effect
-- Relic: persistent card
-- Flux: resource
-- Vitality: player life
-- Guard: defensive stat
-- Elements: wood, fire, earth, metal, water
-- Vessel subtypes currently targeted: warrior, beast, mystic, construct, demon, dragon, ancient, spirit, otherworldly
+## Read order and precedence
+Read README.md, PROJECT_BRIEF.md, GAME_RULES.md, TECHNICAL_ARCHITECTURE.md, docs/MODES_AND_LOBBIES.md, docs/PROGRESSION_AND_CONTENT.md, docs/UNIT_VISUAL_DESIGNS.md, docs/VOXEL_ART_BIBLE.md, and docs/IMPLEMENTATION_PROMPT.md. Then read relevant existing world, arena, synergy, creator, frame, catalog and testing documents. GAME_RULES.md overrides older combat/deck proposals, including docs/COMBAT_RULES.md and older card-guide examples. docs/PROGRESSION_AND_CONTENT.md governs collection/rarity. Preserve existing lore and stable IDs. User requirements are mandatory; explicitly labeled proposed defaults remain tunable, not user-approved final balance.
 
-## Core constraints
-- Board target 7x7; max 4 Vessels per player; printed Attack and Guard 1-10.
-- Use docs/ELEMENTAL_SYSTEM.md as the canonical elemental rules source.
-- Unresolved rules and new concepts are provisional, not finalized.
-- Validate all player actions in the rules engine. Keep randomness injectable for tests.
-- Start with HTML, CSS, and vanilla JS modules. Add Three.js after the core loop is stable.
-- Use safe DOM APIs, keep dependencies minimal, and create original expressive content.
-- Do not copy proprietary code, art, models, card text, lore, UI, or distinctive presentation from other games.
-- Definition of done: behavior works, relevant tests run, docs match code, run steps are documented, limitations are stated.
+## Vocabulary and constraints
+Vessel = unit; Action = one-shot card; Relic = persistent card; Flux = pool resource; Vitality = player life; Guard = persistent unit defense; Lattice Shards = proposed earned shop/recycling currency. Five elements: Wood, Fire, Earth, Metal, Water. Otherworldly is a subtype, not a sixth element. Board target 7x7; four Vessels and two Relics per seat; printed Attack/Guard 1-10, runtime bonuses may exceed 10. Decks 20-40 cards, at least 10 Vessels and 5 Actions, up to three copies per canonical card ID. The minimum total and Action minimum are proposed defaults.
 
-## World, arena, and synergy directives
-- Read docs/WORLD_BIBLE.md, docs/ARENA_SYSTEM.md, docs/SYNERGY_SYSTEM.md, and docs/UNIT_CATALOG.md before adding lore, arenas, or relationships.
-- Treat those documents and new arena/bond data as concepts until explicitly approved; keep rules data-driven and avoid arena- or card-name-specific branches in the engine.
-- Arena modifiers affect both players symmetrically. Telecast hazards clearly and specify their trigger timing and counterplay. Do not implement a hazard whose resolution order conflicts with canonical combat rules.
-- Lore Bonds apply only to listed official Vessel IDs and only while their conditions are true. Recalculate after all relevant board-state changes. Default adjacency is orthogonal; diagonal adjacency does not count unless a specific future rule says so.
-- Duplicate instances of the same Lore Bond do not stack by default. Document and test all stacking.
-- Custom Vessels must carry origin="custom", unique custom IDs, and must never gain official Lore Bond or named-set bonuses. Enforce this in the rules engine, not just in the UI. They may still receive normal arena effects unless the ruleset says otherwise.
-- Bestiary/Codex should show official Vessels, stats, descriptions, abilities, lore, authored bond sets, and activation conditions. Do not claim authored pairings are objectively optimal.
-- Vessel Forge must use a transparent, deterministic point budget and an allowlisted ability catalog. No arbitrary scripts or executable user content. Render names/flavor text safely as text.
-- Name/flavor generators should be local template-based in v1; no external AI service without approval.
-- Elemental card frames share one accessible component with data-driven element themes. Do not rely on hue alone to communicate element.
+## Non-negotiable implementation principles
+- Separate pure rules, content, AI, presentation, transport and persistence. Browser UI never decides authoritative legality or economy.
+- Start with HTML, CSS and vanilla JS ES modules. Keep static hosting and relative asset paths working under /Veylattice/. Add Three.js after core rules tests pass.
+- Validate commands, ownership, costs, timing, targets, copy counts and state versions. Inject time and RNG in tests. Do not mutate printed card definitions.
+- Never claim AI, networking, 3D assets or server persistence exists because a document or placeholder exists. Report tests actually run and remaining limitations.
+- Prepare Supabase migrations and backend source as milestones; do not apply migrations, provision services, spend money, deploy, or insert secrets without separate approval. Never reuse reference-project credentials.
+- Earned currency, pack rolls, rank changes and match results require trusted server validation and atomic/idempotent transactions. Local practice cannot grant online progression.
+- Original code/art/lore/card text/UI only. Private conceptual references: Yu-Gi-Oh Master Duel for collection/deck workflows, Duelyst for tactical movement and retaliation, Magic: The Gathering for resource/effect interaction, Pokemon for collectible creature identity. These are abstract references, never templates to copy. Do not put these titles in README.md.
 
-## Content data directives
-- src/cards/starter-set.json is the current machine-readable baseline Vessel catalog. Keep stable unique IDs, schema consistency, and docs synchronized.
-- Baseline subtype target is two official Vessels each for warrior, beast, mystic, construct, demon, dragon, ancient, spirit, and otherworldly.
-- Balance cost against stats, range, movement, and ability complexity. Catalog stats are prototype seeds and must be playtested.
-- Do not expand the card pool substantially before the core loop and automated rules tests are reliable.
+## Preserve existing systems
+Read docs/WORLD_BIBLE.md, docs/ARENA_SYSTEM.md, docs/SYNERGY_SYSTEM.md, docs/UNIT_CATALOG.md, docs/CARD_CREATOR.md, docs/CARD_FRAMES.md and docs/ELEMENTAL_SYSTEM.md. Keep symmetric telegraphed arena effects, official-ID Lore Bonds, nonstacking duplicate bonds, and custom-card exclusion from official named bonds. Custom cards use origin=custom and an allowlisted point-budget creator, never executable scripts. Custom cards are casual/practice-only by proposed default and never enter ranked pack pools. Render user text safely. Codex explains stats, abilities, lore and authored synergies without claiming optimality.
 
-## Required next implementation sequence
-1. Stabilize movement, combat, turn flow, and win conditions.
-2. Add rule-engine tests and deterministic board-state updates.
-3. Introduce arena data loading and one simple affinity modifier.
-4. Add terrain and telegraphed hazard resolution.
-5. Implement generic Lore Bond evaluation and custom-card exclusion, with tests.
-6. Add Bestiary/Codex UI driven by card and bond data.
-7. Implement Vessel Forge, validation, persistence, and deck integration.
-8. Add element-specific card frames and later voxel model previews.
+## Art/content requirements
+The existing 18 official Vessel IDs remain stable. Every Vessel needs a bespoke silhouette, anatomy, materials, prop/focal point, animation identity and card portrait. Read docs/UNIT_VISUAL_DESIGNS.md together with docs/VOXEL_ART_BIBLE.md. Shared rigs are allowed; recolored duplicate models are not. New units, tokens, leaders, Relics and hazards require the same explicit design metadata before completion. Keep content data-driven and versioned. A new card using supported effects must not require engine edits; a genuinely new mechanic requires an explicit handler and tests.
 
-Do not claim a milestone is complete until implemented and tested. Update the relevant docs whenever behavior changes.
+## Delivery sequence
+1. Deterministic rules engine, persistent Guard/retaliation, legal movement, direct attacks, timer, turns, draw/mulligan and win states; automated tests.
+2. Actions/Relics, effect queue, revive/return, death triggers, deck validation, three prebuilt decks and offline AI practice.
+3. Stash/deck/shop UI and validated versioned content pipeline, using clearly marked nonpersistent demo data until server integration.
+4. Supabase Auth/Postgres schema, RLS and trusted command/reward endpoints; reward-bearing AI matches.
+5. Four-seat room-code lobbies, all human/AI tag combinations, reconnect and privacy tests.
+6. Monthly AI-ranked ladder, promotions, rank rewards, shop rotations and Friday offers.
+7. Arena/Bond/Codex/Forge integration and unique 3D assets; optimize after measuring mobile performance.
+
+Each milestone must deliver complete files, runnable commands, migrations/config examples when relevant, tests, documentation and an honest status summary. Do not stop at a plan when asked to implement a milestone.

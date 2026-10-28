@@ -1,38 +1,41 @@
 # Veylattice
 
-**Veylattice** is an original browser-first tactical card battler built around grid combat, elemental forces, named Vessels, arena hazards, lore-based synergies, and custom card creation.
+Veylattice is an original browser-first tactical collectible card battler featuring grid movement, elemental Vessels, Actions, Relics, handcrafted voxel designs and data-driven expansions.
 
-> **Project status:** Early prototype and design documents. The roster, arena effects, Lore Bonds, Bestiary, card frames, and Vessel Forge are design concepts unless the implementation explicitly supports them. Do not assume features are playable just because they are documented.
+## Project status
+Early DOM prototype and production specifications, not a complete game. Autonomous AI, full tactical movement/combat, complete win flow, accounts, online lobbies, shop progression and 3D models must still be implemented and tested. Documentation describes targets, not playable guarantees.
 
-## Core targets
-- 7×7 tactical grid, two players, up to four Vessels per player.
-- Five elements: Wood, Fire, Earth, Metal, and Water.
-- Vessels use Attack and Guard values from 1 to 10.
-- Original voxel-inspired creature designs and element-specific card frames.
-- Arenas with symmetric affinity modifiers and clearly telegraphed terrain hazards.
-- Bestiary / Synergy Codex for stats, lore, and authored Lore Bond sets.
-- Optional Vessel Forge for player-created cards using a fixed point budget. Custom Vessels never receive official pair bonuses.
+## Planned experience
+- Solo AI opponents with varied decks and strategies; prebuilt Practice with no currency rewards.
+- Four-seat 2v2 Tag lobbies with configurable human/AI teams and reconnect support.
+- Monthly AI-ranked Unranked, Bronze, Silver and Gold progression with three-match promotion series and collectible emblems.
+- 120-second turns, one normal summon, resource-limited Actions, persistent Guard damage, retaliation and direct attacks on Vitality.
+- Up to three copies per card; proposed 20-40-card decks with at least 10 Vessels and five Actions.
+- Unlimited-quantity Stash, earned Lattice Shards (proposed name), recycling, previously discovered Singles and six-card packs with five Commons plus one Rare-or-better.
+- Weekly pack rotations and occasional Friday half-price offers, with disclosed odds and trusted server settlement.
+- Five elements, unique voxel identities for 18 baseline Vessels, symmetric arenas, Lore Bonds, Codex and a restricted custom-card Forge.
 
 ## Documentation
-- [AI coding directives](AI_INSTRUCTIONS.md)
+- [AI implementation directives](AI_INSTRUCTIONS.md)
+- [Copy-ready implementation prompt](docs/IMPLEMENTATION_PROMPT.md)
 - [Project brief](PROJECT_BRIEF.md)
-- [Provisional game rules](GAME_RULES.md)
-- [World bible](docs/WORLD_BIBLE.md)
-- [Arena system](docs/ARENA_SYSTEM.md)
-- [Synergy system and Bestiary](docs/SYNERGY_SYSTEM.md)
-- [Baseline Vessel roster](docs/UNIT_CATALOG.md)
-- [Custom Vessel creator](docs/CARD_CREATOR.md)
-- [Elemental card frames](docs/CARD_FRAMES.md)
-- [Elemental rules](docs/ELEMENTAL_SYSTEM.md)
-- [Combat rules](docs/COMBAT_RULES.md)
-- [Balancing guidance](docs/BALANCING.md)
-- [Testing requirements](docs/TESTING.md)
-- Machine-readable Vessels: [src/cards/starter-set.json](src/cards/starter-set.json)
-- Proposed Lore Bonds: [src/cards/lore-bonds.json](src/cards/lore-bonds.json)
-- Proposed arenas: [src/arenas/arenas.json](src/arenas/arenas.json)
+- [Canonical expanded rules](GAME_RULES.md)
+- [Technical architecture and security](TECHNICAL_ARCHITECTURE.md)
+- [Modes, AI and lobbies](docs/MODES_AND_LOBBIES.md)
+- [Collection, economy and expansions](docs/PROGRESSION_AND_CONTENT.md)
+- [Unique unit/entity designs](docs/UNIT_VISUAL_DESIGNS.md)
+- [Voxel production standards](docs/VOXEL_ART_BIBLE.md)
+- [World](docs/WORLD_BIBLE.md), [arenas](docs/ARENA_SYSTEM.md), [Lore Bonds/Codex](docs/SYNERGY_SYSTEM.md), [roster](docs/UNIT_CATALOG.md)
+- [Forge](docs/CARD_CREATOR.md), [frames](docs/CARD_FRAMES.md), [testing guidance](docs/TESTING.md)
+- [Roadmap](ROADMAP.md)
+
+GAME_RULES.md supersedes older combat/deck/elemental threshold proposals. Proposed numerical defaults remain subject to playtesting. Existing JSON card definitions are prototype seeds, not a balanced released set.
 
 ## Run locally
-From the repository root, run `python -m http.server 8000`, then open `http://localhost:8000`. A local HTTP server is needed for module and JSON loading.
+From repository root: `python -m http.server 8000`, then open `http://localhost:8000`. Use HTTP for ES modules and JSON loading.
+
+## Hosting target
+Keep the frontend static-hostable on GitHub Pages and at xiondigital.net/Veylattice/. Authenticated saves, ranks, rewards and shops require a separately configured trusted backend; do not put backend secrets in this repository or browser bundle. No deployment is implied by these documents.
 
 ## Originality and licensing
-Veylattice is an original project. Do not copy proprietary source code, assets, models, card text, lore, or distinctive presentation from other games. The repository's LICENSE is All Rights Reserved unless a separate written license says otherwise. Third-party dependencies remain under their own licenses. Check the project name and any intended commercial trademarks before public commercial release.
+Original code, creatures, models, card text, lore and presentation only. Existing LICENSE remains All Rights Reserved unless separately authorized. Third-party dependencies retain their licenses; record asset provenance and required notices.

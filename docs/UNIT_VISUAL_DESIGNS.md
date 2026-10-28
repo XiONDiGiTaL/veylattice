@@ -1,0 +1,67 @@
+# Unique Voxel Unit and Entity Design Briefs
+
+Status: original production briefs for the 18 existing official Vessels, not delivered model assets. Use with docs/VOXEL_ART_BIBLE.md and existing stable modelId values. Do not replace the art bible. Each needs front/side/rear/three-quarter references, palette, blockout, rig, idle/move/summon/attack/hit/defeat, portrait crop and provenance. One tile footprint, outline readable at 64-96 pixels. Shared rigs permitted; recolors are not unique designs. Printed stats remain in content data.
+
+## 1. Ashen Crownblade / ashen_crownblade
+Tall wedge-shaped warrior: narrow waist beneath broad scorched-ivory shoulders, a five-prong broken crown helm with one missing tooth, and a heavy rectangular sword wider at its ember-cut tip. Charcoal joints and bronze rivets separate ceramic armor slabs; a ragged black-red half-cape hangs only from the left shoulder. Keep the face a dark slit, not a generic glowing skull. Idle rests blade beside one foot; attack lifts the sword in a heavy diagonal chop with a brief ember seam, defeat kneels as the crown fractures. Portrait preserves crown and oversized blade.
+
+## 2. Mireglass Stalker / mireglass_stalker
+Low, long amphibious predator, hindquarters compact and front limbs disproportionately long. A flat shovel snout, six backward gill fins and a transparent stepped teal carapace create a crocodile/newt silhouette distinct from either hound. Pale ribs show through glass only at close range; three ivory claws fan from each forepaw. Wet dark belly contrasts with sea-green plates. Moves in a compressed crouch, strikes by unfolding forelimbs, takes hits with a lateral recoil, dissolves into heavy glass droplets.
+
+## 3. Hollowroot Oracle / hollowroot_oracle
+Pear-shaped robe of layered bark strips over thin forked root feet. Its oval timber mask is an actual hollow opening with a tiny distant seed-light, framed by a crooked single antler branch. A pale staff bends over the shoulder and carries three hanging amber seed lamps at different heights. Moss and cream, not saturated leaf-green everywhere. Idle seeds bob independently; casts by planting the staff as root squares trace outward. Defeat folds robe into an empty stump, leaving one fading lamp.
+
+## 4. Bastion of the First Mountain / bastion_first_mountain
+A squat fortress body almost as wide as tall: two enormous square pillar arms, stair-stepped slate shoulders and tiny inset head below the skyline. Horizontal sandstone strata and sparse cobalt mineral seams distinguish it from tree/monolith Ancients. A small amber core sits deep inside a dark chest recess; no oversized face. Feet lock like stone wedges; locomotion has delayed weight transfer. Attack is a short two-fist wall push, hit chips the outer ledge, defeat collapses inward into a tidy tile-sized cairn.
+
+## 5. Argent Nightlancer / argent_nightlancer
+Upright, narrow silver-black warrior with angular lamellar skirt, closed crescent brow and a long straight lance held away from the torso. One slim shoulder banner forms a vertical accent, unlike Crownblade's cape. Steel edges remain cool while riveted underlayers are matte charcoal; a single violet ribbon is the only soft motion. Idle aligns lance toward the threat; moves with measured steps and attacks with a precise thrust/retract, never a sword swing. Portrait frames the lance head and crescent clasp.
+
+## 6. Cinder-Maw / cinder_maw
+Front-heavy demon hound with tiny rear haunches, oversized brick-like forelegs and a furnace chimney rising between shoulder blades. Split obsidian jaws hinge sideways around a molten rectangular throat; sparse glowing ribs are separated by pitch-black cavities. No metal pistons or sensors. Its back slopes sharply down to a short clinker tail. Idle exhales a few sparks, movement lurches, attack clamps jaws and shoulders forward. Defeat seals the furnace in cooling black plates, not an explosion that hides neighboring tiles.
+
+## 7. Wyrm of the Drowned Vault / wyrm_drowned_vault
+A heavy sea serpent coiled vertically around its tile, broad pearl-blue neck tapering to a finned tail. Three broken bronze ship bells form an uneven crown; tattered sail-shaped fins extend from the cheek and spine. Shell-white belly and navy recesses keep translucent aqua plates readable. It never resembles a metal flying serpent. Idle sways in a slow tide; movement rolls the coil forward while preserving occupancy; attack uncoils head-first with one bell swing. Defeat settles into a ring of water and bell fragments.
+
+## 8. Verdant Colossus / verdant_colossus
+Wide walking grove with an arch of living dark-bark shoulders, a low face knot and two huge root legs separated by a visible gap. Its left arm is a hanging root bundle; its right is a mossy stone fist. A flat, square-cut branch canopy and cream fungal shelves make the skyline unmistakable. Sap glows only inside knots. Idle canopy sways after body motion; attacks uproot the heavy fist; defeat roots into a motionless stump before fading. Never reuse Bastion's rectangular chassis.
+
+## 9. Ironwrought Hound / ironwrought_hound
+Compact mechanical runner with long piston ankles, a wedge snout, folded triangular ears and one amber lens offset to the left. Brushed steel rib plates leave dark joint gaps; brass tension rods form a clear diagonal along each flank. Back is nearly level with a short segmented balancing tail, unlike Cinder-Maw's furnace hump. Moves with quick paired mechanical bounds, attacks with an articulated jaw snap, hit retracts the head, defeat folds the legs and extinguishes the sensor.
+
+## 10. Dustveil Matriarch / dustveil_matriarch
+Broad six-legged beetle-lion with a low sandstone dome, layered blunt mandibles and a ring of slate cheek plates suggesting a mane. Front legs are thick digging paddles; rear legs brace outwards while staying inside the tile. Ochre shell bands and dusty mauve underside avoid looking like a generic brown cat. Idle sifts a narrow dust curtain under the shell; attack rams with the armored brow. Defeat sinks its legs and settles the mineral mantle, keeping the body outline visible until removal.
+
+## 11. Lantern of the Lost Choir / lantern_lost_choir
+Tall floating blue-glass lantern inside an open hexagonal dark-metal cage, with no humanoid torso. Three small white mask fragments orbit at unequal heights; two ribbon streams of water hang below and curl upward at the ends. A warm pearl flame provides contrast to cold glass. Idle masks rotate slowly; attack briefly aligns them into a choir arc and sends a compact ripple. Hit rattles cage sections; defeat extinguishes light and lets the empty cage fold into water.
+
+## 12. The Star-Eater / star_eater
+A black angular crescent surrounding a suspended eclipse core, with three disconnected square rings receding inward rather than an ordinary head and limbs. Violet negative-space seams and sparse ember pinpoints indicate Fire; the central disk stays the dominant feature. A stable small shadow shows its exact tile despite hovering parts. Motion compresses the rings with restrained discontinuity. Attack opens the crescent once, emitting a narrow dark-red ray; defeat folds the core inward. Avoid full-screen flashes or camera distortion.
+
+## 13. Tidemark Astrologer / tidemark_astrologer
+Slender masked sky-reader wearing segmented midnight robe panels edged in brass. A large asymmetrical astrolabe floats beside the right hand and a broken silver marker halo arcs behind the head; no branch staff or hollow wooden mask. Faceplate has one diagonal star notch. Idle moves brass rings at different rates; casts by snapping one ring into alignment, with a restrained needle-like light stroke. Defeat closes the instrument like a folded fan as robe panels settle. The element is Metal despite the name.
+
+## 14. Gilt-Ash Bargainer / gilt_ash_bargainer
+Short, wide demon merchant with one upward curled horn and one cut stone stump, a cracked gold double-mask and massive sandstone wrist cuffs. Layered parchment seals hang from the belt, not the shoulders; a small suspended balance scale acts as its focal prop. Earth appears in chipped clay/stone masses, not flames. Idle weighs a glowing seal; attack snaps a stone-cuffed hand shut around a sigil. Hit briefly separates mask halves; defeat contracts into a broken sealed urn.
+
+## 15. Cloudbreak Coil / cloudbreak_coil
+Lean airborne metal serpent with a long S-shaped spine, narrow blade snout, forked lightning-rod crest and three turbine-like fins concentrated near the neck. Dark steel segmented scales have bright brushed edges and sparse ice-white charge paths. Unlike the Drowned Wyrm it has no bulky coil, bells or broad sail fins. Hover shadow and compact tile-centered loop anchor it. Moves with rapid head-led arcs; attacks with a drilling forward snap; defeat disengages fins and folds the spine neatly downward.
+
+## 16. Rootbound Witness / rootbound_witness
+Upright weathered monolith with a single carved horizontal eye, thin hanging root tendrils and a crown of three unequal standing stones. Its body is a tall narrow slab, not the Bastion fortress or Colossus grove. Two hidden root pedestals lift it just above the ground; rust-orange strata and dull quartz inlays communicate Earth. Idle eye opens by one stone step; attack projects a compact line of rising stone markers. Defeat closes the eye and cracks vertically without scattering across tiles.
+
+## 17. Bell of the Unmoored / bell_unmoored
+Floating inverted temple bell of carved dark wood, wider at the base, with a root handle and a single pale-jade clapper visible through an irregular side opening. Five rectangular wooden prayer charms hang at alternating heights and orbit just outside its rim. It has no metal cage or masks, separating it from Lost Choir. Idle swings off-center; move drifts with charm lag; attack gives one visible clapper strike and a square-edged green sound ring. Defeat unthreads charms and lets the bell root into a small wooden husk.
+
+## 18. The Unwritten Guest / unwritten_guest
+Tall inverted-teardrop figure made of suspended rain-glass slabs, with a blank white faceplate offset from its vertical axis. Its cloak flows upward into three broad broken panels; there are no visible hands, feet or circular eclipse rings. Thin dark gaps separate glass from the cobalt inner void. Idle panels rise while body stays tile-centered; movement slides without a walk cycle; attack briefly assembles one impossible angular arm, then releases it into rain. Defeat faceplate turns edge-on and shards settle upward, with no unreadable screen warp.
+
+## Other required entity families
+Nexus: a low four-prong stone plinth with one central suspended crystal and a clear team emblem; neutral silver/obsidian frame, team-color inlays plus distinct shape badges. Pulse only on direct damage; do not imply a combat unit.
+Relics: individual miniature props, not generic glowing cubes. Initial proposed designs: Tideglass Reliquary (shell-white tripod holding nested water lenses) and Ember Ledger (hinged bronze tablet with ceramic pages and a narrow coal seam). Each future Relic gets a unique focal silhouette and activation motion.
+Tokens: each token definition gets a model ID and original brief. Proposed Rootling is a three-legged seed pod with a flat leaf hood; Ash Mote is an angular charred kite around an ember; do not reuse an official unit scaled down as a token without explicit art intent.
+Terrain/hazards: stairs/stone ridges for cover, cracked amber tiles for telegraphed eruption, upward bead chains for flooding warning. Highlight affected tile boundaries and countdown symbols; color is supplemental. Hazard VFX must not hide stats or target tiles.
+Actions: unique card illustration focal motif plus reusable effect families. Return-to-hand uses a reverse ribbon trajectory; revival rebuilds a pale silhouette from base upward; Mourning adds one small bone-white tally charm and a numerical badge rather than growing the model outside its footprint.
+
+## Frame and presentation requirements
+Common uses restrained elemental edging; Rare+ adds layered bevels/engraved corner motifs, tier symbol and optional restrained foil. Keep element shape emblem, rarity icon, cost, Attack, current/max Guard and text readable without hue. Battlefield units display a small stable stat strip below the model; selecting one shows full card details on the mat panel, including damage, buffs and effect sources. Rare finish never changes gameplay stats by itself. Verify all 18 models together as black silhouettes before approving final assets.

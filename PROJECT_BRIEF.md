@@ -1,20 +1,20 @@
 # Project Brief
 
-Veylattice is an original browser-based tactical card battler. Players deploy elemental creatures called Vessels onto a square grid, use Actions to change the battlefield, and play persistent Relics. Victory comes from reducing the opponent's Vitality to zero.
+Veylattice is an original HTML-first tactical collectible card battler: deploy named elemental Vessels, maneuver on a grid, spend Flux on Actions and Relics, and win through direct attacks on enemy Vitality.
+
+## Product scope
+- Solo against varied tactical AI, no-reward prebuilt Practice, configurable online 2v2 Tag, and monthly AI-ranked Unranked/Bronze/Silver/Gold progression.
+- 20-40-card decks with three-copy cap, at least 10 Vessels and five Actions (minimum deck size and Action minimum are proposed defaults).
+- 120-second turns, one normal summon, persistent Guard damage, eligible retaliation, turn-time mulligans and explicit revive/death-trigger effects.
+- Unlimited-quantity Stash, earned Lattice Shards (proposed currency name), six-card packs, owned-card Singles, recycling, weekly rotations and occasional Friday half-price packs.
+- Distinct handcrafted voxel identities for all 18 existing official Vessels; maintain lore, arenas, Lore Bonds, Codex, elemental frames and a restricted custom-card Forge.
+- Static browser frontend on GitHub Pages and xiondigital.net/Veylattice/, with separately hosted authenticated persistence and authoritative progression/match validation.
 
 ## Design pillars
-- Position, movement, range, elemental matchups, and resource timing matter.
-- Rules are explainable and independently testable.
-- Card UI remains legible and creature silhouettes readable.
-- Browser-first static app; local/single-player prototype before online play.
+Readable positioning, resource decisions and accessible counterplay; original silhouettes; affordable browser-first delivery; data-driven expansions; server-trusted collection and rewards; truthful implementation status. Rarity offers specialized power and presentation, not strictly superior replacements at equal cost.
 
-## Targets
-- 7x7 grid, 30 starting Vitality, opening hand of 5.
-- 30-card decks, maximum 2 copies per card ID.
-- Maximum 4 Vessels and 2 Relics per player.
-- Elements: Wood, Fire, Earth, Metal, Water.
-- Prototype set: 12 Vessels, 8 Actions, 2 Relics.
-- Aspirational content target: 180 unique cards, only after rules and balance are proven.
+## First playable slice
+A complete offline prebuilt Practice match against legal-move AI: draw/play/summon/move/attack/retaliate, 120-second timer, mulligan, effects, discard and a reachable win state. No earned online rewards in this slice. Build server progression and multiplayer later, not as a substitute for a functioning rules engine.
 
-## Non-goals for the first slice
-No accounts, matchmaking, trading, monetization, backend sync, or giant card pool. The vertical slice should let a user start a match, draw/play cards, spend Flux, summon/move/attack, apply elemental modifiers, end turns, and reach a win state.
+## Current status
+Early DOM prototype and content/design documents. The inspected prototype has no autonomous opponent, full movement, persistent damage/retaliation, complete win loop, authenticated collection or online lobby implementation. Do not describe expanded specifications as playable features. See ROADMAP.md for milestones.
