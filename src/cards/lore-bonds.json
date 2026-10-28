@@ -1,0 +1,41 @@
+[
+  {
+    "id": "bond_ashen_legion",
+    "name": "Last Banner of the Ashen Legion",
+    "type": "lore_bond",
+    "members": ["vessel_ashen_crownblade", "vessel_argent_nightlancer"],
+    "loreSummary": "Former comrades who held the retreat while their empire collapsed.",
+    "activation": {"type": "orthogonal_adjacency", "sameController": true},
+    "effects": [
+      {"target": "each_member", "stat": "attack", "amount": 1},
+      {"target": "each_member", "stat": "guard", "amount": 1}
+    ],
+    "duration": "while_conditions_met",
+    "stacking": "unique_source_only",
+    "status": "proposed"
+  },
+  {
+    "id": "bond_root_revelation",
+    "name": "Root and Revelation",
+    "type": "lore_bond",
+    "members": ["vessel_hollowroot_oracle", "vessel_verdant_colossus"],
+    "loreSummary": "The seer interprets memories held by the living grove.",
+    "activation": {"type": "orthogonal_adjacency", "sameController": true},
+    "effects": [{"target": "vessel_hollowroot_oracle", "stat": "guard", "amount": 1}],
+    "duration": "while_conditions_met",
+    "stacking": "unique_source_only",
+    "status": "proposed"
+  },
+  {
+    "id": "bond_drowned_covenant",
+    "name": "The Drowned Covenant",
+    "type": "lore_bond",
+    "members": ["vessel_mireglass_stalker", "vessel_wyrm_drowned_vault"],
+    "loreSummary": "The Stalker follows the ancient Wyrm through flooded vaults and forgotten channels.",
+    "activation": {"type": "orthogonal_adjacency", "sameController": true},
+    "effects": [{"target": "vessel_mireglass_stalker", "stat": "attack", "amount": 1}],
+    "duration": "while_conditions_met",
+    "stacking": "unique_source_only",
+    "status": "proposed"
+  }
+]
