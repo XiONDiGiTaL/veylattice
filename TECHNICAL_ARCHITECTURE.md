@@ -1,6 +1,13 @@
 # Technical Architecture
 
-Status: target architecture, not deployed infrastructure. HTML/CSS/vanilla JS ES modules and JSON remain the baseline; Three.js/GLB follow tested gameplay.
+Status: target architecture. HTML/CSS/vanilla JS ES modules and JSON remain the baseline; Three.js/GLB follow tested gameplay.
+
+**Implemented as of 2026-10-28 (M1 + M2-003/M2-004):** static frontend on GitHub Pages at
+`xiondigital.net/veylattice/`; deterministic rules engine and AI in `src/game/`; local-first profile
+persistence with a dedicated Supabase project (`jjtfnduodxtulxvviasf`) for name/avatar/settings/stats.
+Everything below about authoritative matches, wallets, seats and ranked progression remains a target.
+The AI's current guarantees (filtered observation, engine-derived candidates, bounded decisions) are the
+pattern any server-side AI must keep.
 
 ## Static frontend and trusted backend
 Host frontend assets on GitHub Pages and the website at /Veylattice/. Use relative module/content URLs and base-aware invite links. Do not configure a CNAME for a subpath. Prefer query/hash navigation so direct routes do not need SPA rewrites. Authentication redirects must preserve deployment base and be allowlisted.
@@ -8,12 +15,30 @@ Proposed backend: Supabase Auth, Postgres, Realtime, and Edge Functions for atom
 Use persisted turn deadlines, compare-and-swap state versions and a scheduled timeout worker. Every incoming command first materializes overdue transitions. The worker advances abandoned games even without connected browsers. Backend project selection, quotas, migrations and deployment require explicit approval.
 
 ## Layers
-1. Immutable versioned content definitions and schemas.
-2. Pure shared rules reducer: state + validated command + time/RNG context => state/events. No DOM/network calls.
-3. AI legal-command enumeration, heuristic/search policy and reproducible seeds.
-4. Controllers/renderers: DOM and later independent 3D presentation.
-5. Transport/auth adapters, server-side command processor and audience-specific projections.
-6. Persistence, immutable economy ledger and content migration/version management.
+1. Immutable versioned content definitions and schemas (`src/game/content.js` — implemented).
+2. Pure shared rules reducer: state + validated command + time/RNG context => state/events. No DOM/network calls (`src/game/engine.js` — implemented).
+3. AI legal-command enumeration, heuristic/search policy and reproducible seeds (`src/game/ai.js` — implemented; consumes a filtered observation, never the state).
+4. Controllers/renderers: DOM and later independent 3D presentation (`src/main.js` — implemented).
+5. Transport/auth adapters, server-side command processor and audience-specific projections (target).
+6. Persistence, immutable economy ledger and content migration/version management (profile slice implemented in `src/net/` + `supabase/migrations/`).
+
+### Implemented data flow (offline match)
+
+```
+DOM click ─▶ applyCommand(state, command, {now}) ─▶ accepted? new state + events
+                                                  └▶ rejected? same state object
+AI turn  ─▶ buildObservation ─▶ buildCandidates(engine) ─▶ choosePlan(bounded) ─▶ applyCommand
+Profile  ─▶ sanitize ─▶ localStorage ─▶ (best effort) Supabase RPC ─▶ sync state shown in UI
+```
+
+### Implemented client persistence boundary
+
+The browser holds the publishable/anon key only. `public.veylattice_profiles` has RLS enabled and **no
+grants to `anon`/`authenticated`**; the only callable surface is two `SECURITY DEFINER` RPCs, and
+writes additionally require a per-profile edit token whose bcrypt hash is stored server-side. Name,
+avatar shape/size and JSON payload sizes are database constraints, not just client validation. This is a
+device identity, not authentication: it must be replaced by authenticated ownership before any
+reward-bearing or cross-device feature depends on it.
 
 ## Proposed tables
 profiles(user_id PK/display settings); wallets(user_id PK/balance); wallet_ledger(id, user_id, delta, reason, operation_id UNIQUE); collection(user_id, card_id, finish, quantity, composite PK); discovered_cards(user_id, canonical_card_id, first_obtained_at); decks/deck_cards; rooms/room_seats; matches/match_seats; match_events(match_id, seq UNIQUE within match); match_snapshots; match_results(match_id UNIQUE); seasons; season_progress(user_id, season_id composite PK); pack_definitions/content_versions; shop_rotations; pack_openings(operation_id UNIQUE); offer_redemptions.
@@ -25,10 +50,21 @@ Each command includes matchId, expectedVersion and unique commandId; server deri
 Pack opening uses server cryptographic randomness; injectable deterministic RNG is for tests and replayable gameplay, not client-chosen pack rolls. Never expose a pack RNG seed that predicts future purchases. Reward-bearing AI executes through trusted command validation; browser-only AI results are not eligible. Idempotent match settlement prevents reconnect/retry farming.
 
 ## Lobby reference findings
-Inspected Meldra src/server/index.ts: Node WebSocket relay, two clients per room, opaque forwarding and host-browser authority. Inspected Leapbuddies js/net.js: Supabase Realtime broadcast/presence, room codes, host/guest callbacks and timeouts. Reuse UX patterns and transport concepts, not credentials, namespaces or host-trusted reward logic. Veylattice needs four seats, authenticated membership, durable recovery, private state and trusted progression. No changes to either reference repository are part of this directive.
+Re-verified 2026-10-28 at current `main` (read-only; no execution). Meldra `src/server/index.ts` is a Node WebSocket relay: two clients per room, opaque message forwarding, optional origin allowlist, rate limiting and idle-room reaping, with host-browser authority and a versioned `act`/`snap` peer protocol. Leapbuddies `js/net.js` uses Supabase Realtime broadcast channels with presence keys, first-guest room locking and watchdog timeouts, and ships a Supabase URL plus public anon key inside the client file. Reuse UX patterns and transport concepts only — never credentials, namespaces or host-trusted reward logic, and never a hard-coded anon key. Veylattice needs four seats, authenticated membership, durable recovery, private state and trusted progression. No changes to either reference repository are part of this directive.
 
 ## Operational requirements
-UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules versions pinned to matches; migrations and rollback instructions; config.example without secrets; structured errors and redacted logs. IndexedDB stores preferences and cached content, not authoritative currency. Cross-domain saves follow authenticated user identity, not localStorage origin. Offline practice remains functional when backend is unavailable; disable rewards/shop writes with clear messaging. Test both root and /Veylattice/ asset paths.
+UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules versions pinned to matches; migrations and rollback instructions; config.example without secrets; structured errors and redacted logs. IndexedDB stores preferences and cached content, not authoritative currency. Cross-domain saves follow authenticated user identity, not localStorage origin. Offline practice remains functional when backend is unavailable; disable rewards/shop writes with clear messaging. Test both root and `/veylattice/` asset paths.
+
+## Deployment topology (implemented)
+
+| Piece | Detail |
+|---|---|
+| Hosting | GitHub Pages project site: repo `main`, path `/`, `.nojekyll` committed. Repository must be public on the free plan. |
+| Custom domain | `xiondigital.net` is already the account's Pages custom domain (user site `xiondigital.github.io`), so project repos appear as subpaths. No DNS or custom-domain change was made for Veylattice. |
+| Path case | Pages paths follow the repository name, so the repo was renamed to lowercase `veylattice` for `/veylattice/`. |
+| Database | Separate Supabase project `jjtfnduodxtulxvviasf`, region us-east-2. Sohbet (`ezwxppiuxbyzmmheckce`) untouched. |
+| Secrets | Only the publishable/anon key is in the bundle (`src/net/config.js`). `service_role` is absent from the repo and browser. |
+| Offline | `CLOUD_ENABLED = false` or any network failure degrades to a clearly labelled local profile; no feature blocks on sync. |
 
 ## Public documentation basis
 GitHub Pages is static hosting: https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages . Supabase RLS/security guidance: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/docs/guides/database/secure-data . These links explain platform/security constraints, not implementation completion.

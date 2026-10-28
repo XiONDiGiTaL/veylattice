@@ -1,13 +1,242 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111426">
-<meta name="description" content="Veylattice: an original tactical elemental card battler."><title>Veylattice | Tactical Card Battler</title><link rel="stylesheet" href="./styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0d16">
+<meta name="description" content="Veylattice: an original tactical elemental card battler with a deterministic rules engine and tactical AI opponents.">
+<meta name="color-scheme" content="dark">
+<title>Veylattice | Tactical Elemental Card Battler</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d16'/%3E%3Cpath d='M16 4l4 8 8 4-8 4-4 8-4-8-8-4 8-4z' fill='%237ad7ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<header class="topbar"><div><p class="eyebrow">TACTICAL CARD BATTLER</p><h1>VEY<span>LATTICE</span></h1></div><div class="top-actions"><span class="pill">EARLY PROTOTYPE</span><button id="restart-btn" class="button secondary">New Match</button></div></header>
-<main><section class="status-strip"><div class="player-stat"><span class="label">OPPONENT VITALITY</span><strong id="enemy-vitality">30</strong></div><div class="center-stat"><span class="label">TURN</span><strong id="turn-number">1</strong><span id="turn-owner">Your turn</span></div><div class="player-stat align-right"><span class="label">YOUR VITALITY</span><strong id="player-vitality">30</strong></div></section>
-<section class="game-layout"><aside class="side-panel"><div class="panel-heading"><h2>Flux</h2><span id="flux-count">1 / 1</span></div><div id="flux-track" class="flux-track"></div><p class="muted">Flux refills at the start of your turn. Maximum increases by one each turn.</p><div class="divider"></div><h3>Selected card</h3><div id="selected-card" class="selected-card empty">Choose a card from your hand.</div><p id="game-message" class="message" role="status" aria-live="polite">Select a Vessel, then choose an empty square on your half of the board.</p><button id="end-turn-btn" class="button primary full">End Turn</button></aside>
-<section class="board-section"><div class="board-caption"><span>THE VEYLATTICE</span><span>7 × 7 GRID</span></div><div id="board" class="board" role="grid" aria-label="Tactical battlefield"></div><div class="legend"><span><i class="legend-dot friendly"></i>Your Vessels</span><span><i class="legend-dot enemy"></i>Opponent Vessels</span><span><i class="legend-dot legal"></i>Legal square</span></div></section></section>
-<section class="hand-section"><div class="section-title"><div><p class="eyebrow">YOUR HAND</p><h2>Cards in hand <span id="hand-count">5</span></h2></div><div class="deck-count">Deck <strong id="deck-count">25</strong></div></div><div id="hand" class="hand" aria-label="Cards in hand"></div></section><footer><span>VEY LATTICE · HTML PROTOTYPE</span><span>Rules and balance are provisional.</span></footer></main>
-<script type="module" src="./src/main.js"></script></body></html>
+<header class="topbar">
+  <div class="brand">
+    <p class="eyebrow">TACTICAL ELEMENTAL CARD BATTLER</p>
+    <h1>VEY<span>LATTICE</span></h1>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button id="tab-battle" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="view-battle">Battle</button>
+    <button id="tab-profile" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-profile">Profile &amp; Settings</button>
+  </nav>
+
+  <div class="top-actions">
+    <button id="profile-chip" class="profile-chip" type="button" title="Open profile and settings">
+      <img id="profile-chip-avatar" class="avatar avatar-sm" alt="" width="32" height="32">
+      <span class="profile-chip-text">
+        <strong id="profile-chip-name">Wanderer</strong>
+        <small id="profile-chip-sync">Local only</small>
+      </span>
+    </button>
+    <button id="restart-btn" class="button secondary" type="button">New Match</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============================ BATTLE ============================ -->
+  <section id="view-battle" class="view" role="tabpanel" aria-labelledby="tab-battle">
+    <section class="status-strip" aria-label="Match status">
+      <div class="player-stat">
+        <span class="label">YOU · SEAT 1</span>
+        <strong id="player-vitality">30</strong>
+      </div>
+      <div class="center-stat">
+        <span class="label">TURN <span id="turn-number">1</span></span>
+        <span id="turn-owner" class="turn-owner">Your turn</span>
+        <span id="timer" class="timer" role="timer" aria-live="off">2:00</span>
+      </div>
+      <div class="player-stat align-right">
+        <span class="label">OPPONENT · SEAT 2</span>
+        <strong id="enemy-vitality">30</strong>
+      </div>
+    </section>
+
+    <section class="opponent-card" aria-label="Opponent">
+      <img id="opponent-avatar" class="avatar" alt="" width="48" height="48">
+      <div class="opponent-text">
+        <p class="eyebrow">AI OPPONENT</p>
+        <h2 id="opponent-name">The Vanguard</h2>
+        <p id="opponent-style" class="muted">Standard difficulty · aggressive pressure</p>
+      </div>
+      <div class="opponent-side">
+        <span id="opponent-difficulty" class="pill">STANDARD</span>
+        <span id="opponent-status" class="thinking" aria-live="polite">Waiting</span>
+      </div>
+    </section>
+
+    <section class="game-layout">
+      <aside class="side-panel">
+        <div class="panel-heading">
+          <h2>Flux</h2>
+          <span id="flux-count">1 / 1</span>
+        </div>
+        <div id="flux-track" class="flux-track" aria-label="Flux available"></div>
+        <p class="muted">Flux refills at the start of your turn and caps at ten.</p>
+        <div class="divider"></div>
+        <h3>Selection</h3>
+        <div id="selected-card" class="selected-card empty">Select a card or a Vessel.</div>
+        <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
+        <div class="button-stack">
+          <button id="mulligan-btn" class="button secondary full" type="button" disabled>Mulligan selected card (1 Flux)</button>
+          <button id="end-turn-btn" class="button primary full" type="button">End Turn</button>
+        </div>
+        <div class="divider"></div>
+        <dl class="counters">
+          <div><dt>Deck</dt><dd id="deck-count">30</dd></div>
+          <div><dt>Discard</dt><dd id="discard-count">0</dd></div>
+          <div><dt>Vessels</dt><dd id="unit-count">0 / 4</dd></div>
+        </dl>
+      </aside>
+
+      <section class="board-section" aria-label="Battlefield">
+        <button id="enemy-nexus" class="nexus enemy" type="button">
+          <span class="nexus-label">OPPONENT NEXUS</span>
+          <span class="nexus-hint">Strike from the enemy home row when it controls no Vessels</span>
+        </button>
+        <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+        <button id="player-nexus" class="nexus friendly" type="button">
+          <span class="nexus-label">YOUR NEXUS</span>
+          <span class="nexus-hint">Defended by your Vessels</span>
+        </button>
+        <div class="legend">
+          <span><i class="legend-dot friendly"></i>Your Vessels</span>
+          <span><i class="legend-dot enemy"></i>Opponent Vessels</span>
+          <span><i class="legend-dot legal"></i>Legal summon</span>
+          <span><i class="legend-dot move"></i>Legal move</span>
+          <span><i class="legend-dot attack"></i>Legal attack</span>
+        </div>
+      </section>
+    </section>
+
+    <section class="hand-section">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">YOUR HAND</p>
+          <h2>Cards in hand <span id="hand-count">5</span></h2>
+        </div>
+        <div class="deck-count">Deck <strong id="deck-count-hand">30</strong></div>
+      </div>
+      <div id="hand" class="hand" aria-label="Cards in hand"></div>
+    </section>
+
+    <section class="log-section">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">MATCH LOG</p>
+          <h2>Recent events</h2>
+        </div>
+        <button id="log-clear" class="button secondary small" type="button">Clear</button>
+      </div>
+      <ol id="log-list" class="log-list" aria-live="off"></ol>
+    </section>
+
+    <footer>
+      <span>VEY LATTICE · M2-003 AI OPPONENT</span>
+      <span>Deterministic engine. The AI submits only engine-validated commands.</span>
+    </footer>
+  </section>
+
+  <!-- ============================ PROFILE ============================ -->
+  <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
+    <div class="profile-layout">
+      <section class="panel">
+        <p class="eyebrow">PLAYER PROFILE</p>
+        <h2>Identity</h2>
+        <div class="avatar-row">
+          <img id="profile-avatar" class="avatar avatar-lg" alt="Your avatar" width="96" height="96">
+          <div class="avatar-actions">
+            <label class="button secondary" for="avatar-input">Upload avatar</label>
+            <input id="avatar-input" type="file" accept="image/png,image/jpeg,image/webp" class="visually-hidden">
+            <button id="avatar-clear" class="button secondary" type="button">Remove</button>
+            <p id="avatar-status" class="muted small" role="status">
+              Square centre-crop, resized to 128 px, stored with your profile.
+            </p>
+          </div>
+        </div>
+
+        <label class="field" for="profile-name">
+          <span>Display name</span>
+          <input id="profile-name" type="text" maxlength="24" autocomplete="nickname" spellcheck="false">
+        </label>
+        <p class="muted small"><span id="profile-name-count">0</span>/24 characters. Names are plain text only.</p>
+
+        <div class="divider"></div>
+        <h3>Profile id</h3>
+        <p class="muted small">Your profile is a device identity — not an account, and not a password. Keep it to keep your stats.</p>
+        <div class="inline-row">
+          <input id="profile-id" type="text" readonly class="mono">
+          <button id="profile-copy" class="button secondary" type="button">Copy</button>
+        </div>
+        <p id="profile-reset-status" class="muted small" role="status"></p>
+        <button id="profile-reset" class="button danger" type="button">Forget this device's profile</button>
+      </section>
+
+      <section class="panel">
+        <p class="eyebrow">MATCH SETUP</p>
+        <h2>Opponent</h2>
+        <label class="field" for="settings-difficulty">
+          <span>Difficulty</span>
+          <select id="settings-difficulty"></select>
+        </label>
+        <p id="difficulty-help" class="muted small"></p>
+        <label class="field" for="settings-archetype">
+          <span>AI style</span>
+          <select id="settings-archetype"></select>
+        </label>
+        <p id="archetype-help" class="muted small"></p>
+        <p class="muted small">Changes apply to the next match you start.</p>
+
+        <div class="divider"></div>
+        <h3>Interface</h3>
+        <label class="check"><input id="settings-motion" type="checkbox"> Reduce animation and AI pacing</label>
+        <label class="check"><input id="settings-coords" type="checkbox"> Show cell coordinates on empty squares</label>
+        <button id="profile-save" class="button primary" type="button">Save profile</button>
+        <p id="profile-sync" class="muted small" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <p class="eyebrow">RECORD</p>
+        <h2>Match statistics</h2>
+        <dl class="counters stats">
+          <div><dt>Games</dt><dd id="stat-games">0</dd></div>
+          <div><dt>Wins</dt><dd id="stat-wins">0</dd></div>
+          <div><dt>Losses</dt><dd id="stat-losses">0</dd></div>
+          <div><dt>Draws</dt><dd id="stat-draws">0</dd></div>
+          <div><dt>Win streak</dt><dd id="stat-streak">0</dd></div>
+          <div><dt>Best streak</dt><dd id="stat-best">0</dd></div>
+        </dl>
+        <p id="stat-last" class="muted small">No matches recorded yet.</p>
+        <div class="divider"></div>
+        <h3>Where this is stored</h3>
+        <p class="muted small">
+          Your profile is written to this browser first, always. When the cloud is reachable it is
+          also saved to a dedicated Supabase project created for Veylattice, in a table that denies
+          direct access and accepts writes only through a function that checks your private edit token.
+          Offline play never blocks.
+        </p>
+      </section>
+    </div>
+  </section>
+</main>
+
+<div id="result-overlay" class="result-overlay" hidden>
+  <div class="result-panel" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <p class="eyebrow">MATCH COMPLETE</p>
+    <h2 id="result-title">Victory</h2>
+    <p id="result-reason" class="muted"></p>
+    <div class="result-stats">
+      <span>Record <strong id="result-record">0–0</strong></span>
+      <span>Streak <strong id="result-streak">0</strong></span>
+    </div>
+    <div class="inline-row center">
+      <button id="result-restart" class="button primary" type="button">Play Again</button>
+      <button id="result-profile" class="button secondary" type="button">Profile</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

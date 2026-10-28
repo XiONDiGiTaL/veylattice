@@ -1,39 +1,129 @@
-# AI Handoff - Start Here
+# AI Handoff — Start Here
 
 ## Verified baseline
-- Repository: XiONDiGiTaL/Veylattice. Branch: main.
-- Verified parent/base commit for this tracking change: 33c4b4885cebcd2c5b70135a1a1c64cdb8170931.
-- This file belongs to the subsequent tracking-docs commit; inspect git history for its actual hash. Do not treat the recorded parent as the latest forever.
-- Last scope: documentation/directives only; no game code, services or migrations changed.
-- Remote edits used the GitHub connector; no local checkout/working-tree inspection was performed in this session. Inspect your own working tree before editing.
+
+- Repository: `XiONDiGiTaL/Veylattice` → **renamed to lowercase `XiONDiGiTaL/veylattice`** in session S-M2-B so the
+  GitHub Pages path matches the published URL. GitHub keeps redirects for the old slug.
+- Branch: `main`. Remote: `https://github.com/XiONDiGiTaL/veylattice.git`.
+- The M1 change set (S-M1-A) and the M2-003/M2-004 change set (S-M2-B) are committed together in the
+  commit recorded at the bottom of `docs/IMPLEMENTATION_LOG.md`.
+- Live site: **https://xiondigital.net/veylattice/** (GitHub Pages project site under the account's
+  existing Pages custom domain). Verified with HTTP requests after enabling Pages.
+- Environment: Windows/Git Bash, Node v24.19.0, Python 3.14 for static serving. No dependencies are
+  installed for the app; tests use Node's built-in runner.
 
 ## Read first
-AI_INSTRUCTIONS.md, CHANGELOG.md, TODO.md, GAME_RULES.md, ROADMAP.md, TECHNICAL_ARCHITECTURE.md, docs/IMPLEMENTATION_PROMPT.md, docs/TRANSCRIPT_RECONCILIATION.md and relevant art/world/content specifications. Canonical newer rules override historical threshold combat/two-copy deck proposals.
 
-## Recent changes
-- Expanded design docs commit: b42c38ada7eae2177d8e98cfd69ce16ed70b9670.
-- Transcript/art reconciliation commit: 33c4b4885cebcd2c5b70135a1a1c64cdb8170931.
-- Current tracking change: AI_INSTRUCTIONS.md, CHANGELOG.md, TODO.md, AI_HANDOFF.md. It mandates continued Markdown history and actionable task/handoff maintenance.
+`AI_INSTRUCTIONS.md`, `GAME_RULES.md`, `TODO.md`, `ROADMAP.md`, `TECHNICAL_ARCHITECTURE.md`,
+`docs/IMPLEMENTATION_LOG.md` (session S-M2-B), `README.md`.
+`GAME_RULES.md` is canonical; `docs/ELEMENTAL_SYSTEM.md` and `docs/COMBAT_RULES.md` now describe the
+implemented rules.
 
-## Implemented versus specified
-The previously inspected src/main.js is an early DOM prototype: grid, card selection/basic summoning, old threshold attack flow and turn-switch scaffolding. Its opponent is not autonomous; full movement, persistent Guard/retaliation and complete match victory flow need implementation. Re-inspect before relying on this snapshot.
-Specifications exist for modes, shop/Stash, ranks, server architecture, seven arenas, three bonds, Forge and 18 unique voxel designs. Those specifications do not establish functioning UI, backend, production models or tests.
+## What is implemented (verified)
 
-## Tests and verification
-No test, build or browser command was executed during these documentation sessions. GitHub push results confirmed the two prior commits. No passing gameplay tests are claimed. Actual task-start commands and observed outcomes must be recorded by the implementing agent.
+### Deterministic rules engine — `src/game/`
 
-## Current blockers and decisions
-- No known design-doc blocker to starting offline M1.
-- Proposed numerical rules need playtesting; keep them configurable and document changes.
-- Backend project selection, migrations, deployment, paid services and license changes need separate authorization.
-- Preserve current proprietary license and original assets; screenshot characters are references, not reusable assets.
-- Standard Practice is prebuilt-only/reward-free; custom Forge cards need separate non-reward Custom Practice/Casual access.
-- Free Codex has Lore Bonds, Elemental Confluences, Tactical Combinations and Arena Intelligence sections.
+- Commands: `summon`, `move`, `attack` (unit or `target: "nexus"`), `mulligan`, `endTurn`,
+  `surrender`, `timeout`, `tick`. `applyCommand(state, command, { now })` → `{ ok, state, events }`.
+- Rejected commands return the original state by reference; `expectedVersion` catches stale commands;
+  the deadline path materializes a timeout rather than losing it.
+- Rules: 7×7 board, 30 Vitality, opening 5 + mandatory draw, Flux 1→10 with refill/expiry, one summon
+  per turn, four-Vessel cap, deployment rows, summons unready, orthogonal BFS movement, one move and
+  one attack per ready Vessel, persistent Guard with separate `maxGuard`, simultaneous eligible
+  retaliation, defeat/discard, Nexus strikes gated on the enemy home row and an undefended opponent,
+  escalating fatigue, victory/surrender/simultaneous-lethal draw, once-per-turn 1-Flux mulligan,
+  120-second deadline.
+- Shared public helpers added for the AI: `attacksFromCell`, `lineOfSightOnBoard`,
+  `canStrikeNexusFrom` (`canAttackNexus` delegates to it). Do not re-implement range/LoS in the AI.
+
+### Tactical AI — `src/game/ai.js`
+
+- `buildObservation(state, seat)` → own hand + public units/board + opponent **counts only**.
+- `buildCandidates(state, seat, { difficulty })` → engine-derived plans (single commands, or
+  `[move, attack]` pairs for move-then-strike).
+- `choosePlan(candidates, observation, { difficulty, archetype, rng, now, timeBudgetMs })` → pure,
+  bounded, returns `{ commands, kind, score, considered, truncated }`.
+- `decideNextCommands(state, seat, options)` → convenience wrapper used by the HUD.
+- Difficulties: `novice`/`standard`/`veteran`/`master` (8/20/45/120 ms budgets). Archetypes:
+  `vanguard`/`warden`/`conductor`. Difficulty changes decision quality only — never resources.
+- Seat 1 is the human, Seat 2 is the AI. The HUD drives the AI through `applyCommand` only.
+
+### Profiles and persistence — `src/net/`
+
+- `src/net/config.js`: public Supabase URL + publishable key, `CLOUD_ENABLED` toggle.
+- `src/net/profile.js`: `sanitizeProfile`, `sanitizeName`, `sanitizeAvatar`, `sanitizeSettings`,
+  `sanitizeStats`, `recordMatchResult`, local-first `persistProfile`, `initialiseProfile`,
+  `resetLocalProfile`, `fileToAvatar` (center-crop → 128 px WebP/JPEG, SVG rejected).
+- UI: Profile & Settings tab with name, avatar upload/removal, difficulty, archetype, reduced motion,
+  coordinates, record, profile id, copy, and "forget this device's profile".
+- Cloud: dedicated Supabase project `jjtfnduodxtulxvviasf`; schema and RPCs in
+  `supabase/migrations/0001_profiles.sql`. RLS on, **no anon table grants**; writes only via
+  `veylattice_profile_save` guarded by a bcrypt-hashed edit token; reads via
+  `veylattice_profile_get`. Verified 401 for direct table access and for wrong tokens.
+
+### Tests — 53/53 passing
+
+`npm test` → 53 pass, 0 fail (~0.62 s). Files: `tests/elemental`, `content`, `engine`, `match`,
+`ai`, `profile`, plus `support.js`.
+
+## Not implemented (do not claim otherwise)
+
+- No Actions or Relics. Non-Vessel cards are rejected with `UNSUPPORTED_CARD`.
+- `PRACTICE_DECK_RULES` still waives only `minActions`. The canonical deck rule needs five Actions;
+  delete the exception in M2-002 once Actions exist.
+- Profiles are **device identities, not accounts**. No sign-in, email, password, recovery, or
+  cross-device identity. Anyone with an id can read its public fields.
+- No rate limiting on profile creation (M2-005) — a browser cannot enforce it.
+- No collection, deck builder, shop, packs, rewards, lobbies, ranked, arenas, Lore Bonds, Forge,
+  Codex, or 3D voxel models. No timeout forfeit safeguard; only auto-pass.
+- No keyboard grid traversal. The AI turn is paced with `setTimeout`, not animated.
+- No measured AI win rate against humans; no balance claims are justified.
+- A real 120-second browser expiry has still not been waited out; engine tests cover the boundary.
+
+## Architecture decisions and reasons
+
+1. **Everything is a command.** HUD and AI (and later a server) submit the same validated commands.
+2. **The AI cannot see hidden information.** The decision function receives an observation, not state;
+   a test mutates the opponent hand and asserts an identical decision.
+3. **Candidates come from the engine**, so legality can never fork between HUD and AI.
+4. **Elemental math is one module**, applied per packet to current Attack; Guard is never halved.
+5. **Simultaneous exchange**, so a lethally hit defender still retaliates.
+6. **Local-first persistence.** Play never blocks on the network; the UI reports the real sync state.
+7. **No anon table grants.** All database access is through two RPCs; writes need an edit token.
+8. **Separate Supabase project.** Sohbet (`ezwxppiuxbyzmmheckce`) must never be touched.
+
+## Commands
+
+```bash
+npm test                                  # 53 tests, Node built-in runner
+node --check src/main.js src/game/ai.js   # syntax sanity
+python -m http.server 8000                # then http://localhost:8000
+```
+
+Serve from the repository root. All asset paths are relative, so `/veylattice/` works unchanged.
+Previously used preview servers: 8123/8124. Check ownership before killing anything.
+
+## Known risks
+
+- `state.catalog` is cloned per command (fine at 18 cards; revisit if the catalog grows or a server
+  serializes per command). `structuredClone` is required.
+- The practice deck exception must not leak into ranked or online formats.
+- Balance numbers (Flux curve, fatigue, 1-Flux mulligan, four-Vessel cap) are provisional.
+- The edit token is a write capability, not authentication. Do not describe profiles as secure accounts.
+- `structuredClone`/`crypto.randomUUID` require a modern browser; there are no polyfills.
 
 ## Next three executable steps
-1. M1-001: inspect current branch/history/tree and source; establish a minimal runnable test harness and record current behavior versus GAME_RULES.md. Check that static HTTP startup still works.
-2. M1-002: extract pure match state/command validation from src/main.js with injectable clock/RNG and immutable printed definitions; test illegal commands do not mutate state.
-3. M1-003/M1-004: implement and test legal movement, persistent Guard/retaliation, direct attacks/win states and turn/Flux/draw/mulligan sequencing; then integrate timer/HUD in M1-005.
+
+1. **M2-001** — typed effect queue in `src/game/effects/` with allowlisted handlers and the first
+   Actions/Relics (damage, heal, draw, revive, death trigger). Acceptance: explicit ordering, loop
+   limit, buff expiry, revive enters unready, simultaneous-death tests, no executable card code.
+2. **M2-002** — author Actions/Relics, build three legal archetype decks (20–40 cards, ≥10 Vessels,
+   ≥5 Actions, ≤3 copies), switch `createMatch` to `DECK_RULES`, delete `PRACTICE_DECK_RULES`.
+3. **M2-005** — cloud write abuse guard (edge/server-side), then **M3** collection and deck builder.
 
 ## End-of-session requirement
-Update CHANGELOG.md with actual changes/tests, TODO.md with statuses/evidence/blockers and this handoff with a fresh verified baseline and concrete next steps. Preserve prior work; never claim completion from a plan, empty file or unrun test. Record engineering rationale and evidence only, not private chain-of-thought or secrets.
+
+Commit coherent change sets, update `CHANGELOG.md` with actual changes and observed test output,
+`TODO.md` with statuses and evidence, this handoff with a fresh verified baseline, and append to
+`docs/IMPLEMENTATION_LOG.md`. Include the commit hash you actually created. Never claim completion
+from a plan, placeholder, or unrun test.
