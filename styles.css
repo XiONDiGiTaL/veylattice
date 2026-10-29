@@ -381,12 +381,68 @@ main {
 .board {
   width: min(100%, 640px);
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* --grid is written by main.js from BOARD_SIZE, so the tiles and the rules
+     can never disagree about how many columns the arena has. */
+  grid-template-columns: repeat(var(--grid, 5), 1fr);
   gap: 4px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: linear-gradient(160deg, #0e1322, #131a2c);
   padding: 8px;
+}
+
+/* ---------------------------- card art ---------------------------- */
+
+/* Generated SVG illustration sitting behind the card's own text. */
+.card-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 46%;
+  opacity: 0.92;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-user-drag: none;
+}
+
+/* Text stays readable over any scene: a bottom-weighted scrim, then content. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgba(6, 9, 16, 0.86) 0%,
+    rgba(6, 9, 16, 0.58) 46%,
+    rgba(6, 9, 16, 0.16) 100%
+  );
+}
+
+.card > *:not(.card-art) {
+  position: relative;
+  z-index: 1;
+}
+
+.card h3,
+.card .card-effect,
+.card .card-role,
+.card .card-stats,
+.card .card-tags {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.65);
+}
+
+.inspector-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 20 / 13;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+  object-fit: cover;
 }
 
 .cell {
@@ -436,19 +492,15 @@ main {
 }
 
 .unit {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto 3px;
+  column-gap: 2px;
   height: 100%;
-  border-radius: 6px;
-  padding: 3px 4px;
+  padding: 0;
   text-align: left;
-  background: linear-gradient(170deg, rgba(122, 215, 255, 0.16), rgba(12, 16, 28, 0.9));
-}
-
-.unit.enemy {
-  background: linear-gradient(170deg, rgba(255, 107, 122, 0.18), rgba(12, 16, 28, 0.9));
+  /* The Vessel stands on the terrain; only its nameplate is a panel. */
+  background: none;
 }
 
 .element-badge {
@@ -561,6 +613,8 @@ main {
   flex-direction: column;
   gap: 5px;
   position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .card:hover:not(:disabled) {
@@ -607,9 +661,12 @@ main {
 .card h3 {
   margin: 0;
   font-size: 13px;
+  line-height: 1.3;
   text-transform: none;
   letter-spacing: 0;
   color: var(--text);
+  /* Sixty Vessels include long names; wrap them instead of clipping. */
+  overflow-wrap: anywhere;
 }
 
 .card-role {
@@ -1438,6 +1495,9 @@ body.reduce-motion * {
 
 .model-stage {
   --u-base: 3.9px;
+  /* Board Vessels are miniatures on the table: without this they rendered at
+     roster-thumbnail scale (27px tall) and read as scenery. */
+  --board-u: clamp(6.2px, 1.05vw, 9.6px);
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
@@ -1445,6 +1505,16 @@ body.reduce-motion * {
   align-items: end;
   justify-items: center;
   perspective: 340px;
+  transform-style: preserve-3d;
+}
+
+.cell .model-stage { --u-base: var(--board-u); }
+
+/* Board models stand upright in the world: the tile is tilted, a miniature on
+   it is not. Counter-rotating by the arena tilt keeps Vessels vertical. */
+.cell .vox-model {
+  transform: rotateX(calc(var(--tilt, 24deg) * 1)) rotateX(-13deg) rotateY(var(--spin, -32deg));
+  transform-origin: 50% 100%;
 }
 
 .vox-model {
@@ -1621,52 +1691,68 @@ body.reduce-motion * {
 /* The unit tile keeps its numbers readable underneath the model. */
 .unit {
   position: relative;
-  z-index: 2;
-  justify-content: flex-end;
-  gap: 1px;
-  padding: 2px 3px 3px;
+  z-index: 3;
+  /* Everything in the unit sits just above its own tile face; otherwise the
+     raised ground plane sorts in front of the model and hides it. The unit
+     itself stays flat: a nested preserve-3d context painted a dark backdrop
+     over the tile instead of compositing the ground behind the model. */
+  transform: translateZ(calc(var(--lift, 0px) + 1.5px));
+  transform-style: flat;
 }
 
-/* A soft pool of shade behind each model separates it from the terrain
-   without dimming the model itself. */
+/* The model owns the tile; the nameplate is a narrow strip at its feet. */
+.unit .model-stage {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: stretch;
+}
+
 .unit::before {
   content: "";
   position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 6px;
-  background: radial-gradient(64% 72% at 50% 64%, rgba(7, 11, 19, 0.6), transparent 74%);
+  inset: auto 0 0;
+  height: 34%;
+  z-index: 1;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, transparent, rgba(7, 11, 19, 0.42));
   pointer-events: none;
 }
 
-.unit.enemy::before {
-  background: radial-gradient(64% 72% at 50% 64%, rgba(26, 8, 14, 0.62), transparent 74%);
-}
-
 .unit-name {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  z-index: 2;
   display: block;
-  padding-right: 0;
-  font-size: 9px;
-  line-height: 1.2;
+  min-width: 0;
+  padding: 1px 3px;
+  border-radius: 3px 0 0 0;
+  background: rgba(8, 12, 20, 0.74);
+  font-size: 8.5px;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .unit-stats {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  z-index: 2;
   display: flex;
   gap: 4px;
-  font-size: 9px;
-  line-height: 1.2;
+  padding: 1px 3px;
+  border-radius: 0 3px 0 0;
+  background: rgba(8, 12, 20, 0.74);
+  font-size: 8.5px;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
 .unit-stats .stat.atk::before { content: "ATK "; color: var(--muted); }
 .unit-stats .stat.gd::before { content: "GD "; color: var(--muted); }
 .unit-stats .stat { font-variant-numeric: tabular-nums; }
-
-.unit-name,
-.unit-stats { position: relative; z-index: 2; }
 
 /* Element and readiness become corner markers so the model gets the centre. */
 .unit .element-badge {
@@ -1697,11 +1783,13 @@ body.reduce-motion * {
 .legend-dot.unready { background: #6c789c; }
 
 .guard-bar {
+  grid-column: 1 / -1;
+  grid-row: 3;
   position: relative;
   z-index: 2;
   display: block;
   height: 3px;
-  border-radius: 2px;
+  border-radius: 0 0 2px 2px;
   background: rgba(10, 14, 26, 0.85);
   overflow: hidden;
 }
@@ -1822,23 +1910,64 @@ body.reduce-motion * {
 }
 
 .board {
+  --tilt: 24deg;
+  --slab: 32px;
   position: relative;
   z-index: 2;
-  /* A shallow camera tilt: enough to read as a tabletop model, small enough
-     that tile coordinates and stat text stay crisp. */
-  transform: perspective(1600px) rotateX(7deg);
-  transform-origin: 50% 40%;
-  padding: 10px;
+  /* A tabletop camera: steep enough that the ground blocks have visible sides,
+     shallow enough that tile coordinates and stat text stay crisp. */
+  transform: perspective(1450px) rotateX(var(--tilt));
+  transform-origin: 50% 46%;
+  transform-style: preserve-3d;
+  padding: 13px;
   gap: 3px;
-  border: 1px solid #3a465f;
-  border-radius: 13px;
+  border: 1px solid #4a4534;
+  border-radius: 8px;
+  /* The rim is packed earth and moss, so the lawns sit inside a place. */
   background:
-    linear-gradient(160deg, #1b2434, #0d1220 62%, #0a0f1a),
-    #0d1322;
+    radial-gradient(120% 60% at 30% 0%, rgba(214, 220, 178, 0.18), transparent 60%),
+    linear-gradient(168deg, #7c8460 0%, #666f4e 34%, #4f5740 68%, #3a4030 100%),
+    #5d6547;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 0 5px rgba(12, 17, 28, 0.55),
-    inset 0 0 42px rgba(0, 0, 0, 0.55);
+    inset 0 2px 0 rgba(255, 252, 240, 0.55),
+    inset 0 -6px 14px rgba(60, 52, 38, 0.45),
+    inset 0 0 0 4px rgba(226, 219, 200, 0.22);
+}
+
+/* The slab the diorama sits on: two visible sides and a cast shadow. */
+.board::before,
+.board::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background-repeat: repeat;
+}
+
+/* Front face: layered soil under the paving edge. */
+.board::before {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: var(--slab);
+  transform-origin: 50% 0;
+  transform: rotateX(-90deg);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 22px),
+    linear-gradient(180deg, #8d8574 0 26%, #6a5b45 26% 62%, #493d2d 62%);
+  box-shadow: inset 0 2px 0 rgba(255, 250, 235, 0.28);
+}
+
+/* Right face, in shade. */
+.board::after {
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: var(--slab);
+  transform-origin: 0 50%;
+  transform: rotateY(90deg);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 20px),
+    linear-gradient(90deg, #6a5b45 0 40%, #453a2b 100%);
 }
 
 .board-post {
@@ -1899,59 +2028,189 @@ body.reduce-motion * {
 
 .cell {
   --lift: 0px;
-  isolation: isolate;
-  border-color: rgba(15, 21, 34, 0.9);
-  background: #101827;
+  --block: 17px;
+  /* Transparent: the gaps between tiles are soil and slab, not a dark card. */
+  border-color: transparent;
+  background: transparent;
+  overflow: visible;
+  transform-style: preserve-3d;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
+
+/* A tile is a block of ground, not a painted square: the top face is the
+   material, the two front-facing sides are soil. Neighbouring gaps expose the
+   sides, which is what makes the board read as a physical diorama. */
 .cell-ground {
   position: absolute;
-  inset: 1px;
-  border-radius: 7px;
+  inset: 0;
+  border-radius: 2px;
   z-index: 0;
   pointer-events: none;
-  transform: translateY(calc(var(--lift) * -1));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -5px 8px rgba(0, 0, 0, 0.34),
-    0 calc(var(--lift) + 3px) 0 rgba(6, 9, 15, 0.55);
+  transform: translateZ(var(--lift));
+  transform-style: preserve-3d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.cell-ground::before,
+.cell-ground::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Front wall of the block.
+  
+the tile face is the ground plane. A side wall has to contain the world-down
+   direction, which for a board tilted by `--tilt` is the element rotated by the
+   *negative* of that angle: rotateX(-90deg) would only make a horizontal slab
+   and read as a painted square. */
+.cell-ground::before {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: var(--block);
+  transform-origin: 50% 0;
+  transform: rotateX(calc(var(--tilt) * -1));
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 13px),
+    linear-gradient(180deg, var(--soil-1) 0 30%, var(--soil-2) 30% 64%, var(--soil-3) 64%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* A darker lip on the wall's foot, so the block meets the earth behind it. */
+.cell-ground::after {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: var(--block);
+  transform-origin: 50% 0;
+  transform: rotateX(calc(var(--tilt) * -1));
+  background-image: linear-gradient(180deg, transparent 78%, rgba(0, 0, 0, 0.34));
+}
+
+/* Voxel grain plus directional light on the tile face: eight-pixel blocks of
+   texture, a lit top-left and a shaded near edge. */
+.cell-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 2px;
+  pointer-events: none;
+  transform: translateZ(calc(var(--lift, 0px) + 0.5px));
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 8px),
+    radial-gradient(120% 90% at 26% 10%, rgba(255, 250, 220, 0.16), transparent 64%),
+    radial-gradient(110% 100% at 76% 98%, rgba(0, 0, 0, 0.26), transparent 68%);
+  box-shadow: inset 0 -5px 9px rgba(0, 0, 0, 0.14);
+}
+
+/* ---- materials ------------------------------------------------------ *
+ * Five surfaces, each defined by colour *and* texture: a mown lawn has clumps
+ * and clover, paving has joints and chips, sand has pebbles, water has swell
+ * lines and foam. Soil colours drive the block sides below every tile.
+ */
+
+.cell[data-terrain="grass"] {
+  --soil-1: #6b8f45;
+  --soil-2: #4d6634;
+  --soil-3: #3a4a27;
 }
 
 .cell[data-terrain="grass"] .cell-ground {
   background:
-    radial-gradient(80% 60% at 24% 18%, rgba(205, 235, 165, 0.16), transparent 62%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 8px, transparent 8px 16px),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.07) 0 8px, transparent 8px 16px),
-    linear-gradient(165deg, rgba(84, 116, 68, 0.84), rgba(44, 66, 43, 0.9));
+    radial-gradient(38% 34% at 26% 22%, rgba(198, 236, 132, 0.5), transparent 68%),
+    radial-gradient(30% 26% at 74% 62%, rgba(126, 176, 86, 0.55), transparent 70%),
+    radial-gradient(circle at 18% 70%, rgba(58, 92, 42, 0.55) 0 3px, transparent 3px),
+    radial-gradient(circle at 62% 30%, rgba(58, 92, 42, 0.45) 0 2px, transparent 2px),
+    radial-gradient(circle at 82% 78%, rgba(168, 214, 120, 0.5) 0 2px, transparent 2px),
+    linear-gradient(158deg, #86b657 0%, #6ca044 46%, #578c3c 100%);
+}
+
+.cell[data-terrain="moss"] {
+  --soil-1: #4f7a3a;
+  --soil-2: #3c5c2c;
+  --soil-3: #2c4522;
 }
 
 .cell[data-terrain="moss"] .cell-ground {
   background:
-    radial-gradient(60% 60% at 30% 30%, rgba(150, 190, 110, 0.24), transparent 70%),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0 7px, transparent 7px 14px),
-    linear-gradient(165deg, rgba(84, 122, 74, 0.86), rgba(42, 64, 40, 0.9));
+    radial-gradient(46% 40% at 30% 26%, rgba(166, 220, 122, 0.42), transparent 70%),
+    radial-gradient(circle at 30% 66%, rgba(96, 148, 62, 0.6) 0 3px, transparent 3px),
+    radial-gradient(circle at 70% 40%, rgba(96, 148, 62, 0.5) 0 2px, transparent 2px),
+    radial-gradient(circle at 54% 82%, rgba(196, 234, 140, 0.45) 0 2px, transparent 2px),
+    linear-gradient(158deg, #6f9f48 0%, #578b3c 48%, #446f30 100%);
+}
+
+.cell[data-terrain="stone"] {
+  --soil-1: #9a9484;
+  --soil-2: #7b7462;
+  --soil-3: #5d5749;
 }
 
 .cell[data-terrain="stone"] .cell-ground {
   background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 13px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(0, 0, 0, 0.1) 12px 24px),
-    linear-gradient(165deg, rgba(94, 104, 124, 0.9), rgba(58, 66, 84, 0.94));
+    linear-gradient(90deg, transparent 0 47%, rgba(70, 64, 52, 0.5) 47% 53%, transparent 53%),
+    linear-gradient(0deg, transparent 0 47%, rgba(70, 64, 52, 0.45) 47% 53%, transparent 53%),
+    radial-gradient(60% 50% at 30% 26%, rgba(255, 250, 232, 0.35), transparent 72%),
+    radial-gradient(circle at 76% 74%, rgba(90, 84, 70, 0.4) 0 2px, transparent 2px),
+    linear-gradient(158deg, #cfc8b4 0%, #b3ab95 52%, #948c78 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(96, 90, 74, 0.45),
+    inset 0 2px 0 rgba(255, 253, 242, 0.4);
+}
+
+.cell[data-terrain="sand"] {
+  --soil-1: #c9ab74;
+  --soil-2: #a98b58;
+  --soil-3: #83683e;
+}
+
+.cell[data-terrain="sand"] .cell-ground {
+  background:
+    radial-gradient(42% 36% at 32% 24%, rgba(255, 244, 206, 0.55), transparent 70%),
+    radial-gradient(circle at 24% 62%, rgba(132, 106, 62, 0.5) 0 2px, transparent 2px),
+    radial-gradient(circle at 68% 36%, rgba(132, 106, 62, 0.42) 0 2px, transparent 2px),
+    radial-gradient(circle at 58% 78%, rgba(255, 246, 214, 0.5) 0 2px, transparent 2px),
+    linear-gradient(158deg, #e2c893 0%, #cfb27a 52%, #b4945f 100%);
+}
+
+.cell[data-terrain="water"] {
+  --soil-1: #2f7f8c;
+  --soil-2: #23636f;
+  --soil-3: #184b55;
 }
 
 .cell[data-terrain="water"] .cell-ground {
+  /* Foam along the bank edge, a soft swell and a darker centre, rather than
+     evenly spaced stripes across the whole tile. */
   background:
-    radial-gradient(70% 40% at 30% 24%, rgba(190, 245, 255, 0.3), transparent 68%),
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.09) 0 2px, transparent 2px 13px),
-    linear-gradient(165deg, rgba(38, 100, 122, 0.85), rgba(21, 60, 82, 0.92));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0 2px, rgba(255, 255, 255, 0.12) 2px 5px, transparent 5px),
+    radial-gradient(46% 34% at 30% 62%, rgba(255, 255, 255, 0.18), transparent 72%),
+    radial-gradient(40% 30% at 72% 36%, rgba(226, 252, 255, 0.22), transparent 74%),
+    radial-gradient(130% 100% at 50% 30%, rgba(6, 54, 68, 0.34), transparent 70%),
+    linear-gradient(158deg, #6fd0d6 0%, #46b0bf 42%, #2c8398 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(206, 248, 255, 0.4),
+    inset 0 -8px 14px rgba(8, 44, 56, 0.45);
+}
+
+.cell[data-terrain="crystal"] {
+  --soil-1: #9fb6b4;
+  --soil-2: #7d938f;
+  --soil-3: #5e6f6d;
 }
 
 .cell[data-terrain="crystal"] .cell-ground {
   background:
-    radial-gradient(50% 50% at 50% 50%, rgba(140, 225, 255, 0.28), transparent 72%),
-    repeating-linear-gradient(60deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 11px),
-    linear-gradient(165deg, rgba(70, 92, 118, 0.9), rgba(45, 58, 80, 0.94));
+    radial-gradient(46% 44% at 50% 46%, rgba(154, 239, 255, 0.55), transparent 70%),
+    repeating-linear-gradient(58deg, rgba(70, 150, 168, 0.28) 0 2px, transparent 2px 12px),
+    repeating-linear-gradient(-58deg, rgba(70, 150, 168, 0.22) 0 2px, transparent 2px 14px),
+    linear-gradient(158deg, #d8e6e2 0%, #b7cdc9 48%, #93aeab 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 214, 232, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.45);
 }
 
 /* Keep legal-tile feedback above the ground and props. */
@@ -1965,26 +2224,44 @@ body.reduce-motion * {
 .cell-prop {
   position: absolute;
   left: 50%;
-  bottom: 44%;
+  bottom: 58%;
   z-index: 1;
-  transform: translateX(-50%);
+  /* Scenery stands on the raised tile face, not under it: with preserve-3d the
+     ground is sorted by real depth, so scenery must share its elevation. */
+  transform: translateX(-50%) translateZ(var(--lift, 0px));
   pointer-events: none;
-  opacity: 0.88;
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.42));
 }
 
-.cell-prop.is-flipped { transform: translateX(-50%) scaleX(-1); }
+.cell-prop.is-flipped { transform: translateX(-50%) translateZ(var(--lift, 0px)) scaleX(-1); }
 
+/* Scenery is authored at Vessel scale, so a tree stands taller than a unit. */
 .cell-prop-model {
-  --u-base: 2.9px;
-  opacity: 0.95;
+  --u-base: clamp(10px, 1.9vw, 15.5px);
+}
+
+/* Scenery sits in the world: every prop drops a soft contact shadow. */  .cell-prop::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 26px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.42), transparent);
+  pointer-events: none;
 }
 
 .cell-prop .vox-body { animation: none; }
 
 @media (max-width: 640px) {
-  .cell-prop-model { --u-base: 1.6px; }
-  .cell-prop { bottom: 44%; }
+  /* Mobile tiles are ~57px: scenery has to shrink with them or it buries the
+     tile, and the board model follows the same rule. */
+  .cell-prop-model { --u-base: 4.4px; }
+  .cell-prop { bottom: 56%; }
+  .cell .model-stage { --u-base: 4.8px; }
+  .cell .vox-model { transform: rotateX(calc(var(--tilt, 24deg) * 1)) rotateX(-9deg) rotateY(var(--spin, -32deg)); }
   .board-post { width: 16px; height: 20px; }
   .board-post.tl, .board-post.bl { left: -11px; }
   .board-post.tr, .board-post.br { right: -11px; }
@@ -2182,6 +2459,8 @@ body.reduce-motion * {
 .roster-stage {
   --u-base: 10px;
   height: 200px;
+  background-size: cover;
+  background-position: 50% 60%;
   display: grid;
   align-items: end;
   justify-items: center;
@@ -2267,4 +2546,183 @@ body.reduce-motion * {
   .roster-stage { --u-base: 6.4px; height: 150px; }
   .back-row-slots { grid-template-columns: minmax(0, 1fr); }
   .unit .guard-bar { height: 2px; }
+}
+
+/* ------------------------------ card library ------------------------------ */
+
+.library-filters {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid rgba(150, 178, 220, 0.28);
+  background: rgba(18, 24, 38, 0.72);
+  color: #cfdaf0;
+  border-radius: 999px;
+  padding: 7px 15px;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.chip:hover { border-color: rgba(170, 205, 255, 0.55); color: #f2f7ff; }
+
+.chip.active {
+  background: linear-gradient(180deg, rgba(120, 176, 255, 0.28), rgba(60, 96, 150, 0.28));
+  border-color: rgba(180, 216, 255, 0.7);
+  color: #ffffff;
+}
+
+.chip.wood { border-color: rgba(127, 224, 106, 0.4); }
+.chip.fire { border-color: rgba(255, 106, 42, 0.42); }
+.chip.earth { border-color: rgba(216, 178, 116, 0.42); }
+.chip.metal { border-color: rgba(138, 216, 240, 0.42); }
+.chip.water { border-color: rgba(95, 208, 240, 0.42); }
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
+.library-tile {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  border-radius: 12px;
+  transition: transform 160ms ease, filter 160ms ease;
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.55));
+}
+
+.library-tile img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+
+.library-tile:hover,
+.library-tile:focus-visible {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.65)) brightness(1.06);
+  outline: none;
+}
+
+.library-tile-name {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9dabca;
+}
+
+.roster-print { margin-top: 10px; justify-self: start; }
+
+/* Full-size card viewer */
+
+body.card-modal-open { overflow: hidden; }
+
+.card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 32px);
+}
+
+.card-modal[hidden] { display: none; }
+
+.card-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 7, 12, 0.86);
+  backdrop-filter: blur(6px);
+}
+
+.card-modal-body {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(180px, 260px);
+  gap: clamp(16px, 2.5vw, 32px);
+  align-items: center;
+  max-height: 100%;
+}
+
+.card-modal-image {
+  display: block;
+  height: min(86vh, 1000px);
+  width: auto;
+  border-radius: 14px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+}
+
+.card-modal-meta h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(20px, 2.2vw, 28px);
+  margin: 0 0 8px;
+}
+
+.card-modal-close {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(190, 214, 250, 0.4);
+  background: rgba(16, 22, 34, 0.9);
+  color: #e8f0ff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.card-modal-close:hover { background: rgba(40, 56, 82, 0.95); }
+
+@media (max-width: 760px) {
+  .card-modal-body {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    overflow-y: auto;
+  }
+  .card-modal-image { height: auto; width: min(88vw, 460px); }
+  .card-modal-meta { text-align: center; }
+  .card-modal-close { top: 4px; right: 4px; }
+}
+
+#card-modal-file {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .library-tile-name { font-size: 10px; }
+  .library-filters { gap: 8px; }
+  .chip { padding: 6px 12px; font-size: 12px; }
 }

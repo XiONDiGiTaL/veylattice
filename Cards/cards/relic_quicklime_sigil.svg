@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1086 2048" width="1086" height="2048" class="card-face" role="img" aria-label="Quicklime Sigil, Earth Relic, cost 2">
+  <defs>
+    <linearGradient id="cf-bg-relic_quicklime_sigil" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#33291a"/>
+      <stop offset="1" stop-color="#1c160d"/>
+    </linearGradient>
+    <linearGradient id="cf-plate-relic_quicklime_sigil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3e3423"/>
+      <stop offset="0.5" stop-color="#2a2318"/>
+      <stop offset="1" stop-color="#1e1a12"/>
+    </linearGradient>
+    <radialGradient id="cf-medal-relic_quicklime_sigil" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#3e3423"/>
+      <stop offset="0.62" stop-color="#2a2318"/>
+      <stop offset="1" stop-color="#3b2c1a"/>
+    </radialGradient>
+    <linearGradient id="cf-title-relic_quicklime_sigil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dddddd"/>
+    </linearGradient>
+  </defs>
+  
+  <rect x="0" y="0" width="1086" height="2048" rx="46" fill="url(#cf-bg-relic_quicklime_sigil)"/>
+  <rect x="10" y="10" width="1066" height="2028" rx="40" fill="none" stroke="#3b2c1a" stroke-width="18"/>
+  <rect x="26" y="26" width="1034" height="1996" rx="30" fill="url(#cf-plate-relic_quicklime_sigil)" stroke="#6f5735" stroke-width="5"/>
+  <rect x="44" y="44" width="998" height="1960" rx="22" fill="none" stroke="#c8a86f" stroke-width="2.5" opacity="0.55"/>
+  <g><rect x="18" y="620" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="31" cy="663" r="6" fill="#9aa6b4" opacity="0.65"/></g><g><rect x="1042" y="620" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="1055" cy="663" r="6" fill="#9aa6b4" opacity="0.65"/></g><g><rect x="18" y="820" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="31" cy="863" r="6" fill="#9aa6b4" opacity="0.65"/></g><g><rect x="1042" y="820" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="1055" cy="863" r="6" fill="#9aa6b4" opacity="0.65"/></g><g><rect x="18" y="1020" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="31" cy="1063" r="6" fill="#9aa6b4" opacity="0.65"/></g><g><rect x="1042" y="1020" width="26" height="86" rx="10" fill="#3b2c1a" stroke="#6f5735" stroke-width="3"/>
+         <circle cx="1055" cy="1063" r="6" fill="#9aa6b4" opacity="0.65"/></g>
+  <g transform="translate(26 26) scale(1 1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#c8a86f" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="9" fill="#3e3423" stroke="#c8a86f" stroke-width="3"/>
+       <circle cx="30" cy="30" r="3.4" fill="#9aa6b4" opacity="0.9"/>
+     </g><g transform="translate(1060 26) scale(-1 1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#c8a86f" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="9" fill="#3e3423" stroke="#c8a86f" stroke-width="3"/>
+       <circle cx="30" cy="30" r="3.4" fill="#9aa6b4" opacity="0.9"/>
+     </g><g transform="translate(26 2022) scale(1 -1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#c8a86f" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="9" fill="#3e3423" stroke="#c8a86f" stroke-width="3"/>
+       <circle cx="30" cy="30" r="3.4" fill="#9aa6b4" opacity="0.9"/>
+     </g><g transform="translate(1060 2022) scale(-1 -1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#c8a86f" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="9" fill="#3e3423" stroke="#c8a86f" stroke-width="3"/>
+       <circle cx="30" cy="30" r="3.4" fill="#9aa6b4" opacity="0.9"/>
+     </g>
+  <g opacity="0.9"><line x1="70" y1="60" x2="96" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="116" y1="60" x2="142" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="162" y1="60" x2="188" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="208" y1="60" x2="234" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="254" y1="60" x2="280" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="300" y1="60" x2="326" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="346" y1="60" x2="372" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="392" y1="60" x2="418" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="438" y1="60" x2="464" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="484" y1="60" x2="510" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="530" y1="60" x2="556" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="576" y1="60" x2="602" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="622" y1="60" x2="648" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="668" y1="60" x2="694" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="714" y1="60" x2="740" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="760" y1="60" x2="786" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="806" y1="60" x2="832" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="852" y1="60" x2="878" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="898" y1="60" x2="924" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="944" y1="60" x2="970" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/><line x1="990" y1="60" x2="1016" y2="150" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/></g>
+
+  <!-- header -->
+  <g>
+    <rect x="70" y="62" width="770" height="128" rx="18" fill="#1e1a12" stroke="#c8a86f" stroke-width="3" opacity="0.95"/>
+    <text x="108" y="152" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="80" font-weight="700" fill="url(#cf-title-relic_quicklime_sigil)" letter-spacing="1">Quicklime Sigil</text>
+  </g>
+  <g>
+    <rect x="70" y="206" width="946" height="66" rx="12" fill="#2a2318" stroke="#6f5735" stroke-width="2.5"/>
+    <text x="104" y="250" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="34" fill="#f0dcb4" letter-spacing="1.2">Element: Earth / Relic</text>
+  </g>
+  <g>
+    
+    <circle cx="968" cy="128" r="112" fill="#3b2c1a" stroke="#6f5735" stroke-width="4"/>
+    <circle cx="968" cy="128" r="104" fill="url(#cf-medal-relic_quicklime_sigil)" stroke="#c8a86f" stroke-width="5"/>
+    <circle cx="968" cy="128" r="92" fill="none" stroke="#d8b98a" stroke-width="1.6" opacity="0.5"/>
+    <g transform="translate(968 128)">
+      <circle cx="0" cy="0" r="86" fill="#1e1a12" opacity="0.55"/>
+      <circle cx="0" cy="0" r="86" fill="none" stroke="#d8b98a" stroke-width="1.5" opacity="0.45"/>
+      <text x="0" y="40.1" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="118" font-weight="700" fill="#1e1a12" stroke="#1e1a12" stroke-width="20" stroke-linejoin="round" opacity="0.8">2</text>
+      <text x="0" y="40.1" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="118" font-weight="700" fill="#ffffff" stroke="#1e1a12" stroke-width="4.5" paint-order="stroke" stroke-linejoin="round">2</text>
+    </g>
+  </g>
+
+  <!-- illustration and emblems -->
+  
+  <g>
+    <rect x="84" y="312" width="918" height="716" rx="16" fill="#3b2c1a" stroke="#6f5735" stroke-width="4"/>
+    <clipPath id="art-clip-relic_quicklime_sigil">
+      <rect x="92" y="320" width="902" height="700" rx="10"/>
+    </clipPath>
+    <g clip-path="url(#art-clip-relic_quicklime_sigil)">
+      <svg x="92" y="320" width="902" height="700" viewBox="0 0 400 310" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky-fill" x1="0" y1="0" x2="0.15" y2="1">
+      <stop offset="0" stop-color="#2a1d0d"/>
+      <stop offset="0.62" stop-color="#8a5c2c"/>
+      <stop offset="1" stop-color="#332414"/>
+    </linearGradient>
+    <radialGradient id="horizon-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="rgba(255, 220, 160, 0.42)"/>
+      <stop offset="0.5" stop-color="rgba(255, 220, 160, 0.14)"/>
+      <stop offset="1" stop-color="rgba(255, 220, 160, 0)"/>
+    </radialGradient>
+    <linearGradient id="fog-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="rgba(255, 220, 160, 0)"/>
+      <stop offset="0.55" stop-color="rgba(255, 220, 160, 0.26)"/>
+      <stop offset="1" stop-color="rgba(255, 220, 160, 0)"/>
+    </linearGradient>
+    <linearGradient id="ground-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#221809"/>
+      <stop offset="1" stop-color="#110c05"/>
+    </linearGradient>
+    <radialGradient id="vignette-relic_quicklime_sigil" cx="0.5" cy="0.44" r="0.8">
+      <stop offset="0.62" stop-color="rgba(0,0,0,0)"/>
+      <stop offset="1" stop-color="rgba(3,5,9,0.62)"/>
+    </radialGradient>
+  </defs>
+  <rect x="0.0" y="0.0" width="400.0" height="310.0" fill="url(#sky-fill)"/><ellipse cx="200" cy="166" rx="250" ry="110" fill="url(#horizon-glow)"/><polygon points="-19.3,240.0 -8.1,180.5 12.2,170.5 61.8,173.5 82.0,184.5 93.3,240.0" fill="#332414"/><polygon points="216.2,240.0 232.5,158.9 261.8,148.9 333.3,151.9 362.6,162.9 378.9,240.0" fill="#332414"/><polygon points="-17.5,240.0 -3.9,170.8 20.5,160.8 80.2,163.8 104.6,174.8 118.2,240.0" fill="#291d10"/><polygon points="143.1,240.0 151.1,171.2 165.6,161.2 200.8,164.2 215.2,175.2 223.2,240.0" fill="#291d10"/><polygon points="292.0,240.0 308.6,155.6 338.4,145.6 411.3,148.6 441.1,159.6 457.6,240.0" fill="#291d10"/><polygon points="-8.7,240.0 7.9,171.6 37.7,161.6 110.6,164.6 140.5,175.6 157.1,240.0" fill="#130d06"/><polygon points="110.2,240.0 122.8,182.5 145.4,172.5 200.7,175.5 223.4,186.5 235.9,240.0" fill="#130d06"/><polygon points="222.8,240.0 233.6,180.5 253.1,170.5 300.7,173.5 320.2,184.5 331.0,240.0" fill="#130d06"/><polygon points="331.6,240.0 347.3,183.9 375.4,173.9 444.3,176.9 472.5,187.9 488.2,240.0" fill="#130d06"/><rect x="296.0" y="116.0" width="22.0" height="84.0" fill="#130d06"/><rect x="290.0" y="113.0" width="34.0" height="5.0" fill="#130d06"/><ellipse cx="200" cy="130" rx="132" ry="96" fill="rgba(255, 220, 160, 0.22)"/><circle cx="200" cy="82" r="46" fill="rgba(255, 220, 160, 0.28)"/><circle cx="200" cy="82" r="24" fill="rgba(255, 220, 160, 0.50)"/><path d="M232.0 82.0 L246.0 82.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M225.9 100.8 L237.2 109.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M209.9 112.4 L214.2 125.7" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M190.1 112.4 L185.8 125.7" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M174.1 100.8 L162.8 109.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M168.0 82.0 L154.0 82.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M174.1 63.2 L162.8 55.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M190.1 51.6 L185.8 38.3" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M209.9 51.6 L214.2 38.3" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><path d="M225.9 63.2 L237.2 55.0" stroke="rgba(255, 220, 160, 0.45)" stroke-width="3"/><rect x="18.0" y="56.0" width="74.0" height="144.0" fill="#5c4a30"/><rect x="18.0" y="56.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="18.0" y="56.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="18.0" y="85.0" width="74.0" height="29.0" fill="rgba(154, 125, 82, 0.26)"/><rect x="18.0" y="85.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="18.0" y="114.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="18.0" y="114.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="18.0" y="143.0" width="74.0" height="29.0" fill="rgba(154, 125, 82, 0.26)"/><rect x="18.0" y="143.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="18.0" y="172.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="18.0" y="172.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="10.0" y="44.0" width="90.0" height="16.0" fill="#9a7d52"/><rect x="28.0" y="104.0" width="54.0" height="4.0" fill="rgba(216, 178, 116, 0.55)"/><rect x="308.0" y="56.0" width="74.0" height="144.0" fill="#5c4a30"/><rect x="308.0" y="56.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="308.0" y="56.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="308.0" y="85.0" width="74.0" height="29.0" fill="rgba(154, 125, 82, 0.26)"/><rect x="308.0" y="85.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="308.0" y="114.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="308.0" y="114.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="308.0" y="143.0" width="74.0" height="29.0" fill="rgba(154, 125, 82, 0.26)"/><rect x="308.0" y="143.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="308.0" y="172.0" width="74.0" height="29.0" fill="rgba(19, 13, 6, 0.26)"/><rect x="308.0" y="172.0" width="74.0" height="1.4" fill="rgba(19, 13, 6, 0.70)"/><rect x="300.0" y="44.0" width="90.0" height="16.0" fill="#9a7d52"/><rect x="318.0" y="104.0" width="54.0" height="4.0" fill="rgba(216, 178, 116, 0.55)"/><rect x="10.0" y="18.0" width="380.0" height="22.0" fill="#9a7d52"/><rect x="10.0" y="18.0" width="380.0" height="3.0" fill="rgba(240, 220, 176, 0.40)"/><polygon points="288.0,200.0 340.0,200.0 330.0,176.0 280.0,178.0" fill="rgba(92, 74, 48, 0.95)"/><path d="M2.1 161.2 q 60 -5.0 120 1.0" stroke="rgba(240, 220, 176, 0.16)" stroke-width="3" fill="none"/><path d="M12.8 159.4 q 60 -5.0 120 1.0" stroke="rgba(240, 220, 176, 0.16)" stroke-width="3" fill="none"/><path d="M15.1 168.4 q 60 -5.0 120 1.0" stroke="rgba(240, 220, 176, 0.16)" stroke-width="3" fill="none"/><path d="M27.9 177.1 q 60 -5.0 120 1.0" stroke="rgba(240, 220, 176, 0.16)" stroke-width="3" fill="none"/><path d="M6.5 158.5 q 60 -5.0 120 1.0" stroke="rgba(240, 220, 176, 0.16)" stroke-width="3" fill="none"/><rect x="0.0" y="200.0" width="400.0" height="110.0" fill="url(#ground-fill)"/><rect x="0.0" y="203.1" width="400.0" height="0.8" fill="rgba(154, 125, 82, 0.17)"/><rect x="0.0" y="212.2" width="400.0" height="0.8" fill="rgba(154, 125, 82, 0.20)"/><rect x="0.0" y="227.5" width="400.0" height="0.8" fill="rgba(154, 125, 82, 0.23)"/><rect x="0.0" y="248.9" width="400.0" height="0.8" fill="rgba(154, 125, 82, 0.26)"/><rect x="0.0" y="276.4" width="400.0" height="0.8" fill="rgba(154, 125, 82, 0.29)"/><path d="M104.0 200 L-400.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M128.0 200 L-250.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M152.0 200 L-100.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M176.0 200 L50.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M200.0 200 L200.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M224.0 200 L350.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M248.0 200 L500.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M272.0 200 L650.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><path d="M296.0 200 L800.0 310" stroke="rgba(154, 125, 82, 0.11)" stroke-width="1.2" fill="none"/><ellipse cx="200" cy="234" rx="148" ry="34.0" fill="none" stroke="rgba(255, 220, 160, 0.34)" stroke-width="2.2"/><ellipse cx="200" cy="234" rx="106.6" ry="24.5" fill="none" stroke="rgba(255, 220, 160, 0.18)" stroke-width="1.2"/><rect x="272.8" y="259.0" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="168.0" y="263.2" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="80.7" y="249.2" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="62.2" y="225.1" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="123.2" y="205.0" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="228.0" y="200.8" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="315.3" y="214.8" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="333.8" y="238.9" width="4.0" height="4.0" fill="rgba(255, 220, 160, 0.55)"/><rect x="0" y="170" width="400" height="34" fill="url(#fog-fill)"/><rect x="0" y="202" width="400" height="18" fill="rgba(255, 220, 160, 0.07)"/><circle cx="266.7" cy="114.6" r="2.0" fill="rgba(240, 220, 176, 0.31)"/><circle cx="202.7" cy="4.6" r="1.8" fill="rgba(240, 220, 176, 0.32)"/><circle cx="51.4" cy="252.7" r="0.8" fill="rgba(240, 220, 176, 0.27)"/><circle cx="163.0" cy="86.4" r="1.0" fill="rgba(240, 220, 176, 0.46)"/><circle cx="348.6" cy="123.5" r="1.8" fill="rgba(240, 220, 176, 0.41)"/><circle cx="204.9" cy="281.2" r="1.2" fill="rgba(240, 220, 176, 0.43)"/><circle cx="354.9" cy="67.7" r="1.5" fill="rgba(240, 220, 176, 0.52)"/><circle cx="30.9" cy="54.3" r="2.1" fill="rgba(240, 220, 176, 0.29)"/><circle cx="373.7" cy="289.3" r="1.2" fill="rgba(240, 220, 176, 0.38)"/><circle cx="347.1" cy="249.0" r="0.9" fill="rgba(240, 220, 176, 0.38)"/><circle cx="122.6" cy="248.0" r="1.1" fill="rgba(240, 220, 176, 0.52)"/><circle cx="330.6" cy="105.6" r="1.3" fill="rgba(240, 220, 176, 0.54)"/><circle cx="312.0" cy="208.2" r="0.9" fill="rgba(240, 220, 176, 0.39)"/><circle cx="124.0" cy="107.8" r="2.0" fill="rgba(240, 220, 176, 0.28)"/><circle cx="71.2" cy="60.4" r="1.0" fill="rgba(240, 220, 176, 0.57)"/><circle cx="257.2" cy="248.8" r="1.1" fill="rgba(240, 220, 176, 0.57)"/>
+  <ellipse cx="200.0" cy="227" rx="96.0" ry="13" fill="rgba(0,0,0,0.45)"/>
+  <g opacity="0.95">
+             <ellipse cx="200" cy="227" rx="86" ry="15" fill="rgba(19, 13, 6, 0.85)"/>
+             <rect x="150" y="210" width="100" height="14" fill="#5c4a30"/>
+             <rect x="142" y="224" width="116" height="10" fill="#130d06"/>
+             <rect x="150" y="210" width="100" height="2" fill="rgba(154, 125, 82, 0.7)"/>
+           </g><g class="art-emblem"><ellipse cx="200" cy="140" rx="104" ry="104" fill="url(#emblem-glow)"/><g transform="translate(200 142) scale(1.5) translate(-200 -120)">
+    <path d="M200 54 L240 74 v46 L200 168 L160 120 V74 Z" fill="none" stroke="#ffdca0" stroke-width="5" opacity="0.85"/>
+    <path d="M200 78 L222 92 v28 L200 140 L178 120 V92 Z" fill="#ffdca0" opacity="0.35"/></g></g>
+  <polygon points="-11.9,310.0 1.0,230.4 24.0,252.4 49.9,236.4 60.0,310.0" fill="rgba(19, 13, 6, 0.95)"/><polygon points="355.5,310.0 364.2,224.0 379.5,246.0 396.7,230.0 403.4,310.0" fill="rgba(19, 13, 6, 0.95)"/><polygon points="7.3,310.0 22.5,236.0 49.5,258.0 79.9,242.0 91.7,310.0" fill="rgba(19, 13, 6, 0.95)"/><polygon points="345.9,310.0 356.7,244.4 375.9,266.4 397.5,250.4 405.9,310.0" fill="rgba(19, 13, 6, 0.95)"/>
+  
+  <circle cx="83.4" cy="35.3" r="2.0" fill="rgba(0, 0, 0, 0.59)"/><circle cx="39.9" cy="81.4" r="2.0" fill="rgba(0, 0, 0, 0.392)"/><circle cx="184.4" cy="194.4" r="2.2" fill="rgba(0, 0, 0, 0.403)"/><circle cx="0.6" cy="258.5" r="1.2" fill="rgba(0, 0, 0, 0.845)"/><circle cx="201.9" cy="182.9" r="1.5" fill="rgba(0, 0, 0, 0.665)"/><circle cx="265.5" cy="149.0" r="1.7" fill="rgba(0, 0, 0, 0.477)"/><circle cx="252.4" cy="105.2" r="2.6" fill="rgba(0, 0, 0, 0.711)"/><circle cx="383.2" cy="250.4" r="1.5" fill="rgba(0, 0, 0, 0.462)"/>
+  <rect width="400" height="310" fill="url(#vignette-relic_quicklime_sigil)"/>
+</svg>
+    </g>
+    <rect x="92" y="320" width="902" height="700" rx="10" fill="none" stroke="#c8a86f" stroke-width="3" opacity="0.75"/>
+  </g>
+  <g transform="translate(172 404)">
+    
+    <circle cx="0" cy="0" r="66" fill="#3b2c1a" stroke="#6f5735" stroke-width="4"/>
+    <circle cx="0" cy="0" r="58" fill="url(#cf-medal-relic_quicklime_sigil)" stroke="#c8a86f" stroke-width="5"/>
+    <circle cx="0" cy="0" r="46" fill="none" stroke="#d8b98a" stroke-width="1.6" opacity="0.5"/>
+    <g fill="#f0dcb4" stroke="#f0dcb4" stroke-width="2" stroke-linejoin="round" transform="scale(1.25)"><path d="M0 -26 L22 -8 L14 24 L-14 24 L-22 -8 Z"/>
+          <path d="M0 -26 L8 -4 L0 24 L-8 -4 Z" opacity="0.4"/></g>
+  </g>
+  <g transform="translate(172 482)">
+    <rect x="-72" y="-20" width="144" height="40" rx="9" fill="#1e1a12" stroke="#c8a86f" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="10" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="25" letter-spacing="3" fill="#f0dcb4">EARTH</text>
+  </g>
+  <g transform="translate(914 404)">
+    
+    <circle cx="0" cy="0" r="66" fill="#3b2c1a" stroke="#6f5735" stroke-width="4"/>
+    <circle cx="0" cy="0" r="58" fill="url(#cf-medal-relic_quicklime_sigil)" stroke="#c8a86f" stroke-width="5"/>
+    <circle cx="0" cy="0" r="46" fill="none" stroke="#d8b98a" stroke-width="1.6" opacity="0.5"/>
+    <g fill="#f0dcb4" stroke="#f0dcb4" stroke-width="2" stroke-linejoin="round" transform="scale(1.05)"><path d="M0 -24 L18 -10 L12 20 L0 26 L-12 20 L-18 -10 Z"/><circle cx="0" cy="-2" r="7" fill="none" stroke-width="4"/></g>
+  </g>
+  <g transform="translate(914 482)">
+    <rect x="-74" y="-20" width="148" height="40" rx="9" fill="#1e1a12" stroke="#c8a86f" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="10" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="25" letter-spacing="3" fill="#f0dcb4">RELIC</text>
+  </g>
+
+  <!-- stats or category band -->
+  
+  <g transform="translate(543 1072)">
+    <path d="M-420 0 H-140" stroke="#c8a86f" stroke-width="4"/>
+    <path d="M140 0 H420" stroke="#c8a86f" stroke-width="4"/>
+    <circle cx="-140" cy="0" r="12" fill="#d8b98a" opacity="0.8"/>
+    <circle cx="140" cy="0" r="12" fill="#d8b98a" opacity="0.8"/>
+  </g>
+  <g transform="translate(543 1132)">
+    <rect x="-250" y="-40" width="500" height="80" rx="40" fill="#1e1a12" stroke="#c8a86f" stroke-width="3"/>
+    <text x="0" y="15" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="46" font-weight="700" letter-spacing="12" fill="#f0dcb4">RELIC</text>
+  </g>
+  <text x="543" y="1242" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="22" letter-spacing="3" fill="#f0dcb4" opacity="0.55">
+    ELEMENTALLY RESOLVED · NO COMBAT STATISTICS
+  </text>
+
+  <!-- rules and flavour -->
+  
+  <g>
+    <rect x="92" y="1300" width="902" height="430" rx="18" fill="#1e1a12" stroke="#c8a86f" stroke-width="3.5"/>
+    <rect x="102" y="1310" width="882" height="410" rx="14" fill="none" stroke="rgba(24, 18, 10, 0.55)" stroke-width="2"/>
+    <text x="146" y="1392.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="44" fill="#f4efe4">Relic · your Vessels have +1 Guard.</text>
+    <line x1="146" y1="1493" x2="940" y2="1493" stroke="#c8a86f" stroke-width="2" opacity="0.6"/>
+           <text x="146" y="1547.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="34" font-style="italic" fill="#cfc6b4">A thin crust of chalk that makes every blow</text><text x="146" y="1595.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="34" font-style="italic" fill="#cfc6b4">cost more.</text>
+  </g>
+  
+  <g transform="translate(543 1936)">
+    <rect x="-300" y="-30" width="600" height="60" rx="16" fill="#2a2318" stroke="#6f5735" stroke-width="3"/>
+    <path d="M-300 0 h600" stroke="rgba(24, 18, 10, 0.55)" stroke-width="1.5" opacity="0.7"/>
+    <g transform="translate(-96 0)">
+      <path d="M0 -15 L13 -6 L9 13 L0 19 L-9 13 L-13 -6 Z" fill="#9aa6b4" opacity="0.9"/>
+      <circle cx="0" cy="1" r="4" fill="#0b0f16" opacity="0.55"/>
+    </g>
+    <text x="16" y="9" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="26" letter-spacing="6" fill="#f0dcb4" opacity="0.85">COMMON</text>
+  </g>
+</svg>

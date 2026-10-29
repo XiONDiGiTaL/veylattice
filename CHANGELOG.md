@@ -4,6 +4,288 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-28 - ART-005 - Humanoids split by body plan; human knight wave
+
+Scope: four slim humanoids (Reef Duelist, Quarry Engineer, Emberwright Adept, Razorline Duelist)
+shared one outline at 0.845–0.895 IoU because they differed by stance and reach rather than mass.
+The roster also had no ordinary armoured humans: its "knights" were wardens and constructs.
+
+- **Humanoid body plans, not hues.** The rig gained three structural options it lacked: a
+  `robe: "split"` tabard (short flared skirt over visible boots and a belt, versus the columnar
+  robe that gave two casters the same 0.917 silhouette), a horizontal `wire` weapon, and a
+  back-mounted `pack` (frame, hanging chain, bucket) that gives a rearward mass nothing else has.
+  Reef Duelist now lunges in a `bent` crouch, Quarry Engineer carries a pike and pack, Emberwright
+  Adept wears the split tabard with a tome, Razorline Duelist holds the wire. The four now sit at
+  **0.758–0.848** against each other.
+- **Human knight wave (5 new Vessels, one per element).** Oathstone Knight (Earth, 4/7 `stalwart`,
+  braced low behind a tower shield), Ironvow Paladin (Metal, 6/7 `stalwart`, great axe, long cloak,
+  no shield), Tidewall Sentinel (Water, 3/5 `stalwart`, tide spear and shield), Cinderwatch Knight
+  (Fire, 5/4 `swift`, axe and carried brazier), Thornmarch Ranger (Wood, 2/3 `swift`, hood and
+  longbow). Pool is now **65 Vessels (13 per element), 30 Actions, 12 Relics = 107 cards**.
+- **Pauldron depth is capped.** Scaling depth by the shoulder multiplier turned a broad knight's
+  pauldrons into flat boards seen edge-on from the three-quarter camera; width and height still
+  scale with the Vessel.
+- **Counts are no longer hard-coded in copy.** The Card Library footer and the menu/guide headings
+  read the catalog instead of printing "102".
+
+Verification: `node tools/silhouette-report.mjs` — worst pair in the roster is **0.877** and no pair
+is at or above 0.90 (it was 0.895 before the split, and the knight wave briefly created 0.90–0.917
+pairs that were fixed before shipping). New knights' closest neighbours are 0.815–0.874. `npm test` →
+**129/129 pass**. `node tools/build-cards.mjs` → 107 faces (65 V / 30 A / 12 R), 0 missing models,
+0 missing rules, `Cards/` rebuilt and byte-equal to a fresh render. `screenshots/knights-wave.png` and
+`screenshots/knight-art.png` are Chromium captures of the five new faces and their art layers;
+`screenshots/humanoid-sheet.png` is an orthographic projection of the box data used to catch the
+board-like pauldrons.
+
+Not claimed: no deck builder, ownership or economy for the new cards; balance is unproven (costs
+follow the existing `1.5 × cost + 4` seed, and no simulation exists). Several robed casters still sit
+in the 0.86–0.877 band and need authored geometry rather than rig options.
+
+### 2026-10-28 - ART-004 - Lean predator body plan for the beast rig
+
+Scope: ART-003 gave every animal the same barrel body. A hound, a stalker and a charger
+differed from the Rams and the Warden only by palette, bulk and horn, so the roster's
+predators read as the same ox recoloured.
+
+- **A second beast body plan, not a resized first one.** `build: "lean"` builds long
+  proportional limbs, a deep narrow ribcage set forward over the forelegs, a waist that tucks
+  up and narrows behind it, a back that arches over the chest, a forward-reaching neck, a
+  shoulder mass with spine knobs, and a long counterbalancing tail. `brine_hound` (level, fan
+  tail), `bramble_stalker` (`prowl`, six legs) and `glass_horn_charger` (`rear`, ram horn) use
+  it; `slatehorn_ram`, `mossback_warden` and `antlered_bulwark` keep the heavy plan.
+- **Stature is posture, not scale.** `prowl` drops the chest and raises the haunches; `rear`
+  rises on the hind legs with the forelimbs held clear of the ground as clawed paws.
+- **Two-mass predator skull.** The shared skull helper gained `skull: "wedge"`: a tall
+  cranium, a brow ridge, a long low muzzle with a dark nose, a dropped under-jaw, fangs and
+  deep-set eyes. The heavy plan's blunt cranium, pale face plate and heavy jaw are unchanged.
+  Horn bases follow the skull plan so ram/antler/spike horns sit on the cranium, not the muzzle.
+- **Two defects found by rendering, not by tests.** The reared charger's hind legs floated
+  about a unit below its raised chest because segment heights were authored flat; limbs now
+  stack as fractions of the belly line and always meet the body. Thin flank rib bars read as
+  debris beside the torso at card size and were replaced with a shoulder mass.
+
+Verification: `node tools/silhouette-report.mjs` — lean vs heavy plan 0.346–0.620 IoU (was a
+~0.9 cluster); the three lean Vessels differ from each other at 0.415–0.590; worst pair in the
+roster is unchanged at 0.895 (two slim humanoids). `npm test` 129/129. `node
+tools/build-cards.mjs` 102 faces, 0 missing models, 0 missing rules, and the on-disk `Cards/`
+set was rebuilt so the stale-artefact guard in `tests/card-files.test.js` passes again.
+Geometry inspected in `screenshots/beast-builds.png`, an orthographic projection of the box
+data (Chromium capture was unavailable this session: the browser window was not being drawn).
+
+Not claimed: the heavy plan is deliberately unchanged, so Rams/Warden/Bulwark still read as
+barrel-bodied bruisers; the four slim humanoid soldiers remain at 0.88–0.895 overlap.
+
+### 2026-10-28 - ART-003 - Distinct body plans, legible card numerals
+
+Scope: several rig-built Vessels were the same silhouette in a different palette
+(the Clockwork Hydra was a two-legged construct chassis, which is why it read as
+Ironstep Sentinel's twin), and card numbers had three separate defects: the
+Attack/Guard values crowded the sword/shield badges, they had no outline worth the
+name over bright metal, and Flux costs sat low in their orb.
+
+- **Hydra is a serpent.** `clockwork_hydra` now uses the `serpent` rig: three coiled
+  tiers, a raised trunk, three fanned necks with staggered heights, brass scale
+  plates and clawed forelimbs. `ironstep_sentinel` keeps the `slim` construct frame
+  and gains an `antenna` crest, so the two no longer share a body plan.
+- **Structural variety across the 42 rig Vessels.** Every `humanoid`/`beast`/
+  `construct`/`drake`/`spirit` configuration now sets its own structure — stance,
+  robe, second arm pair, hunch, wings, tail, leg count, head count, shell, posture,
+  wings plan, construct frame and crest — instead of only tone/height/bulk. Examples:
+  `mossback_warden` is a shelled tall beast with a club tail, `bramble_stalker` a
+  six-legged spiked low predator, `tomb_colossus` a `tower` frame, `quiet_engine` a
+  `quad` frame, `first_bloom` a core spirit with no arms.
+- **Heads read at tile size.** The humanoid rig gains a lit neck column and a pale
+  face plate; the beast rig gets a longer rising neck, a larger skull, a `bone` face
+  plate, a dark jaw and repositioned eyes. Before this the skull sat flush against
+  the torso and vanished into it in both renderers.
+- **Rig detail floors met.** `quad`, `tower`, `wraith`, `crowned` and `core` gained
+  authoried detail (chain fists, buttresses, sarcophagus slabs, ribs, tendrils,
+  petals) so every model clears the 30-box / 4-group / 4-material bar that
+  `tests/models.test.js` enforces.
+- **Card numerals.** Stat medallions are re-zoned: icon badge at the top, engraved
+  rule, value in the lower half drawn as a wide dark halo plus a white face with a
+  dark keyline. Attack/Guard labels moved onto their own plates below the disc.
+  Numbers now use a lining-figure stack (`NUMERIC`, `'lnum'`), not Georgia, whose
+  old-style 3/4/5/7/9 descend below the baseline; the Flux cost is centred with a
+  `0.34 em` cap-height offset instead of `0.355 em`, and its disc gains an inner
+  well so the digit has a value to sit against.
+- **Card art fills more of the window.** The illustration target box grew from
+  216x164 to 284x188 in art units, so Vessels read as card subjects rather than
+  miniatures beside scenery.
+- **Verification.** `node --test tests/models.test.js` passes (box/group/material
+  floors, pivots, palette keys, footprint). `node tools/silhouette-report.mjs`:
+  no pair scores 0.90 or above; the worst is 0.895 (a slim duelist and a slim engineer) and
+  the Hydra/Sentinel pair fell to 0.485. `node tools/build-cards.mjs` renders all 102 faces and
+  `tests/illustration.test.js` passes. Card faces inspected in the browser at
+  1086x2048.
+
+### 2026-10-28 - CARDS-001 - The printed collection: 102 faces, element scenery, in-game library
+
+Scope: the game could render a card's illustration, but the *card* as a designed
+object did not exist, and every Vessel was staged on the same studio backdrop
+(dark gradient, summoning ring, light shaft), which is exactly the generic
+presentation the art direction forbids.
+
+- **Card faces** (new `src/render/card-face.js`, `src/game/card-text.js`): one
+  1086x2048 face per card at the reference's 543:1024 ratio. Sculpted frame with
+  per-element materials, serif title fitted to its plate, Flux medallion at the
+  top right, element and subtype emblems with label tabs, inset art window,
+  Attack/Guard medallions, movement/range row, rules then italic flavour, rarity
+  plate. Actions and Relics print a category band and no stat sockets at all.
+  Text is SVG text generated from the definition, never baked into the picture,
+  so a face cannot ship a misspelled name or a stale cost.
+- **Scenery** (new `src/render/scenery.js`): five hand-built environments — a
+  fortress gatehouse, a rootbound grove, a drowned temple, a furnace hall, a
+  canyon gate — each with its own architecture, floor, weather and palettes, and
+  one shared value structure (bright sky, dark distant silhouettes, mid-tone side
+  masses, a lit opening behind the figure, fog at the ground line, near-black
+  rubble in front). Seeded per card id, so cards of one element share a design
+  language without sharing a composition.
+- **Art canvas** 400x260 to 400x310: the old canvas was 1.54:1 against a 1.29:1
+  window, so `slice` cropped the flanking architecture off every card. The new
+  ratio means the scene is shown whole, and a figure target of 92–308 x 62–226
+  leaves room for the place behind it.
+- **The build** (new `tools/build-cards.mjs`) writes `Cards/cards/*.svg`,
+  `Cards/art/*.svg`, `Cards/frames/*.svg`, `Cards/manifest.json`, `Cards/QA.md`
+  and a contact sheet. 102 faces, 3.4 MB total, **33 kB average**.
+- **In the game**: new Cards tab and Card Library (102 faces, category and
+  element filters), full-face viewer shared by the library, the roster ("Printed
+  card") and the hand (double-click), loading the built file and falling back to
+  the same generator in memory if `Cards/` is absent.
+- **Tests**: 129/129 passing. New `tests/card-files.test.js` re-generates every
+  face and compares it to the file on disk, so data changes cannot leave stale
+  cards behind; it also checks the manifest, printed name/cost/stats, that
+  non-unit cards carry no ATTACK/GUARD sockets, and that no face contains NaN or
+  an empty fill. `tests/illustration.test.js` moved to the 400x310 canvas and a
+  60 kB data-URI budget.
+- **Verified in the browser** (1440x950 and 390x844): library renders 102 tiles
+  with no broken images; filters return 21 Metal cards and 12 Metal Vessels;
+  viewer opens at 343x647 on mobile; zero console errors.
+
+### 2026-10-28 - GRID-002 / ART-001 - Five-by-five arena, generated card art, AI legality fix
+
+Session scope: the owner asked for a 5x5 grid with configurable geometry, a genuinely three-dimensional
+world, full-background card art consistent with the playable models, and verification in the running game.
+
+- **Arena geometry** (`src/game/constants.js`, `src/main.js`, `src/render/terrain.js`, `styles.css`):
+  the board is **5x5 — 25 playable tiles**, two deployment rows per seat and one contested row. Every
+  rule that depends on size now derives from `BOARD_SIZE`/`DEPLOYMENT_ROWS`: cell indices, in-bounds
+  checks, deployment bounds, home rows, the terrain map, the UI's zone tinting (`rowOwner`), the CSS
+  grid column count (`--grid`) and the arena label. The helpers take optional overrides, so an
+  alternative size is testable without engine edits, and `deploymentBounds` throws on impossible
+  geometry (rows overlapping). `terrain.js` refuses to load a map that does not match `BOARD_SIZE`.
+- **Card art pipeline** (new `src/render/illustration.js`): every one of the 102 cards now has a
+  generated SVG illustration. A Vessel's art is its canonical `VOXEL_MODELS` definition projected
+  through a three-quarter camera (yaw 0.52 rad, pitch 0.13 rad), each face shaded against a fixed key
+  light with material responses for metal, crystal, glass and ember, painter-sorted across the whole
+  figure, then staged in an element environment: sky gradient, three seeded ridge layers, horizon
+  haze, ground plane, engraved summoning ring, light shaft, foreground rocks and grass, contact
+  shadow, rarity arcs, motes and a vignette. Actions and Relics get emblem scenes keyed to their
+  effect kind in their element's colours. Markup and data URIs are memoised per card.
+- **Art in the interface** (`src/main.js`, `styles.css`): hand cards carry the illustration as a
+  full-bleed layer under a directional scrim; the command-panel inspector shows the full illustration
+  for any selected card; the roster stage uses the same scene (figure omitted) behind the live,
+  draggable model, so the gallery is art-directed instead of gradient-filled.
+- **AI legality fix** (`src/game/ai.js`): candidate generation could propose a move-then-attack for a
+  Vessel that had already attacked, because `attacksFromCell` reasons about geometry only. Plans now
+  check `hasAttacked`/`hasMoved` before they are offered. Verified over 12 seeded AI-vs-AI matches:
+  zero engine rejections (previously 1-2 per match) and every match reached a result.
+- **Tests**: **122/122 passing** in ~0.9 s. Board tests now assert 25 tiles split 10/5/10, plus a new
+  test that alternative geometry (7x7) is derivable and invalid geometry is rejected. New
+  `tests/illustration.test.js` (8 tests) enforces that every card has art, that Vessel art is a
+  projection of its model (part count, palette shading, declared voxel height), that no figure is
+  clipped, that no two Vessels share art, that Action emblems differ by effect, and that SVG is
+  deterministic, script-free and under 40 kB.
+- **Verified in the browser** (Chrome via CDP at 1440x950 and 390x844): 5x5 board with correct zone
+  tints, 60 roster cards with generated scenes, hand art legible at 138x84, inspector art for a Vessel
+  and an Action, zero console errors, zero failed art requests.
+- **Not done, stated plainly**: the world is still CSS-3D (real boxes, real perspective, per-face
+  shading, painted contact shadows) rather than WebGL with GPU lighting and cast shadows. Roster,
+  deck builder, shop, packs and online lobbies remain unbuilt.
+
+### 2026-10-28 - CONTENT-001 - Sixty Vessels, thirty Actions, twelve Relics and an extensible content pipeline
+
+Session scope: the shipped pool was 18 Vessels, 8 Actions and 4 Relics, all loaded from two hardcoded
+file paths. Roster size was asserted literally in tests and copy, so adding a card failed the suite.
+
+- **Set manifest** (new `src/cards/manifest.json`, `schemaVersion: 2`). The app and the tests now load
+the same manifest and every listed set, so a new expansion file needs no engine, HUD or loader edit.
+- **Expansion set** (new `src/cards/expansion-set.json`): 42 original Vessels, 22 Actions and 8 Relics,
+bringing the pool to **60 Vessels (12 per element), 30 Actions, 12 Relics = 102 cards**. Roles cover
+knights, guardians, rogues, mages, priests, artificers, beasts, constructs, drakes, ancients and
+spirits; `SUBTYPES` was extended to describe them rather than mislabelling a priest as a warrior.
+- **Engine vocabulary** (`src/game/constants.js`, `engine.js`): six new Action kinds — `nexusHeal`,
+`drain`, `stun`, `ready`, `revive`, `flux` — and three Relic auras — `wardAura`, `swiftAura`,
+`drawAura`. `stun` costs exactly one activation, `ready` refreshes a Vessel, `revive` returns the
+highest-cost defeated Vessel to hand, Flux gain caps at the turn maximum, Nexus healing caps at 30,
+and ward reduces Action damage but never to zero. `EFFECT_TARGETING` makes each kind's targeting mode
+part of its validated contract.
+- **Vessel keywords** (`VESSEL_KEYWORDS`): `swift` (enters ready), `stalwart` (+2 Guard on entry) and
+`deathrattleDraw` (its controller draws when it is defeated). Keywords are a closed, validated list,
+stored on the unit and explained in the HUD and roster; content still cannot carry executable text.
+- **Model pipeline** (new `src/render/vessels/blueprints.js`): five anatomical rigs — humanoid, beast,
+construct, drake, spirit — plus a distinct robed body plan, with per-Vessel proportions, head,
+weapon, offhand, crest, cape, palette keys and tris. The 42 new Vessels add **1,660 boxes** (2,388
+total, 30–59 each). No two models share a silhouette; the existing 18 hand-authored models are
+unchanged.
+- **Roster and deck**: the practice deck is curated to 40 legal cards (20 Vessels across all five
+elements, two copies each of eight Actions, four Relics) because the pool is now larger than a legal
+deck. Each practice match now samples a fresh seeded selection from the 60-Vessel pool, so every
+Vessel is reachable before a deck builder exists; the no-RNG call used by tests stays deterministic.
+Roster copy, the menu count and the hand name wrapping reflect the larger pool.
+- **Tests**: 112/112 passing in ~0.75 s. The suite now asserts the roster *target* rather than a
+literal 18/30, checks per-element distribution, requires every shipped effect kind to appear on a
+card, validates keywords and targeting, and covers the new mechanics in `tests/keywords.test.js`.
+- **Workflow**: added `docs/COMPLIANCE_AUDIT.md` (evidence-based status of every specified system) and
+`npm run check` (syntax + full suite) so a session cannot report a suite it did not run.
+- Browser (fresh incognito, local static server): 60 roster cards / 2,388 boxes, zero console errors;
+a practice match loaded the 40-card deck, showed an expansion Relic in hand, and a turn-3 summon of
+*Lantern of the Lost Choir* paid 3 Flux, filled Vessel zone 1 and rendered its 32-box model with
+`data-model-id`.
+- Not claimed: balance of the new cards is unproven, several humanoids share a blueprint rig, and no
+collection, deck builder, shop, arena, bond or lobby behaviour changed (none exists). The change set
+is in the working tree; the live site still serves the previous build until it is committed/deployed.
+
+### 2026-10-28 - LAYOUT-001 - War table: integrated fields, 4+4 card zones, Nexus as HUD target
+
+Session scope: the battle screen was a status strip, a detached opponent card, a side panel, a nexus
+bar, a 7×7 grid, a relic panel, a hand panel and a log stacked vertically. At 1440×950 the board
+overflowed the viewport, and there was no representation of the four Vessel or four Action zones.
+
+- **One war table** (`index.html`, new `battlefield.css`). The whole match is a single object: opponent
+  HUD + four back-row zones + four front-row zones, the 7×7 arena, the player's four front-row + four
+  back-row zones, then a player console and hand. The field platforms share the table plinth, a 2.4°
+  tilt and one light; they are not detached panels.
+- **Eight zones per seat, derived from state** (new `src/ui/fields.js`). `fieldState(match, seat)`
+  returns exactly four Vessel and four Relic slots, fills them from `match.units` / `player.relics`,
+  and exposes stable keys (`seat0:vessel:2`). Occupied Vessel zones render the real miniature, live
+  Guard, ATK/MV/RG; occupied Relic zones render name, element and effect; empty zones are labelled
+  sockets.
+- **Engine zone assignment** (`engine.js`). `handleSummon` records `fieldSlot` (lowest free of four) so
+  a Vessel keeps its card zone when another dies; movement never changes it. `nextFieldSlot` is
+  exported and tested. Presentation metadata only: no legality reads it.
+- **Relic capacity now 4** (`constants.js`, `GAME_RULES.md`). The four back-row zones are the rule's
+  four Relic slots, so the interface cannot promise capacity the engine rejects. Actions still resolve
+  from hand and never occupy a zone (canonical rule).
+- **Zone interactions**: Vessel card → four zones + 21 legal tiles highlight; tile → summon fills the
+  next zone; filled Vessel zone → selects that unit; Relic card → only the next free Action socket
+  glows; wrong socket → explains which is next without mutating; filled Relic zone → reads the effect.
+- **Nexus as a target** (`index.html`): the opponent's vitality bar is now the clickable Nexus for
+  strikes, so two dedicated nexus bars no longer consume 58 px of board height. The player's vitality
+  block is the mirrored target. FX still pulse the same ids.
+- **Battle header compaction**: `body[data-view="battle"]` trims the marketing header so the table
+  fits 950 px; the board is 46vh and the arena wings frame it instead of leaving dead space.
+- **Terrain**: per-tile deterministic tone variation, larger back-edge props, restored ground depth
+  shadows, 2 px tile seams; all decorative, no rule change.
+- **Docs**: README rewritten around the war table with live screenshots; GAME_RULES relic cap updated;
+  TESTING and IMPLEMENTATION_LOG record the actual checks.
+- Tests: `npm test` → **97 tests, 97 pass, 0 fail** (~0.5 s), including the new `tests/fields.test.js`
+  (six tests) and the updated four-Relic limit test.
+- Browser: verified at 1440×950, 1024×768, 390×844 in a fresh incognito context: eight zones per seat,
+  summon (flux paid, hand -1, zone filled, board tile occupied), Relic set into zone 1 (1/4, effect
+  shown), Vessel-zone selection highlights the board, stale selection cleared after a defeat, no
+  console errors, no horizontal overflow.
+
 ### 2026-10-28 - ART-001 - Voxel art pass: materials, pivots, 728 boxes and a diorama arena
 
 Session scope: the roster was 11–14 boxes per Vessel with one tint per element, models were lit by CSS
@@ -147,3 +429,45 @@ Session scope: the app dropped straight into a match, the battlefield did not ex
 
 ## Entry template
 Use a dated heading with stable task/session IDs. Record Added/Changed/Fixed/Removed as applicable; affected paths; behavior and decision summary; exact commands and observed results (or Not run with reason); known limitations; migration/deployment impact; verified base or existing commit reference. Do not fabricate a self-referential commit hash or expose secrets.
+
+### 2026-10-28 - ART-006 - Literal voxel humans and a stepped voxel arena
+
+Scope: the five human Vessels shipped in ART-005 were one armoured body swapped between five
+colour schemes - the same face, the same straight-down arms, the same box torso - and the arena
+rendered its ground as five flat colour patches on a dark panel.
+
+- **Humans are people now.** The human rig gained per-Vessel face proportions (`headW`, `headH`,
+  `jaw`, `nose`, `ears`), eye sockets with irises and brows, a nose with nostrils, a mouth and a
+  chin shadow, five new hair plans (`shaved`, `swept`, `curls`, `mohawk`, `chignon`) alongside the
+  existing ones, and `goatee` facial hair. Skin and hair colour are per-Vessel palette overrides,
+  so two humans of one element are no longer the same person.
+- **Poses, not mannequins.** Human arms are now a shoulder-elbow-hand chain driven by a named pose
+  (`stand`, `guard`, `draw`, `shoulder`, `carry`, `hip`); weapons and off-hand props anchor to the
+  hand point the pose computes. Oathstone Knight braces behind a raised kite shield, Ironvow
+  Paladin rests an axe at her shoulder, Tidewall Sentinel grips a spear high behind a shield,
+  Cinderwatch Knight carries her brazier forward, Thornmarch Ranger stands at full draw.
+- **Bodies with waists.** Hips, a pinched waist, a wide chest, a collar, shoulder deltoids and
+  narrower legs replaced the single torso box. Garment layers (`quilt`, `scale`, `mail`, `coat`,
+  `hide`), plus scarf, bracer, pouch, quiver, hood and a one-shoulder pauldron, give each human a
+  different read from the front and from behind. Weapons got proportional blades, stepped axe
+  edges and a kite shield with rim and boss.
+- **The arena is a stepped diorama.** `terrain.js` was rewritten: stone terraces hold the corners,
+  a paved cross meets a water ring around a raised shrine, and every surface border is a height
+  step (water 0, sand 3, grass 6, moss 11, stone 16, shrine 22 px). Sixteen scenery models -
+  canopy trees, pines, hedges, bushes, flower beds, ruins, columns, stairs, statues, banners,
+  lanterns, logs, lily pads, reeds, coral, rocks - carry fifty placements, and each tile renders a
+  voxel-grain face with directional light.
+- **The board is a block of ground.** The tile side wall was rotated with `rotateX(-90deg)`, which
+  made a horizontal slab and left the board looking painted; it is now rotated by the negative of
+  the arena tilt, so every tile shows real thickness (17-35 px) above the board plane. Vessels
+  stand upright (counter-rotated against the tilt) on their raised tile face, at board scale
+  (`--board-u`, previously they rendered at roster-thumbnail size), with a nameplate and guard bar
+  instead of a panel covering the terrain.
+- **Verification:** `npm test` -> **129/129 pass**; `node tools/build-cards.mjs` -> 107 faces, 0
+  missing models, 0 missing rules; `node tools/silhouette-report.mjs 0.84` -> no human pair at or
+  above the threshold. Browser checks at 690x1225 and 390x844. Card art budget needed one
+  optimisation: edge strokes are dropped on facets smaller than 9 px^2, which removed icon noise
+  and brought the longest illustration back under its 60 kB test budget.
+- **Not done / known gaps:** the human weapon silhouettes are still simple compared with the beast
+  and construct rigs; robe-wearers and the new humans remain the closest cluster in the roster;
+  the arena has one authored layout only, and terrain is still decorative (no rules effects).

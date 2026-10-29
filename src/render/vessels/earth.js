@@ -4,8 +4,9 @@
  */
 
 import { box, both, pair } from "./_parts.js";
+import { beast, construct, humanoid, spirit } from "./blueprints.js";
 
-export const EARTH_VESSELS = [
+const EARTH_CORE = [
   {
     id: "dustveil_matriarch",
     element: "earth",
@@ -212,4 +213,27 @@ export const EARTH_VESSELS = [
       box("base", 1.55, 0.05, 0.85, 0.6, 0.3, 0.55, "dark", "stone", { ry: 20 }),
     ],
   },
+];
+
+export const EARTH_VESSELS = [
+  ...EARTH_CORE,
+  humanoid({ id: "rubble_warden", element: "earth", head: "helm", weapon: "hammer", offhand: "shield", cape: "none", crest: "spikes", stance: "wide", pauldrons: 1.35, hunch: 0.12, height: 0.88, bulk: 1.14, accent: "accent", tone: "stone" }),
+  humanoid({ id: "clayfist_brawler", element: "earth", head: "mask", weapon: "fists", offhand: "none", cape: "none", crest: "none", stance: "bent", hunch: 0.25, pauldrons: 1.2, height: 0.96, bulk: 1.14, accent: "light", tone: "dark" }),
+  humanoid({ id: "dust_sage", element: "earth", head: "hood", weapon: "staff", offhand: "lantern", cape: "short", crest: "none", robe: true, hunch: 0.34, height: 0.94, bulk: 0.94, accent: "light", tone: "cloth" }),
+  beast({ id: "slatehorn_ram", element: "earth", posture: "low", horn: "ram", tail: "tusk", shell: true, height: 1.0, bulk: 1.16, scale: 1.14, accent: "bone", tone: "stone" }),
+  humanoid({ id: "quarry_engineer", element: "earth", head: "mask", weapon: "spear", offhand: "lantern", cape: "none", crest: "none", stance: "normal", pack: true, pauldrons: 1.0, height: 0.97, bulk: 1.08, accent: "brass", tone: "base" }),
+  construct({ id: "obsidian_mason", element: "earth", frame: "heavy", crest: "crown", height: 1.03, bulk: 1.2, accent: "light", tone: "dark" }),
+  construct({ id: "tomb_colossus", element: "earth", frame: "tower", crest: "bell", height: 1.16, bulk: 1.3, accent: "bone", tone: "stone" }),
+  spirit({ id: "crown_of_dust", element: "earth", form: "crowned", arms: 0, height: 1.12, bulk: 1.0, accent: "light", tone: "stone" }),
+  // A broad, bald, bearded veteran: deep brown skin, a heavy square jaw, quilted
+  // campaign coat, and a shield arm raised across the body. Nothing else in the
+  // roster stands in this stance.
+  humanoid({
+    id: "oathstone_knight", element: "earth", human: true, head: "human",
+    hair: "bald", beard: "full", pose: "guard", garment: "quilt",
+    headW: 1.14, headH: 0.94, jaw: 1.2, nose: 1.15, ears: 1.1,
+    palette: { skin: "#8a5a3c", skinShade: "#6b4229", hair: "#2b221b", eye: "#c69a52" },
+    frame: 1.14, sleeves: "short", weapon: "sword", offhand: "shield",
+    cape: "short", stance: "bent", height: 1.02, bulk: 1.14, accent: "light", tone: "cloth", pouch: true, pauldron: true,
+  }),
 ];

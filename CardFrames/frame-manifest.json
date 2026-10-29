@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "canvas": {
+    "width": 214,
+    "height": 300
+  },
+  "sourceSha256": "24ab2072830c7d4d4a3a94beb98f3d6ba13c625b7d480cfe7750783e427c07aa",
+  "frames": {
+    "wood": {
+      "native": "native/wood.png",
+      "overlay": "overlays/wood.png",
+      "sourceCrop": [
+        55,
+        36,
+        268,
+        331
+      ],
+      "offset": [
+        0,
+        2
+      ],
+      "art": [
+        19,
+        62,
+        175,
+        130
+      ]
+    },
+    "fire": {
+      "native": "native/fire.png",
+      "overlay": "overlays/fire.png",
+      "sourceCrop": [
+        306,
+        36,
+        520,
+        331
+      ],
+      "offset": [
+        0,
+        2
+      ],
+      "art": [
+        19,
+        62,
+        179,
+        130
+      ]
+    },
+    "earth": {
+      "native": "native/earth.png",
+      "overlay": "overlays/earth.png",
+      "sourceCrop": [
+        55,
+        378,
+        268,
+        664
+      ],
+      "offset": [
+        0,
+        7
+      ],
+      "art": [
+        19,
+        68,
+        175,
+        117
+      ]
+    },
+    "water": {
+      "native": "native/water.png",
+      "overlay": "overlays/water.png",
+      "sourceCrop": [
+        306,
+        378,
+        520,
+        664
+      ],
+      "offset": [
+        0,
+        7
+      ],
+      "art": [
+        19,
+        68,
+        179,
+        117
+      ]
+    },
+    "metal": {
+      "native": "native/metal.png",
+      "overlay": "overlays/metal.png",
+      "sourceCrop": [
+        55,
+        704,
+        268,
+        991
+      ],
+      "offset": [
+        0,
+        6
+      ],
+      "art": [
+        19,
+        67,
+        176,
+        113
+      ]
+    },
+    "action": {
+      "native": "native/action.png",
+      "overlay": "overlays/action.png",
+      "sourceCrop": [
+        306,
+        704,
+        520,
+        991
+      ],
+      "offset": [
+        0,
+        6
+      ],
+      "art": [
+        19,
+        67,
+        179,
+        126
+      ]
+    }
+  }
+}

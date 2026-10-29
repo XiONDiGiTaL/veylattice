@@ -124,8 +124,29 @@ export function createUnit(state, def, owner, x, y, options = {}) {
     hasMoved: false,
     hasAttacked: false,
     summonedOnTurn: state.turn,
+    // Which of the four front-row card zones holds this Vessel. Presentation
+    // only: movement, combat and legality never read it.
+    fieldSlot: Number.isInteger(options.fieldSlot) ? options.fieldSlot : null,
+    // Closed keyword list from the card definition. Legality and combat read
+    // these by name; content cannot smuggle code in through an ability.
+    keywords: [...(def.abilities ?? [])],
+    stunned: false,
     modifiers: [],
   };
+}
+
+/**
+ * Lowest free front-row card zone for a seat.
+ *
+ * Zones are assigned at summon time so a card keeps its place when another
+ * Vessel dies; the next summon fills the gap rather than shifting the row.
+ */
+export function nextFieldSlot(state, seat) {
+  const used = new Set(unitsOf(state, seat).map((unit) => unit.fieldSlot).filter(Number.isInteger));
+  for (let slot = 0; slot < MAX_UNITS_PER_SEAT; slot += 1) {
+    if (!used.has(slot)) return slot;
+  }
+  return null;
 }
 
 /** Place an already-built unit on the board. Performs no validation. */
@@ -256,7 +277,15 @@ function startTurn(state, seat, now, events) {
   player.summonUsed = 0;
   player.mulliganUsed = 0;
   for (const unit of unitsOf(state, seat)) {
-    unit.ready = true;
+    if (unit.stunned) {
+      // A stunned Vessel loses exactly one activation: it stays unready and
+      // the stun clears, so the next turn behaves normally.
+      unit.stunned = false;
+      unit.ready = false;
+      events.push({ type: "stunSkipped", seat, unitId: unit.id });
+    } else {
+      unit.ready = true;
+    }
     unit.hasMoved = false;
     unit.hasAttacked = false;
   }
@@ -264,6 +293,9 @@ function startTurn(state, seat, now, events) {
   state.deadlineAt = now + TURN_MS;
   events.push({ type: "turnStart", seat, turn: state.turn, maxFlux: player.maxFlux });
   drawCard(state, seat, events, "turnStart");
+  for (let i = 0; i < relicAuras(state, seat).draw; i += 1) {
+    drawCard(state, seat, events, "relic");
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -275,7 +307,7 @@ function startTurn(state, seat, now, events) {
  * Relics are open information: they sit on the table, not in a hand.
  */
 export function relicAuras(state, seat) {
-  const auras = { attack: 0, armor: 0, mend: 0, guard: 0 };
+  const auras = { attack: 0, armor: 0, mend: 0, guard: 0, ward: 0, swift: 0, draw: 0 };
   for (const relic of state.players[seat].relics) {
     const def = state.catalog.get(relic.cardId);
     const effect = def?.effect;
@@ -284,6 +316,9 @@ export function relicAuras(state, seat) {
     else if (effect.kind === "armorAura") auras.armor += effect.amount;
     else if (effect.kind === "mendAura") auras.mend += effect.amount;
     else if (effect.kind === "guardAura") auras.guard += effect.amount;
+    else if (effect.kind === "wardAura") auras.ward += effect.amount;
+    else if (effect.kind === "swiftAura") auras.swift += 1;
+    else if (effect.kind === "drawAura") auras.draw += effect.amount;
   }
   return auras;
 }
@@ -451,9 +486,12 @@ function handleSummon(state, command, events) {
   player.hand = player.hand.filter((c) => c.instanceId !== card.instanceId);
   player.flux -= def.cost;
   player.summonUsed += 1;
+  const auras = relicAuras(state, state.active);
+  const keywordGuard = (def.abilities ?? []).includes("stalwart") ? 2 : 0;
   const unit = createUnit(state, def, state.active, command.x, command.y, {
-    ready: false,
-    guardBonus: relicAuras(state, state.active).guard,
+    ready: (def.abilities ?? []).includes("swift") || auras.swift > 0,
+    guardBonus: auras.guard + keywordGuard,
+    fieldSlot: nextFieldSlot(state, state.active),
   });
   insertUnit(state, unit);
   events.push({
@@ -592,6 +630,9 @@ function cleanupDefeated(state, events) {
   for (const unit of defeated) {
     removeUnit(state, unit);
     events.push({ type: "defeat", unitId: unit.id, cardId: unit.cardId, seat: unit.owner });
+    if ((unit.keywords ?? []).includes("deathrattleDraw")) {
+      drawCard(state, unit.owner, events, "deathrattle");
+    }
   }
   return defeated;
 }
@@ -645,13 +686,22 @@ function fluxAllows(player, cost) {
   return player.flux >= 1 && player.flux >= cost;
 }
 
+/**
+ * Relic ward softens Action damage against that seat's Vessels. It is applied
+ * after elemental adaptation and can never reduce a hit to zero.
+ */
+function wardPacket(state, unit, packet) {
+  const ward = relicAuras(state, unit.owner).ward;
+  return ward > 0 ? { ...packet, damage: Math.max(1, packet.damage - ward) } : packet;
+}
+
 /** Apply one typed Action effect. Mutates `state`; logs what happened. */
 function applyEffect(state, def, target, events) {
   const effect = def.effect;
   const seat = state.active;
   switch (effect.kind) {
     case "damage": {
-      const packet = previewDamage(effect.amount, def.element, target.element);
+      const packet = wardPacket(state, target, previewDamage(effect.amount, def.element, target.element));
       target.guard -= packet.damage;
       events.push({
         type: "actionDamage",
@@ -667,7 +717,7 @@ function applyEffect(state, def, target, events) {
       const packets = [];
       for (const unit of Object.values(state.units)) {
         if (unit.owner === seat) continue;
-        const packet = previewDamage(effect.amount, def.element, unit.element);
+        const packet = wardPacket(state, unit, previewDamage(effect.amount, def.element, unit.element));
         unit.guard -= packet.damage;
         packets.push({ unitId: unit.id, packet, guardAfter: unit.guard });
       }
@@ -723,6 +773,78 @@ function applyEffect(state, def, target, events) {
         damage,
         vitality: state.players[foeSeat].vitality,
       });
+      break;
+    }
+    case "nexusHeal": {
+      const player = state.players[seat];
+      const before = player.vitality;
+      player.vitality = Math.min(START_VITALITY, player.vitality + effect.amount);
+      events.push({
+        type: "nexusHeal",
+        seat,
+        cardId: def.id,
+        healed: player.vitality - before,
+        vitality: player.vitality,
+      });
+      break;
+    }
+    case "drain": {
+      const packet = wardPacket(state, target, previewDamage(effect.amount, def.element, target.element));
+      target.guard -= packet.damage;
+      const player = state.players[seat];
+      const before = player.vitality;
+      const stolen = Math.max(1, Math.floor(packet.damage / 2));
+      player.vitality = Math.min(START_VITALITY, player.vitality + stolen);
+      events.push({
+        type: "actionDamage",
+        seat,
+        cardId: def.id,
+        unitId: target.id,
+        packets: [{ unitId: target.id, packet, guardAfter: target.guard }],
+      });
+      events.push({
+        type: "nexusHeal",
+        seat,
+        cardId: def.id,
+        healed: player.vitality - before,
+        vitality: player.vitality,
+      });
+      cleanupDefeated(state, events);
+      break;
+    }
+    case "stun": {
+      target.stunned = true;
+      target.ready = false;
+      events.push({ type: "actionStun", seat, cardId: def.id, unitId: target.id });
+      break;
+    }
+    case "ready": {
+      target.ready = true;
+      target.hasMoved = false;
+      target.hasAttacked = false;
+      events.push({ type: "actionReady", seat, cardId: def.id, unitId: target.id });
+      break;
+    }
+    case "revive": {
+      const player = state.players[seat];
+      const candidates = player.discard
+        .map((cardId) => state.catalog.get(cardId))
+        .filter((candidate) => candidate && candidate.category === "vessel")
+        .sort((a, b) => b.cost - a.cost || a.id.localeCompare(b.id));
+      const picked = candidates[0] ?? null;
+      if (picked) {
+        player.discard.splice(player.discard.indexOf(picked.id), 1);
+        player.hand.push({ instanceId: `c${state.nextInstanceSeq}`, cardId: picked.id });
+        state.nextInstanceSeq += 1;
+      }
+      events.push({ type: "actionRevive", seat, cardId: def.id, unitCardId: picked?.id ?? null });
+      break;
+    }
+    case "flux": {
+      const player = state.players[seat];
+      const before = player.flux;
+      player.flux = Math.min(player.maxFlux, player.flux + effect.amount);
+      events.push({ type: "actionFlux", seat, cardId: def.id, gained: player.flux - before, flux: player.flux });
       break;
     }
     default:

@@ -7,7 +7,7 @@ Veylattice is an original HTML-first tactical collectible card battler: deploy n
 - 20-40-card decks with three-copy cap, at least 10 Vessels and five Actions (minimum deck size and Action minimum are proposed defaults).
 - 120-second turns, one normal summon, persistent Guard damage, eligible retaliation, turn-time mulligans and explicit revive/death-trigger effects.
 - Unlimited-quantity Stash, earned Lattice Shards (proposed currency name), six-card packs, owned-card Singles, recycling, weekly rotations and occasional Friday half-price packs.
-- Distinct handcrafted voxel identities for all 18 existing official Vessels; maintain lore, arenas, Lore Bonds, Codex, elemental frames and a restricted custom-card Forge.
+- Distinct handcrafted voxel identities for all 60 official Vessels; maintain lore, arenas, Lore Bonds, Codex, elemental frames and a restricted custom-card Forge.
 - Static browser frontend on GitHub Pages and xiondigital.net/Veylattice/, with separately hosted authenticated persistence and authoritative progression/match validation.
 
 ## Design pillars

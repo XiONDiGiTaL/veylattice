@@ -44,6 +44,48 @@ Element identity must be visible through shape, material, emblem, and lighting, 
 - **Spirit:** floating or partially intangible body, lantern/mask/bell/ribbon focal shape, a readable center of mass and shadow.
 - **Otherworldly:** unfamiliar proportions and deliberate spatial contradiction, but never an unreadable random cluster.
 
+## 4b. Body plans: share a rig, never a silhouette
+
+The roster is too large to hand-place every box, so most Vessels are built by parametric
+rigs in `src/render/vessels/blueprints.js`. A rig is an **anatomical body plan**, not a
+skin. Structure decides the outline; colour, height and bulk only refine it.
+
+| Rig | Structural axes |
+|---|---|
+| `humanoid` | lower body `robe` (columnar skirt, no legs) / `robe: "split"` (short flared tabard over visible boots) / legs; stance `normal` / `wide` / `narrow` / `bent` / `stilt`; a second arm pair (`arms: 4`); wings; tail; hunch; pauldron scale; back `pack`; head (helm, hood, mask, crown, circlet, skull); weapon (`sword`, `axe`, `spear`, `staff`, `bow`, `daggers`, `wire`, `hammer`, `scythe`, `fists`); offhand (`shield`, `buckler`, `tome`, `orb`, `lantern`, `brazier`); crest (`horns`, `spikes`, `feather`, `plume`) |
+| `beast` | build `heavy` / `lean`; posture `low` / `tall` / `prowl` / `rear`; 4 or 6 legs; 1–3 heads; horns `ram` / `antler` / `tusk` / `spike`; tail `whip` / `fan` / `club`; shell |
+| `serpent` | coiled body, 1–3 necks, coil count, cobra hood, forelimbs, no legs at all |
+| `construct` | frame `heavy` / `slim` / `quad` / `tower`; crest `crown` / `chimney` / `ring` / `bell` / `antenna`; head count |
+| `drake` | plan `wings` / `wyvern` / `lindworm`; neck count; horns `crown` / `swept` |
+| `spirit` | form `veiled` / `wraith` / `crowned` / `core`; arm count |
+
+Rules that follow from this:
+
+- **A subtype is not a silhouette.** Two Constructs must not both be a two-legged chassis
+  because they share a subtype. The Clockwork Hydra is a `serpent` (coils, three fanned
+  necks, brass scale plates, no legs); the Ironstep Sentinel is a `slim` construct (piston
+  legs, one sealed lamp head, antenna spine). They are not variants of one another.
+- **A head must survive the projection.** A skull flush against the shoulder mass merges
+  into it at tile size. Every rig gives the head its own neck column, a pale (`bone`) face
+  plate and a dark jaw or visor, so the head keeps its own value against the torso.
+- **One beast rig is not one animal.** `build: "heavy"` is the barrel-chested plan: short
+  thick limbs, a single wide body slab, a blunt skull and a full saddle blanket — the Rams,
+  the Warden, the Bulwark. `build: "lean"` is a separate plan, not a resized heavy one:
+  proportional long limbs that always meet the belly line, a deep narrow ribcage forward over
+  the forelegs, a waist that tucks up and narrows behind it, a back that arches over the
+  chest, a forward-reaching neck, a two-mass skull (tall cranium + long low muzzle + dropped
+  jaw) and a long counterbalancing tail — the Brine Hound, the Bramble Stalker, the Glass-Horn
+  Charger. Stature follows posture inside that plan: `low` stands level, `prowl` drops the
+  chest and raises the haunches, `rear` rises on the hind legs with the forelimbs clear of
+  the ground.
+- **Compute limb length, do not author it.** A reared animal's hind legs are longer, not
+  floating beneath a raised chest. The lean plan stacks its leg segments as fractions of the
+  belly line so any posture keeps contact with the body.
+- **Audit before declaring a model done.** `node tools/silhouette-report.mjs` rasterises
+  every model from the front and the side and reports the most similar pairs by IoU.
+  Treat anything at or above 0.90 as too close and change the *structure* (stance, leg count,
+  neck, shell, frame), not the palette.
+
 ## 5. Model production package per unit
 
 Every official Vessel needs:
@@ -125,8 +167,13 @@ direction plus a real pipeline rather than an aspiration.
 
 ### Roster
 
-- All **18 official Vessels** have individually authored models, 30–59 boxes each, **728 boxes
-  total**, in `src/render/vessels/{fire,water,earth,metal,wood}.js`.
+- All **60 Vessels** have models, 30–59 boxes each, in
+  `src/render/vessels/{fire,water,earth,metal,wood}.js`. The original eighteen are hand-placed;
+  the rest are built by the rigs in `blueprints.js`, each with its own body-plan configuration.
+- Every rig model is verified against every other: `tools/silhouette-report.mjs` rasterises each
+  model from two angles and prints the worst IoU pairs. The current worst pair is 0.895 (a slim
+  duelist and a slim engineer, which differ in stance, reach and pack); no pair reaches 0.90, and
+  the Hydra and the Ironstep Sentinel — the pair that used to be twins — score 0.485.
 - Every model declares 4 or more animation groups and 4 or more materials. A test enforces these
   floors, uniqueness of silhouette (including rotations), palette-key validity, material validity,
   pivot validity and the tile footprint.
@@ -148,7 +195,43 @@ direction plus a real pipeline rather than an aspiration.
   shading, not a light pass.
 - No skeletal deformation: limbs rotate as rigid voxel groups.
 - Props do not react to units, and there is no destructible scenery.
-- The Wyrm of the Drowned Vault and the Verdant Colossus are the weakest silhouettes in the roster at
-  tile size; both need another authored pass (clearer coil/head separation, and a lighter canopy that
-  separates from the trunk).
+- The Wyrm of the Drowned Vault and the Verdant Colossus are still the weakest hand-authored
+  silhouettes at tile size; both need another authored pass (clearer coil/head separation, and a
+  lighter canopy that separates from the trunk).
+- Rig humanoids were the weakest group: four slim soldiers shared one outline. They now differ in
+  body plan, not colour — a bent low lunge (Reef Duelist), a pike-and-pack engineer (Quarry
+  Engineer), a split tabard over boots (Emberwright Adept) and a horizontal wire-blade (Razorline
+  Duelist). The worst humanoid pair in the roster is 0.877, under the 0.90 bar, but several robed
+  figures still sit in the 0.86–0.877 band and would benefit from authored geometry.
+- The lean beast plan is measured at 0.35–0.62 IoU against the heavy plan, so the two plans no
+  longer read as one animal.
+- Pauldrons scale in width and height but not depth: `pad`-scaled depth turned a broad-shouldered
+  knight's shoulders into flat boards seen edge-on from the three-quarter camera.
 - Phone tiles (43 px) prioritise stat readability; models read as colour + shape only at that size.
+
+## Human anatomy (ART-006)
+
+A helmet is not a person. Every human Vessel is built from a skull with a jaw that steps in from
+the temples, eyes with a socket, an iris and a brow, a nose with a nostril shadow, a mouth and a
+chin shadow, and ears. Face proportions are per-Vessel (`headW`, `headH`, `jaw`, `nose`, `ears`)
+rather than one shared head, and skin, hair and eye colour are palette overrides so two humans of
+the same element are two people.
+
+Hair plans: `short`, `long`, `braid`, `topknot`, `bald`, `shaved`, `swept`, `curls`, `mohawk`,
+`chignon`. Beards: `none`, `stubble`, `goatee`, `full`.
+
+Bodies carry a hips/waist/chest taper, a collar, shoulder deltoids and narrower legs. Garments
+(`tunic`, `quilt`, `scale`, `mail`, `coat`, `hide`) and kit (scarf, bracer, pouch, quiver, hood,
+single pauldron) are what separate two fighters of one element.
+
+Poses: `stand`, `guard`, `draw`, `shoulder`, `carry`, `hip`. A pose is a shoulder-elbow-hand chain
+per side, and weapons and off-hand props anchor to the hand it computes - a sword is never left
+floating beside a hip.
+
+## Arena ground (ART-006)
+
+The arena is one raised landmass, not a painted grid. Each tile is a block: a top face with its
+material, a voxel grain and a lit corner, and a side wall rotated by the negative of the arena tilt
+so it is a real vertical face. Height steps between surfaces (water 0, sand 3, grass 6, moss 11,
+stone 16, shrine 22 px) are what make the board read as terrain rather than a diagram. Scenery is
+authored per tile at the back edge, and units stand on the tile face at board scale, upright.

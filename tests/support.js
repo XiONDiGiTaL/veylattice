@@ -18,9 +18,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const readCards = (name) =>
   JSON.parse(readFileSync(path.join(here, "..", "src", "cards", name), "utf8"));
 
-export const RAW_VESSELS = readCards("starter-set.json");
-export const RAW_EXTRAS = readCards("actions-relics.json");
-export const RAW_CARDS = [...RAW_VESSELS, ...RAW_EXTRAS];
+/** The manifest is the content pipeline: tests load exactly what the app loads. */
+export const CARD_MANIFEST = readCards("manifest.json");
+export const CARD_SETS = CARD_MANIFEST.sets.map((set) => ({
+  ...set,
+  cards: readCards(set.file),
+}));
+export const RAW_CARDS = CARD_SETS.flatMap((set) => set.cards);
+export const RAW_VESSELS = RAW_CARDS.filter((card) => card.category === "vessel");
+export const RAW_EXTRAS = RAW_CARDS.filter((card) => card.category !== "vessel");
+export const RAW_CORE_VESSELS = readCards("starter-set.json");
 export const CATALOG = createCatalog(RAW_CARDS);
 
 export const CARD = Object.fromEntries(CATALOG.cards.map((c) => [c.id, c]));

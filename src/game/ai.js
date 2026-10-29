@@ -23,7 +23,7 @@ import {
   relicAuras,
 } from "./engine.js";
 import { previewDamage } from "./elemental-rules.js";
-import { BOARD_SIZE, enemyHomeRow } from "./constants.js";
+import { BOARD_SIZE, START_VITALITY, enemyHomeRow } from "./constants.js";
 
 /* ------------------------------------------------------------------ *
  * Difficulty and personality profiles
@@ -151,6 +151,8 @@ function publicUnit(unit) {
     ready: unit.ready,
     hasMoved: unit.hasMoved,
     hasAttacked: unit.hasAttacked,
+    keywords: [...(unit.keywords ?? [])],
+    stunned: Boolean(unit.stunned),
   };
 }
 
@@ -203,6 +205,8 @@ export function buildObservation(state, seat) {
       discardCount: own.discard.length,
       attackBonus: ownAuras.attack,
       nexusArmor: ownAuras.armor,
+      ward: ownAuras.ward,
+      drawBonus: ownAuras.draw,
       relics: ownRelics,
       hand,
     },
@@ -216,6 +220,7 @@ export function buildObservation(state, seat) {
       // Relics are open information: they sit on the table, visible to both
       // seats. Hand and deck contents are never exposed.
       nexusArmor: foeAuras.armor,
+      ward: foeAuras.ward,
       relicEffectKinds: foe.relics.map((relic) => state.catalog.get(relic.cardId)?.effect?.kind ?? null),
     },
     units: units.map(publicUnit),
@@ -259,7 +264,13 @@ export function buildCandidates(state, seat, options = {}) {
   for (const entry of actions.units) {
     const unit = state.units[entry.unitId];
     if (!unit) continue;
-    for (const target of entry.attacks) {
+    // `getLegalAttacks` already filters these, but `attacksFromCell` below does
+    // not know about the unit's spent activation, so both flags are checked
+    // here: a plan the engine would reject is never even proposed.
+    const canAttack = !unit.hasAttacked;
+    const canMove = !unit.hasMoved;
+    if (!canAttack && !canMove) continue;
+    for (const target of canAttack ? entry.attacks : []) {
       plans.push({
         kind: target.type === "nexus" ? "nexusAttack" : "attack",
         unitId: unit.id,
@@ -267,7 +278,7 @@ export function buildCandidates(state, seat, options = {}) {
         commands: [attackCommand(unit.id, target)],
       });
     }
-    if (difficulty.moveAndAttack) {
+    if (difficulty.moveAndAttack && canAttack && canMove) {
       for (const cell of entry.moves) {
         // Moving onto the enemy home row with the board clear unlocks a Nexus strike.
         const targets = attacksFromCell(state, unit.id, cell.x, cell.y);
@@ -286,7 +297,7 @@ export function buildCandidates(state, seat, options = {}) {
         }
       }
     }
-    for (const cell of entry.moves) {
+    for (const cell of canMove ? entry.moves : []) {
       plans.push({
         kind: "move",
         unitId: unit.id,
@@ -494,8 +505,10 @@ function evaluateAction(observation, card, targetId, weights) {
     if (effect.kind === "damage") {
       if (friendly) return { score: -Infinity };
       const packet = previewDamage(effect.amount, card.element, target.element);
-      const dealt = Math.min(packet.damage, target.guard);
-      const kills = target.guard - packet.damage <= 0;
+      // Relic ward is open information and applies to every Action packet.
+      const damage = Math.max(1, packet.damage - (observation.foe.ward ?? 0));
+      const dealt = Math.min(damage, target.guard);
+      const kills = target.guard - damage <= 0;
       let score = dealt * 1.2 + (kills ? unitValue(target) * 1.15 : 0) - cost * 0.35;
       if (packet.relation === "advantage") score += 1.5 * weights.elementPlay;
       if (kills && observation.foe.unitCount === 1) score += 8 * weights.nexusFocus;
@@ -519,7 +532,54 @@ function evaluateAction(observation, card, targetId, weights) {
     };
   }
 
+  if (effect.kind === "drain") {
+    const target = observation.units.find((u) => u.id === targetId);
+    if (!target || target.owner === own) return { score: -Infinity };
+    const warded = observation.foe.ward ?? 0;
+    const packet = previewDamage(effect.amount, card.element, target.element);
+    const dealt = Math.min(Math.max(1, packet.damage - warded), target.guard);
+    const heal = Math.min(Math.max(1, Math.floor(dealt / 2)), START_VITALITY - observation.own.vitality);
+    const kills = target.guard - dealt <= 0;
+    return {
+      score:
+        dealt * 1.2 + heal * 1.8 * weights.defense + (kills ? unitValue(target) * 1.1 : 0) - cost * 0.3,
+      kills,
+      damage: dealt,
+    };
+  }
+
+  if (effect.kind === "stun") {
+    const target = observation.units.find((u) => u.id === targetId);
+    if (!target || target.owner === own || target.stunned) return { score: -Infinity };
+    return {
+      score: (4 + target.attack * 1.1 + target.guard * 0.3) * weights.positioning - cost * 0.3,
+    };
+  }
+
+  if (effect.kind === "ready") {
+    const target = observation.units.find((u) => u.id === targetId);
+    if (!target || target.owner !== own) return { score: -Infinity };
+    // Only worth a card if the Vessel has already spent its action.
+    if (!target.hasAttacked && !target.hasMoved) return { score: -Infinity };
+    return { score: (3 + target.attack * 0.9) * weights.aggression - cost * 0.3 };
+  }
+
   switch (effect.kind) {
+    case "nexusHeal": {
+      const healed = Math.min(effect.amount, START_VITALITY - observation.own.vitality);
+      if (healed <= 0) return { score: -Infinity };
+      return { score: healed * 1.7 * weights.defense - cost * 0.3, healed };
+    }
+    case "revive": {
+      // Without a defeated Vessel the card would do nothing.
+      if (observation.own.discardCount === 0) return { score: -Infinity };
+      return { score: 5.5 * weights.positioning - cost * 0.3 };
+    }
+    case "flux": {
+      const gained = Math.min(effect.amount, observation.own.maxFlux - observation.own.flux);
+      if (gained <= 0) return { score: -Infinity };
+      return { score: gained * 1.5 - cost * 0.4, gained };
+    }
     case "damageAll": {
       const enemies = observation.units.filter((unit) => unit.owner !== own);
       // A board wipe against an empty board is a wasted card, not a style choice.
@@ -554,7 +614,15 @@ function evaluateAction(observation, card, targetId, weights) {
   }
 }
 
-const RELIC_VALUE = Object.freeze({ attackAura: 4, armorAura: 3, guardAura: 2.5, mendAura: 2.5 });
+const RELIC_VALUE = Object.freeze({
+  attackAura: 4,
+  armorAura: 3,
+  guardAura: 2.5,
+  mendAura: 2.5,
+  wardAura: 3.5,
+  swiftAura: 4.5,
+  drawAura: 4,
+});
 
 /**
  * Score one plan. Pure: observation plus candidate, no match state.

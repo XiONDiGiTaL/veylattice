@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applyCommand, applyOutcome, createMatch, getLegalActions, unitsOf } from "../src/game/engine.js";
+import {
+  applyCommand,
+  applyOutcome,
+  cellIndex,
+  createMatch,
+  getLegalActions,
+  unitsOf,
+} from "../src/game/engine.js";
 import { createCatalog } from "../src/game/content.js";
 import { TURN_MS } from "../src/game/constants.js";
 import {
@@ -33,8 +40,8 @@ test("opening state follows the documented sequence", () => {
   assert.equal(state.players[1].vitality, 30);
   assert.equal(state.players[0].hand.length, 6, "five opening cards plus the first-turn draw");
   assert.equal(state.players[1].hand.length, 5);
-  // 38-card practice deck minus the five opening cards and the first draw.
-  assert.equal(state.players[0].deck.length, 32);
+  // 40-card practice deck minus the five opening cards and the first draw.
+  assert.equal(state.players[0].deck.length, 34);
   assert.equal(state.players[0].maxFlux, 1);
   assert.equal(state.players[0].flux, 1);
   assert.equal(state.deadlineAt, START + TURN_MS);
@@ -64,7 +71,7 @@ test("Flux caps at ten and does not carry over", () => {
   assert.equal(state.active, 0);
   assert.equal(state.players[0].maxFlux, 10);
   const spent = prepare(state, { hand: [ASHEN], flux: state.players[0].flux });
-  const summon = run(spent, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const summon = run(spent, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(summon.ok, true);
   const passed = run(summon.state, { type: "endTurn" });
   const back = run(passed.state, { type: "endTurn" });
@@ -75,7 +82,7 @@ test("Flux caps at ten and does not carry over", () => {
 
 test("summon pays Flux, enforces one per turn, and enters unready", () => {
   const state = prepare(matchWith(), { hand: [MIREGLASS, ASHEN], flux: 10 });
-  const first = run(state, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const first = run(state, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(first.ok, true, first.message);
   assert.equal(first.state.players[0].flux, 8);
   assert.equal(first.state.players[0].summonUsed, 1);
@@ -84,7 +91,7 @@ test("summon pays Flux, enforces one per turn, and enters unready", () => {
   assert.equal(unit.guard, 3);
   assert.deepEqual(getLegalActions(first.state).units.find((u) => u.unitId === unit.id)?.attacks, []);
 
-  const second = run(first.state, { type: "summon", instanceId: "test0_1", x: 4, y: 5 });
+  const second = run(first.state, { type: "summon", instanceId: "test0_1", x: 2, y: 2 });
   assert.equal(second.ok, false);
   assert.equal(second.code, "SUMMON_LIMIT");
   assert.equal(second.state, first.state);
@@ -93,29 +100,29 @@ test("summon pays Flux, enforces one per turn, and enters unready", () => {
 test("summon rejects illegal cells, occupancy, Flux shortages and the unit cap", () => {
   const base = prepare(matchWith(), { hand: [ASHEN], flux: 10 });
 
-  const outsideZone = run(base, { type: "summon", instanceId: "test0_0", x: 3, y: 3 });
+  const outsideZone = run(base, { type: "summon", instanceId: "test0_0", x: 2, y: 2 });
   assert.equal(outsideZone.code, "ILLEGAL_CELL");
 
-  const offBoard = run(base, { type: "summon", instanceId: "test0_0", x: 9, y: 5 });
+  const offBoard = run(base, { type: "summon", instanceId: "test0_0", x: 9, y: 2 });
   assert.equal(offBoard.code, "ILLEGAL_CELL");
 
-  const occupied = place(base, 0, MIREGLASS, 3, 5);
-  const blocked = run(occupied.state, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const occupied = place(base, 0, MIREGLASS, 2, 3);
+  const blocked = run(occupied.state, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(blocked.code, "CELL_OCCUPIED");
 
   const poor = prepare(matchWith(), { hand: [ASHEN], flux: 2 });
-  const short = run(poor, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const short = run(poor, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(short.code, "INSUFFICIENT_FLUX");
   assert.equal(short.state, poor);
 
   const noFlux = prepare(matchWith(), { hand: [ASHEN], flux: 0 });
-  assert.equal(run(noFlux, { type: "summon", instanceId: "test0_0", x: 3, y: 5 }).code, "INSUFFICIENT_FLUX");
+  assert.equal(run(noFlux, { type: "summon", instanceId: "test0_0", x: 2, y: 3 }).code, "INSUFFICIENT_FLUX");
 
   let capped = prepare(matchWith(), { hand: [ASHEN], flux: 10 });
   [[0, 6], [1, 6], [2, 6], [3, 6]].forEach(([x, y], i) => {
     capped = place(capped, 0, i % 2 === 0 ? MIREGLASS : HOLLOWROOT, x, y).state;
   });
-  const full = run(capped, { type: "summon", instanceId: "test0_0", x: 4, y: 6 });
+  const full = run(capped, { type: "summon", instanceId: "test0_0", x: 3, y: 4 });
   assert.equal(full.code, "UNIT_LIMIT");
 });
 
@@ -155,7 +162,7 @@ test("a zero-cost card still requires at least one available Flux", () => {
   const deck = [...synthetic.flatMap((c) => [c.id, c.id]), ...syntheticActions.map((c) => c.id)];
   const state = createMatch({ catalog, decks: [deck, deck], rng: seededRng(2), now: START });
   const prepared = prepare(state, { hand: ["synth_0"], flux: 0 });
-  const result = run(prepared, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const result = run(prepared, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(result.code, "INSUFFICIENT_FLUX");
 });
 
@@ -163,21 +170,22 @@ test("a zero-cost card still requires at least one available Flux", () => {
 
 test("movement respects readiness, range, occupancy and ownership", () => {
   const base = matchWith();
-  const placed = place(base, 0, MIREGLASS, 3, 5, { ready: true });
+  const placed = place(base, 0, MIREGLASS, 2, 3, { ready: true });
 
-  const moved = run(placed.state, { type: "move", unitId: placed.unitId, x: 3, y: 3 });
+  const moved = run(placed.state, { type: "move", unitId: placed.unitId, x: 2, y: 2 });
   assert.equal(moved.ok, true, moved.message);
-  assert.equal(moved.state.units[placed.unitId].y, 3);
-  assert.equal(moved.state.board[3 * 7 + 3], placed.unitId);
-  assert.equal(moved.state.board[5 * 7 + 3], null);
+  assert.equal(moved.state.units[placed.unitId].y, 2);
+  assert.equal(moved.state.board[cellIndex(2, 2)], placed.unitId);
+  assert.equal(moved.state.board[cellIndex(2, 3)], null);
 
-  const again = run(moved.state, { type: "move", unitId: placed.unitId, x: 4, y: 3 });
+  const again = run(moved.state, { type: "move", unitId: placed.unitId, x: 3, y: 2 });
   assert.equal(again.code, "ALREADY_MOVED");
 
-  const tooFar = run(placed.state, { type: "move", unitId: placed.unitId, x: 3, y: 2 });
+  // Movement 2 from row 3: row 1 is reachable, row 0 is not.
+  const tooFar = run(placed.state, { type: "move", unitId: placed.unitId, x: 2, y: 0 });
   assert.equal(tooFar.code, "OUT_OF_RANGE");
 
-  const unready = place(base, 0, MIREGLASS, 3, 5, { ready: false });
+  const unready = place(base, 0, MIREGLASS, 2, 3, { ready: false });
   assert.equal(
     run(unready.state, { type: "move", unitId: unready.unitId, x: 3, y: 4 }).code,
     "UNIT_NOT_READY",
@@ -189,16 +197,16 @@ test("movement respects readiness, range, occupancy and ownership", () => {
     "NOT_YOUR_UNIT",
   );
 
-  const blocked = place(placed.state, 1, BASTION, 4, 5);
+  const blocked = place(placed.state, 1, BASTION, 2, 2);
   assert.equal(
-    run(blocked.state, { type: "move", unitId: placed.unitId, x: 4, y: 5 }).code,
+    run(blocked.state, { type: "move", unitId: placed.unitId, x: 2, y: 2 }).code,
     "CELL_OCCUPIED",
   );
 
   // Occupied cells block paths: a unit cannot slip past a blocker with movement 2.
-  const wall = place(placed.state, 0, BASTION, 3, 4);
+  const wall = place(placed.state, 0, BASTION, 2, 2);
   assert.equal(
-    run(wall.state, { type: "move", unitId: placed.unitId, x: 3, y: 3 }).code,
+    run(wall.state, { type: "move", unitId: placed.unitId, x: 2, y: 1 }).code,
     "OUT_OF_RANGE",
   );
 });
@@ -417,7 +425,7 @@ test("stale, unknown and illegally-shaped commands never mutate state", () => {
   const state = prepare(matchWith(), { hand: [ASHEN], flux: 10 });
   const before = structuredClone(state);
 
-  const stale = run(state, { type: "summon", instanceId: "test0_0", x: 3, y: 5, expectedVersion: 99 });
+  const stale = run(state, { type: "summon", instanceId: "test0_0", x: 2, y: 3, expectedVersion: 99 });
   assert.equal(stale.code, "STALE_STATE");
   assert.equal(stale.state, state);
 
@@ -426,7 +434,7 @@ test("stale, unknown and illegally-shaped commands never mutate state", () => {
   assert.equal(run(state, { type: "attack", unitId: "garbage", target: "nexus" }).code, "UNKNOWN_UNIT");
   assert.deepEqual(state, before);
 
-  const accepted = run(state, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const accepted = run(state, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(accepted.state.version, state.version + 1);
   assert.equal(state.players[0].hand.length, 1, "original state is untouched");
 });
@@ -459,10 +467,10 @@ test("commands at or after the deadline are rejected and the turn is passed", ()
 
 test("deadline expiry preserves committed actions and does not duplicate them", () => {
   const state = prepare(matchWith(), { hand: [ASHEN], flux: 10 });
-  const summoned = run(state, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const summoned = run(state, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(summoned.ok, true);
 
-  const late = applyCommand(summoned.state, { type: "summon", instanceId: "test0_0", x: 4, y: 5 }, {
+  const late = applyCommand(summoned.state, { type: "summon", instanceId: "test0_0", x: 2, y: 2 }, {
     now: summoned.state.deadlineAt,
   });
   assert.equal(late.code, "DEADLINE_PASSED");
@@ -507,7 +515,7 @@ test("legal action enumeration matches what the engine accepts", () => {
   const state = prepare(matchWith(), { hand: [MIREGLASS], flux: 2 });
   const actions = getLegalActions(state);
   assert.equal(actions.summons.length, 1);
-  assert.equal(actions.summons[0].cells.length, 21, "three deployment rows of seven");
+  assert.equal(actions.summons[0].cells.length, 10, "two deployment rows of five");
   const { x, y } = actions.summons[0].cells[0];
   assert.equal(run(state, { type: "summon", instanceId: "test0_0", x, y }).ok, true);
 
@@ -518,7 +526,7 @@ test("legal action enumeration matches what the engine accepts", () => {
 test("catalog definitions are never mutated by play", () => {
   const before = JSON.stringify(CATALOG.byId.get(ASHEN));
   const state = prepare(matchWith(), { hand: [ASHEN], flux: 10 });
-  const result = run(state, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const result = run(state, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(result.ok, true);
   assert.equal(JSON.stringify(CATALOG.byId.get(ASHEN)), before);
 });

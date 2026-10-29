@@ -5,8 +5,9 @@
  */
 
 import { box, both } from "./_parts.js";
+import { beast, construct, humanoid, spirit } from "./blueprints.js";
 
-export const WATER_VESSELS = [
+const WATER_CORE = [
   {
     id: "mireglass_stalker",
     element: "water",
@@ -223,4 +224,26 @@ export const WATER_VESSELS = [
       box("base", 0.2, 0.5, -0.8, 0.4, 0.75, 0.4, "base", "crystal"),
     ],
   },
+];
+
+export const WATER_VESSELS = [
+  ...WATER_CORE,
+  humanoid({ id: "tidecaller_acolyte", element: "water", head: "circlet", weapon: "staff", offhand: "orb", cape: "short", crest: "none", robe: true, height: 0.9, bulk: 0.88, accent: "crystal", tone: "cloth" }),
+  humanoid({ id: "reef_duelist", element: "water", head: "circlet", weapon: "sword", offhand: "buckler", cape: "none", crest: "feather", stance: "bent", pauldrons: 1.15, height: 0.94, bulk: 0.96, accent: "light", tone: "base" }),
+  spirit({ id: "saltglass_siren", element: "water", form: "wraith", arms: 4, height: 1.0, bulk: 0.94, accent: "crystal", tone: "cloth" }),
+  beast({ id: "brine_hound", element: "water", build: "lean", posture: "low", horn: "none", tail: "fan", height: 1.02, bulk: 0.94, scale: 1.15, accent: "crystal", tone: "dark" }),
+  humanoid({ id: "abyssal_cartographer", element: "water", head: "hood", weapon: "staff", offhand: "tome", cape: "short", crest: "none", stance: "stilt", hunch: 0.3, height: 1.0, bulk: 1.04, accent: "brass", tone: "cloth" }),
+  humanoid({ id: "riptide_monk", element: "water", head: "mask", weapon: "fists", offhand: "none", cape: "none", crest: "none", stance: "bent", hunch: 0.2, height: 0.99, bulk: 1.0, accent: "light", tone: "base" }),
+  construct({ id: "leviathan_shard", element: "water", frame: "heavy", crest: "chimney", height: 1.05, bulk: 1.3, accent: "crystal", tone: "stone" }),
+  spirit({ id: "hollow_current", element: "water", form: "wraith", arms: 2, height: 1.16, bulk: 1.02, accent: "glow", tone: "dark" }),
+  // A deep-brown spearman with cropped hair, bare arms and a scale coat. The
+  // spear is gripped high, so his stance reads as braced behind a shield.
+  humanoid({
+    id: "tidewall_sentinel", element: "water", human: true, head: "human",
+    hair: "shaved", beard: "stubble", pose: "guard", garment: "scale",
+    headW: 1.06, headH: 1.0, jaw: 1.1, nose: 1.1, ears: 1.05,
+    palette: { skin: "#7c4b31", skinShade: "#5d3623", hair: "#1c1614", eye: "#a8dcd0" },
+    frame: 1.08, sleeves: "none", weapon: "spear", offhand: "shield",
+    cape: "none", stance: "wide", height: 1.0, bulk: 1.06, accent: "crystal", tone: "cloth", scarf: true,
+  }),
 ];

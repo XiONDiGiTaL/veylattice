@@ -5,8 +5,9 @@
  */
 
 import { box, both } from "./_parts.js";
+import { beast, construct, drake, humanoid, spirit } from "./blueprints.js";
 
-export const WOOD_VESSELS = [
+const WOOD_CORE = [
   {
     id: "hollowroot_oracle",
     element: "wood",
@@ -186,4 +187,27 @@ export const WOOD_VESSELS = [
       box("body", 1.3, 4.95, -1.15, 0.45, 0.8, 0.18, "dark", "wood", { rz: 8 }),
     ],
   },
+];
+
+export const WOOD_VESSELS = [
+  ...WOOD_CORE,
+  humanoid({ id: "thornwood_sentinel", element: "wood", head: "helm", weapon: "spear", offhand: "shield", cape: "none", crest: "horns", stance: "wide", pauldrons: 1.25, hunch: 0.15, height: 1.0, bulk: 1.1, accent: "light", tone: "wood" }),
+  beast({ id: "bramble_stalker", element: "wood", build: "lean", posture: "prowl", horn: "spike", tail: "whip", legs: 6, height: 0.96, bulk: 1.0, scale: 1.14, accent: "light", tone: "dark" }),
+  beast({ id: "mossback_warden", element: "wood", posture: "tall", horn: "tusk", tail: "club", shell: true, height: 1.1, bulk: 1.3, scale: 1.02, accent: "crystal", tone: "stone" }),
+  humanoid({ id: "whisperleaf_oracle", element: "wood", head: "hood", weapon: "staff", offhand: "tome", cape: "short", crest: "feather", robe: true, wings: "feather", wingTone: "wood", height: 0.95, bulk: 0.9, accent: "light", tone: "cloth" }),
+  humanoid({ id: "grove_harrier", element: "wood", head: "hood", weapon: "daggers", offhand: "none", cape: "short", crest: "none", stance: "narrow", hunch: 0.4, wings: "feather", wingTone: "wood", height: 0.94, bulk: 0.86, accent: "light", tone: "dark" }),
+  beast({ id: "antlered_bulwark", element: "wood", posture: "rear", horn: "antler", tail: "whip", height: 1.14, bulk: 1.22, scale: 1.05, accent: "bone", tone: "base" }),
+  spirit({ id: "willow_veil_priest", element: "wood", form: "veiled", height: 1.06, bulk: 1.0, accent: "light", tone: "cloth" }),
+  drake({ id: "canopy_wyrm", element: "wood", plan: "wyvern", wings: "broad", necks: 1, horns: "swept", height: 1.05, bulk: 1.05, accent: "light", tone: "dark", wingTone: "wood" }),
+  spirit({ id: "first_bloom", element: "wood", form: "core", arms: 0, height: 1.0, bulk: 1.06, accent: "light", tone: "dark" }),
+  // The only archer at full draw: bow arm out, string hand at the cheek, quiver
+  // on the back, olive skin under a long chestnut mane.
+  humanoid({
+    id: "thornmarch_ranger", element: "wood", human: true, head: "human",
+    hair: "long", beard: "none", pose: "draw", garment: "hide",
+    headW: 0.88, headH: 1.02, jaw: 0.92, nose: 0.9, ears: 0.95,
+    palette: { skin: "#b98a5e", skinShade: "#96683f", hair: "#4a2c18", eye: "#9fbf72" },
+    frame: 0.9, sleeves: "long", weapon: "bow", offhand: "none",
+    cape: "short", stance: "normal", height: 0.97, bulk: 0.94, accent: "light", tone: "cloth", quiver: true, pouch: true, hood: true,
+  }),
 ];

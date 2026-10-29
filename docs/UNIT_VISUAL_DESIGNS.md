@@ -95,3 +95,84 @@ path the battlefield uses. Counts are asserted by `tests/models.test.js`.
 The renderer shades each material differently, rotates groups around authored pivots (weapon, head,
 tail, arms) and supports angled boxes, so these are assembled miniatures rather than recoloured
 stacks. Known weak points are marked above; they are acceptance notes, not completed work.
+
+
+## Expansion 01 models (CONTENT-001, generated from the model data)
+
+The forty-seven expansion Vessels are configured through `src/render/vessels/blueprints.js`. Five
+anatomical rigs (humanoid, beast, construct, drake, spirit) share primitives and animation helpers;
+each Vessel supplies its own proportions, head, weapon, offhand, crest, cape and palette keys.
+Body plan, not colour, separates them: a columnar robe for casters, a split tabard over visible
+boots for spellblades, a lean predator frame for hounds, stalkers and chargers, and a heavy barrel
+for the Rams and the Warden. No two models share a geometry signature.
+
+| Card id | Boxes | Groups | Materials | Height | Idle | Tags |
+|---|---|---|---|---|---|---|
+| `vessel_emberwright_adept` | 47 | 8 | 5 | 12.2 | breathe | circlet, sword |
+| `vessel_cinder_warden` | 46 | 7 | 6 | 13.8 | breathe | helm, hammer |
+| `vessel_slagborn_pyromancer` | 46 | 6 | 7 | 12.7 | breathe | hood, staff |
+| `vessel_glass_horn_charger` | 34 | 5 | 6 | 6.4 | heavy | low, ram, whip |
+| `vessel_ash_veil_assassin` | 44 | 8 | 5 | 12.0 | breathe | mask, daggers |
+| `vessel_furnace_abbot` | 47 | 6 | 8 | 12.4 | breathe | circlet, staff |
+| `vessel_obsidian_lancer` | 50 | 8 | 6 | 15.2 | breathe | helm, spear |
+| `vessel_kiln_tyrant` | 31 | 6 | 6 | 11.1 | heavy | heavy, chimney |
+| `vessel_pyre_sovereign` | 31 | 6 | 4 | 7.9 | hover | broad, crown |
+| `vessel_tidecaller_acolyte` | 46 | 6 | 7 | 10.9 | breathe | circlet, staff |
+| `vessel_reef_duelist` | 47 | 8 | 5 | 11.9 | breathe | circlet, sword |
+| `vessel_saltglass_siren` | 31 | 4 | 5 | 10.7 | hover | veiled, floating |
+| `vessel_brine_hound` | 31 | 5 | 6 | 6.2 | heavy | low, none, whip |
+| `vessel_abyssal_cartographer` | 46 | 6 | 7 | 12.4 | breathe | hood, staff |
+| `vessel_riptide_monk` | 38 | 7 | 5 | 12.3 | breathe | mask, fists |
+| `vessel_leviathan_shard` | 32 | 6 | 5 | 10.3 | heavy | heavy, crown |
+| `vessel_hollow_current` | 34 | 4 | 6 | 12.4 | hover | crowned, floating |
+| `vessel_thornwood_sentinel` | 47 | 7 | 6 | 13.6 | breathe | helm, spear |
+| `vessel_bramble_stalker` | 37 | 5 | 6 | 7.4 | heavy | low, antler, whip |
+| `vessel_mossback_warden` | 32 | 6 | 5 | 10.0 | heavy | heavy, crown |
+| `vessel_whisperleaf_oracle` | 46 | 6 | 7 | 12.3 | breathe | hood, staff |
+| `vessel_grove_harrier` | 43 | 8 | 5 | 12.2 | breathe | hood, daggers |
+| `vessel_antlered_bulwark` | 37 | 5 | 6 | 7.6 | heavy | tall, antler, whip |
+| `vessel_willow_veil_priest` | 31 | 4 | 5 | 11.3 | hover | veiled, floating |
+| `vessel_canopy_wyrm` | 30 | 6 | 4 | 7.7 | hover | broad, swept |
+| `vessel_first_bloom` | 33 | 4 | 5 | 10.2 | hover | core, floating |
+| `vessel_rubble_warden` | 46 | 7 | 6 | 11.5 | breathe | helm, hammer |
+| `vessel_clayfist_brawler` | 38 | 7 | 5 | 12.0 | breathe | mask, fists |
+| `vessel_dust_sage` | 47 | 6 | 8 | 12.2 | breathe | hood, staff |
+| `vessel_slatehorn_ram` | 34 | 5 | 6 | 6.4 | heavy | low, ram, tusk |
+| `vessel_quarry_engineer` | 45 | 8 | 7 | 11.8 | breathe | circlet, hammer |
+| `vessel_obsidian_mason` | 32 | 6 | 5 | 10.1 | heavy | heavy, crown |
+| `vessel_tomb_colossus` | 32 | 6 | 5 | 11.0 | heavy | heavy, crown |
+| `vessel_crown_of_dust` | 34 | 4 | 6 | 12.1 | hover | crowned, floating |
+| `vessel_copper_squire` | 48 | 8 | 5 | 11.7 | breathe | helm, sword |
+| `vessel_lattice_artificer` | 47 | 8 | 6 | 11.6 | breathe | mask, staff |
+| `vessel_razorline_duelist` | 44 | 8 | 5 | 12.3 | breathe | mask, daggers |
+| `vessel_null_choir_cantor` | 47 | 6 | 7 | 12.9 | breathe | mask, staff |
+| `vessel_ironstep_sentinel` | 31 | 6 | 5 | 9.9 | heavy | slim, ring |
+| `vessel_stormforge_lancer` | 50 | 8 | 6 | 14.7 | breathe | helm, spear |
+| `vessel_clockwork_hydra` | 37 | 6 | 5 | 9.7 | heavy | heavy, ring |
+| `vessel_quiet_engine` | 31 | 6 | 5 | 11.1 | heavy | heavy, ring |
+| `vessel_oathstone_knight` | 55 | 8 | 6 | 13.9 | breathe | helm, sword, bent |
+| `vessel_ironvow_paladin` | 51 | 8 | 5 | 14.4 | breathe | helm, axe, wide |
+| `vessel_tidewall_sentinel` | 46 | 7 | 6 | 13.9 | breathe | helm, spear, normal |
+| `vessel_cinderwatch_knight` | 51 | 8 | 5 | 13.0 | breathe | helm, axe, normal |
+| `vessel_thornmarch_ranger` | 44 | 7 | 5 | 12.6 | breathe | hood, bow, normal |
+
+## Human knight wave (ART-005, 2026-10-28)
+
+Five armoured humans, one per element, added to `src/cards/expansion-set.json`. Every one has a human
+silhouette — helmet, shoulders, two arms, two legs — and is separated from its neighbours by equipment
+and mass rather than palette.
+
+- **Oathstone Knight / `oathstone_knight`** (Earth, 4/7, cost 5, `stalwart`). Braced low behind a paved
+  tower shield: bent knees, wide quarried pauldrons, a broad sword held across the body and a stone
+  plume swept back over the helm. The stance is the tell — it is the only shield knight that crouches.
+- **Ironvow Paladin / `ironvow_paladin`** (Metal, 6/7, cost 6, `stalwart`). Tall riveted plate, a long
+  cloak to the floor, a crescent-headed great axe in both hands (no shield) and a brass plume. Reads as
+  a heavy vertical line where the knight reads as a crouch.
+- **Tidewall Sentinel / `tidewall_sentinel`** (Water, 3/5, cost 3, `stalwart`). Slim sea-glass harness,
+  no cape, a hooked tide spear over the shoulder and a wave-crested shield. The cheapest knight; the
+  spear is its height marker.
+- **Cinderwatch Knight / `cinderwatch_knight`** (Fire, 5/4, cost 4, `swift`). Ember-plated, scorched
+  spike crest, a hafted axe in the right hand and a lit brazier carried in the left — the brazier is
+  the offhand that no other Vessel has.
+- **Thornmarch Ranger / `thornmarch_ranger`** (Wood, 2/3, cost 2, `swift`). Hooded leather coat, tall
+  longbow, no cape, a feather at the shoulder. The only hooded bow-carrier in the pool.

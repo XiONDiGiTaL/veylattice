@@ -7,19 +7,19 @@
 Grid movement · persistent Guard · five-element counter-cycle · a tactical AI that plays by the rules
 
 [![Play now](https://img.shields.io/badge/▶_PLAY_NOW-xiondigital.net%2Fveylattice-7ad7ff?style=for-the-badge)](https://xiondigital.net/veylattice/)
-[![Tests](https://img.shields.io/badge/tests-83_passing-6ee7a8?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-129_passing-6ee7a8?style=flat-square)](#tests)
 [![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-b58bff?style=flat-square)](#architecture)
 [![License](https://img.shields.io/badge/license-All_Rights_Reserved-9aa6c4?style=flat-square)](LICENSE)
 
 </div>
 
-![Veylattice battle screen](screenshots/battle.png)
+![Veylattice battle screen](screenshots/grid5-battle.png)
 
 ---
 
 ## ▸ What this is
 
-Veylattice is a tactical collectible card game: you deploy **Vessels** onto a 7×7 lattice, manoeuvre
+Veylattice is a tactical collectible card game: you deploy **Vessels** onto a 5×5 lattice, manoeuvre
 them into firing lanes, and break the opposing **Nexus** before yours falls. Every unit is a
 miniature sculpture of its element, every trade is decided by persistent Guard, and the five-element
 cycle decides who hits harder.
@@ -30,26 +30,81 @@ cross-device recovery code, animated voxel combat, and automated tests all ship 
 
 | Playable now | Not built yet |
 |---|---|
-| Main menu, How to Play, guided first match — no auto-launch into a game | Card collection, deck builder, shop, packs |
-| 7×7 board with tinted deployment zones and a contested middle row | Online lobbies and server-authoritative matches |
+| Main menu, How to Play, guided first match — no auto-launch into a game | Deck builder, shop, packs, ownership |
+| 5×5 board (25 tiles) with tinted deployment zones and one contested row | Online lobbies and server-authoritative matches |
+| Integrated war table: 4 Vessel + 4 Action/Relic zones per seat, built into the arena | — |
 | Persistent Guard, simultaneous retaliation, lethal trades | Lore Bonds, arenas, Forge, Codex |
 | Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Ranked ladder and seasonal rewards |
-| **8 Action cards** (damage, sweep, heal, buff, draw, Nexus) | Google / Discord sign-in (needs OAuth credentials) |
-| **4 Relic cards** in a visible two-slot back row | Set/activate Action zones (no rule specifies them yet) |
+| **30 Action cards** (damage, sweep, drain, stun, ready, revive, draw, heal, buff, Nexus, Flux) | Google / Discord sign-in (needs OAuth credentials) |
+| **12 Relic cards** in four back-row zones (the Relic cap and the field agree) | Setting Actions face-down (Actions resolve from hand) |
+| **65 Vessels** with three closed keywords: `swift`, `stalwart`, `deathrattleDraw` | — |
 | Typed, data-only effects — no card can carry code | Terrain that changes rules rather than decoration |
 | Flux economy 1→10, one summon, four-Vessel cap | — |
 | 120-second deadline with automatic turn pass | — |
 | Tactical AI: 4 difficulties × 3 styles, plays Actions and Relics | — |
-| **18 individually modelled 3D Vessels** in a CSS-3D renderer | — |
+| **65 individually modelled 3D Vessels** (2,890 boxes) in a CSS-3D renderer | — |
+| **107 printed card faces** in a browsable Card Library | — |
 | Combat: lunges, impact, floating damage, Guard ticks, deaths | — |
 | Contextual prompts, cancel/Escape, legality reasons | — |
 | Profiles, avatars, match record, **portable accounts** | — |
-| 83 automated tests + offline-first play | — |
+| **129 automated tests** + offline-first play | — |
 
 > **Honest status:** Seat 2 is a real AI opponent with no access to your hand. The game opens on a
 > menu; nothing starts until you press a button. Every Vessel on the board is its own voxel model —
 > there is no generic fallback in the shipped roster, and a missing model renders a labelled
 > placeholder instead of a silent cube.
+
+---
+
+## ▸ The printed set: 107 finished cards
+
+Every card in the game is also a designed object. `Cards/` holds one 1086×2048 face per card — the
+attached reference card's 543:1024 proportion — and the game's **Cards** tab is that folder, with
+category and element filters and a full-size viewer reachable from the library, the roster and the hand.
+
+![The card library in the game](screenshots/library-grid-102.png)
+
+One hierarchy on every face: name, Flux medallion top-right, attribute line, element and subtype
+emblems, a 902×700 illustration window, Attack and Guard medallions, rules in upright type, then
+flavour in italic. Actions and Relics print an `ACTION` / `RELIC` band and **no** stat sockets — they
+are not units with missing numbers.
+
+### Each Vessel is staged in its element's place
+
+The illustration is not a separate drawing. It is that Vessel's own voxel model, projected through a
+three-quarter camera, shaded per material, painter-sorted, and placed in an environment built from its
+element: a **fortress gatehouse** for Metal, a **rootbound grove** for Wood, a **drowned temple** for
+Water, a **furnace hall** for Fire, a **canyon gate** for Earth. All five share one value structure —
+bright sky, dark far silhouettes, mid-tone side masses, a lit opening directly behind the figure, fog
+at the ground line, near-black rubble in front — which is what makes the set read as one game.
+
+![Argent Nightlancer at full size](screenshots/card-modal-metal.png)
+
+![The thirty Action cards](screenshots/library-actions.png)
+
+Add a weapon to a Vessel's model and its card art gains it; there is no second asset to drift.
+
+### The human knights
+
+Every element now fields an armoured human, not only monsters and spirits. Earth's **Oathstone
+Knight** braces behind a paved shield, Metal's **Ironvow Paladin** carries a great axe and a plume,
+Water's **Tidewall Sentinel** holds a causeway with a tide spear, Fire's **Cinderwatch Knight** walks
+her post with a brazier, and Wood's **Thornmarch Ranger** scouts with a longbow. They are built on the
+humanoid rig but read apart from each other by equipment and mass: the knight's helm and shield, the
+ranger's hood and bow, the paladin's long cloak and back-swept plume.
+
+![The human knight wave](screenshots/knights-wave.png)
+
+### Rebuild them
+
+```bash
+node tools/build-cards.mjs      # 107 faces, art layers, frames, manifest, QA sheet, contact sheet
+npm test                        # fails if a face on disk is stale
+```
+
+The build writes `Cards/cards/<id>.svg`, `Cards/art/<id>.svg`, reusable `Cards/frames/`, a
+machine-readable `Cards/manifest.json` and `Cards/QA.md`. `tests/card-files.test.js` re-renders every
+face and compares it byte for byte, so a data edit cannot leave a card printing the old numbers.
 
 ---
 
@@ -84,13 +139,32 @@ the tutorial can never trap you, and Skip is always one click away.
 
 <div align="center">
 
-![Vessel roster](screenshots/roster.png)
+![Vessel roster](screenshots/roster-art.png)
 
 </div>
 
-**The Roster page renders the same model files the battlefield uses** — not illustrations. All 18
-official Vessels have their own voxel definition: 11–14 boxes each, distinct silhouettes, grouped for
-animation, and a per-model palette blended from its element.
+**The Roster page renders the same model files the battlefield uses**, and the scene behind each model
+is that Vessel's generated card art with the figure removed — one definition, two presentations. All 65
+official Vessels have their own voxel definition: 30–60 boxes each, distinct silhouettes, grouped for
+animation, and a per-model palette blended from its element. Eighteen are hand-placed rigs; the
+expansion's forty-seven use five shared anatomical blueprints (humanoid, quadruped, construct, drake,
+spirit) with separate body plans for robed casters, split-tabard spellblades, tabard-less knights and
+lean predators, and every one supplies its own proportions, head, weapon, offhand, crest, cape and
+palette keys.
+
+Actions and Relics are illustrated from their effect kind, so the art says what the card does — here a
+draw Action's fan-and-arrow emblem in a metal scene:
+
+<div align="center">
+
+![Action card art](screenshots/inspector-art2.png)
+
+</div>
+
+Practice deals a **fresh seeded 40-card selection from the 65-Vessel pool** on every match — 20
+Vessels (four per element), eight Actions at two copies, four Relics — so the whole roster can reach
+the board before a deck builder exists. The generated deck is always checked against the canonical
+deck rules.
 
 ---
 
@@ -166,7 +240,7 @@ both return no plan at all, which was caught in browser play and fixed at the sc
 
 ## ▸ Actions, Relics and voxel combat
 
-![Battle screen with Actions in hand and voxel units](screenshots/battle.png)
+![Battle screen with Actions in hand and voxel units](screenshots/grid5-battle.png)
 
 Cards are **typed data, never code**. Every effect is one of a closed set of `kind` values, validated
 against a numeric range, frozen at catalog build time, and executed by one switch in the engine. A
@@ -187,7 +261,7 @@ card that tries to smuggle behaviour is rejected before a match can start.
 | Choir Bell | Water | 2 | Relic · mend 2 Guard at the start of your turn |
 | Verdant Seal | Wood | 3 | Relic · your Vessels have +2 Guard |
 
-Relics are persistent, capped at two per seat, and their auras are computed in one place
+Relics are persistent, capped at four per seat (one per back-row zone), and their auras are computed in one place
 (`relicAuras`) so the HUD, the previews, the engine and the AI cannot disagree. A Guard aura applies
 to Vessels already on the table *and* to every future summon, so the bonus does not depend on timing.
 
@@ -203,7 +277,7 @@ boxes in voxel units with an animation group (`body`, `head`, `weapon`, `armL/R`
 size, offset, colour key, **material** and optional rotation. The renderer is handed a card id; it
 cannot change a match.
 
-**728 boxes across the 18 official Vessels** (30–59 each), and every one of them is individually
+**2,388 boxes across the 60 official Vessels** (30–59 each), and every one of them is individually
 authored against [`docs/UNIT_VISUAL_DESIGNS.md`](docs/UNIT_VISUAL_DESIGNS.md).
 
 - **Materials, not tints.** Each palette defines a whole material world per element — ceramic, cloth,
@@ -232,12 +306,47 @@ A test enforces the roster: every official Vessel has a model, no two models sha
 box uses a real palette key and material, every model has 30+ boxes across 4+ animation groups and 4+
 materials, and a missing id returns `null` rather than a silent cube.
 
-### The battlefield diorama
+### The war table: one battlefield, eight zones per seat
 
-The board is still the authoritative 7×7 grid, but it is dressed as a miniature arena on a stone
-table: a raised plinth, corner posts, layered ground blocks with real thickness, props at the back edge
-of tiles, a key light from the upper left and a vignette at the table edge. The 7×7 hit targets, tile
-coordinates, deployment tints and legal-summon rings sit above the scenery and are unchanged.
+The battle screen is one object, not a board with panels bolted around it. From top to bottom:
+
+1. opponent identity, Nexus vitality (the bar itself is the strike target), Flux, hand and Vessel counts;
+2. the opponent's **four back-row Action zones**;
+3. the opponent's **four front-row Vessel zones**;
+4. the 5×5 voxel diorama, with the player's deployment rows tinted;
+5. the player's four front-row Vessel zones, then four back-row Action zones;
+6. the player console (identity, Nexus vitality, deck/discard, counts, End Turn) and the hand.
+
+Every zone is built from match state, never from the DOM: [`src/ui/fields.js`](src/ui/fields.js)
+projects four Vessel slots and four Relic slots per seat, and stamps each one with a stable key
+(`seat0:vessel:2`). The engine assigns a Vessel its zone at summon time, so a unit keeps its place when
+another dies and the next summon fills the gap. The four Relic zones are also the rule: the per-seat
+Relic cap is four, so the interface cannot promise capacity the engine rejects.
+
+**How the zones connect to play**
+
+| Interaction | Result |
+|---|---|
+| Click a Vessel card in hand | all four front-row zones light up, and the ten legal deployment tiles ring on the grid |
+| Click a highlighted tile | the engine resolves the summon, the card leaves the hand, Flux drops and the Vessel appears in the next free front-row zone |
+| Click a filled Vessel zone | that unit is selected; reachable tiles and legal attacks highlight on the board |
+| Click a Relic card, then the next free Action zone | the Relic is set through the engine and occupies that socket |
+| Click a filled Action zone | its effect is read back to you; no hidden card data is invented |
+| Click a wrong/early Action zone | nothing mutates, and the status line explains which socket is next |
+
+Actions resolve from hand and go to the discard pile, so they never sit in a back-row zone; that is
+the canonical rule, not an omission. Empty zones read as carved sockets, occupied ones carry the real
+model, live Guard and stats, and the player's field also mirrors the engine's `Vessels 0/4` and
+`Relics 0/4` counters.
+
+### The arena
+
+The board is still the authoritative 5×5 grid, dressed as a miniature arena on a plinth: layered
+ground blocks with real thickness, carved seams, back-edge props, a deterministic per-tile tone shift
+so neighbouring tiles stop repeating, a key light from the upper left and a vignette at the edge.
+The Arena shell frames it with the arena name, objective, interaction key and a command console. The
+5×5 hit targets, coordinates, deployment tints and legal-summon rings sit above the scenery and are
+unchanged.
 
 [`src/render/terrain.js`](src/render/terrain.js) owns the ground map and props. It is **decorative by
 contract**: every kind declares `rules: "decorative"`, the layout is point-symmetric so neither seat
@@ -271,11 +380,13 @@ can mutate a match — the presentation layer only reads events.
 
 | Rule | Value |
 |---|---|
-| Board | 7×7, orthogonal movement, occupied cells block paths |
+| Board | 5×5 (25 tiles), two deployment rows per seat, orthogonal movement, occupied cells block paths |
 | Vitality | 30 per Nexus |
 | Flux | Starts at 1, +1 per turn, caps at 10, refills each turn |
 | Opening | 5 cards, mandatory draw at turn start, fatigue escalates |
 | Summons | One per turn, max four Vessels, own three deployment rows, enters unready |
+| Card fields | Four Vessel zones and four Action/Relic zones per seat, mirrored top and bottom |
+| Relics | Max four per seat, one per back-row zone; Actions resolve from hand |
 | Actions per Vessel | One move **and** one attack per ready Vessel |
 | Guard | Persistent durability; printed maximum is preserved separately |
 | Retaliation | Simultaneous, if the defender's range and line of sight allow it |
@@ -378,17 +489,84 @@ and [`supabase/migrations/0002_accounts.sql`](supabase/migrations/0002_accounts.
 
 ---
 
-## ▸ Screenshots
+## ▸ Card art: one definition, two presentations
 
-| Battle | Profile & Settings |
+Every card in the game now carries a full-bleed illustration. The important part is *how* it is made.
+
+`src/render/illustration.js` projects the card's canonical voxel model through a three-quarter camera,
+shades each face against a key light, sorts the faces back-to-front, and places the figure in an
+element-specific environment: layered ridges, horizon haze, an engraved summoning ring, a shaft of
+stage light, floating motes, rarity arcs and a vignette. Actions and Relics get emblem scenes keyed to
+their effect kind — a damage slash, a heal bloom, a draw fan — so their art states what the card does.
+
+| Layer | Source |
 |---|---|
-| ![Battle](screenshots/battle.png) | ![Profile](screenshots/profile.png) |
+| Figure | the same `VOXEL_MODELS` entry the battlefield renders, shaded from that model's palette |
+| Environment | element scene (fire/water/earth/metal/wood), seeded per card so it never reshuffles |
+| Rarity treatment | arcs and motes scale with common → mythic |
+| Emblem (Actions, Relics) | effect kind, in the card's element colours |
+
+Because the art is *derived*, it cannot drift from the playable model. Add a weapon to a Vessel and its
+card art gains it. `tests/illustration.test.js` enforces that: it checks every card produces SVG, that
+each Vessel's art is a projection of its model (palette, part count, declared voxel height), that no
+figure is clipped by the frame, that two Vessels never share identical art, and that Action emblems
+differ by effect.
 
 <div align="center">
 
-**Mobile (414 px)**
+**A Vessel card**: the Ashen Crownblade's illustration is its battlefield model, lit and staged.
 
-<img src="screenshots/mobile.png" alt="Veylattice on a phone" width="360">
+![Vessel card art](screenshots/vessel-card-art.png)
+
+**The roster** shows the same scene behind a live, draggable model — no painted duplicate.
+
+![Roster with generated art](screenshots/roster-art.png)
+
+</div>
+
+The hand rail uses the art as a dimmed full-bleed backdrop under the card's text, so a 138×84 card still
+reads at a glance:
+
+<div align="center">
+
+![Hand cards with generated art](screenshots/card-art-hand2.png)
+
+</div>
+
+> **Limitation, stated plainly:** the playable world is CSS-3D. Voxels are real boxes with real depth,
+> per-face shading and a perspective camera, but there is no GPU lighting pass or shadow map — shadows
+> are painted contact shadows, not cast ones. A WebGL renderer is the next step if that becomes a
+> requirement; it is not in this build.
+
+
+---
+
+## ▸ Screenshots
+
+<div align="center">
+
+**A live match on the war table.** Opponent field above, the 5×5 diorama in the middle, your field and
+hand below. Vessel zones show the real model, live Guard and stats; the back row holds set Relics.
+
+![Battle](screenshots/grid5-battle.png)
+
+</div>
+
+| Summoning: four Vessel zones and ten legal tiles light up | Setting a Relic: the next free Action socket |
+|---|---|
+| ![Summon zones](screenshots/wartable-summon-select.png) | ![Relic zone](screenshots/wartable-relic-select.png) |
+
+| 1024×768 | Mobile (390 px) |
+|---|---|
+| ![War table at 1024](screenshots/wartable-1024.png) | ![War table on a phone](screenshots/mobile-grid5.png) |
+
+<div align="center">
+
+**Menu · roster · guided rules**
+
+<img src="screenshots/menu.png" alt="Veylattice menu" width="420">
+<img src="screenshots/roster.png" alt="Veylattice roster" width="420">
+<img src="screenshots/guide.png" alt="Veylattice how to play" width="420">
 
 </div>
 
@@ -409,15 +587,15 @@ src/net/             browser persistence
   profile.js           sanitise, local-first save, cloud sync, avatar pipeline
   account.js           recovery-code accounts (create, load, save, rotate)
 src/render/          presentation-only model layer
-  models.js            18 Vessel voxel definitions + element palettes
+  models.js            60 Vessel voxel definitions + element palettes
   voxel.js             CSS-3D model builder (no dependencies)
 src/ui/              UI state machines that are worth testing on their own
   tutorial.js          guided-match steps and the pure advance reducer
 src/main.js          HUD controller + presentation layer (events → animation)
-src/cards/           starter Vessels, Actions and Relics as validated JSON
+src/cards/           set manifest + three validated card sets (102 cards)
 index.html           Menu, How to Play, Roster, Battle and Settings views
 styles.css           themed UI, voxel models, board zones, combat keyframes, reduced motion
-tests/               Node test runner, 83 tests, zero dependencies
+tests/               Node test runner, 122 tests, zero dependencies
 supabase/migrations/ profile + account schemas and RPCs
 docs/                rules, research, adaptation matrix, accounts, session log
 ```
@@ -448,7 +626,7 @@ npm test            # node --test "tests/*.test.js"
 
 ### Tests
 
-`npm test` → **83 passing, 0 failing** (~0.6 s). Coverage includes:
+`npm test` → **122 passing, 0 failing** (~0.9 s). Coverage includes:
 
 | Area | Examples |
 |---|---|
@@ -456,13 +634,15 @@ npm test            # node --test "tests/*.test.js"
 | Combat | lethal trades, out-of-range retaliation, blocked line of sight, Nexus gating |
 | Actions & Relics | elemental damage, heal capping, permanent buffs, sweeps, Nexus burn vs armour, wrong-side and missing targets, Relic cap, attack/guard/mend auras, aura timing on existing and future Vessels |
 | Deck rules | canonical five-Action minimum enforced, vessel-only decks rejected, practice deck legal with no exception profile |
-| Content | 30-card pool validates; malformed effects, cross-scope effects and pseudo-targeting Relics are rejected |
+| Content | 102-card pool validates through the set manifest; 60 Vessels split 12 per element; 30 Actions and 12 Relics; every effect kind is used by a shipped card; malformed effects, cross-scope effects, wrong targeting, unknown keywords and pseudo-targeting Relics are rejected |
 | Economy & turns | Flux 1→10, zero-Flux restriction, summon limits, draw, fatigue |
 | Determinism | byte-identical rejection, seeded replay, catalog immutability |
 | Deadlines | boundary rejection, committed actions preserved |
 | AI | information isolation, hidden-hand invariance, time budget, legality, tier differentiation, Actions/Relics played through the engine, no pointless casts, full AI-vs-AI match |
 | Profiles | name/avatar/settings/stats sanitisation, forged ids, streak maths |
-| Voxel roster | all 18 official ids modelled, no shared silhouettes, palette keys resolve, missing model reports `null`, board is 49 tiles split 21/7/21 across the zones |
+| Voxel roster | all 60 official ids modelled, 12 per element, no shared silhouettes, palette keys resolve, missing model reports `null`, board is 25 tiles split 10/5/10 across the zones |
+| Keywords & expansion effects | stun consumes exactly one activation, ready refreshes an acted Vessel, revive returns the highest-cost Vessel, Flux gain caps at `maxFlux`, drain returns half damage, Nexus heal caps at 30, ward never nullifies Action damage, swift and stalwart change summons, deathrattle draws for its controller |
+| Card fields | four Vessel + four Action zones per seat, stable unique slot keys, engine-assigned zones survive movement, inserted units fill one slot each, Relics fill the back row in order and the cap equals the slot count |
 | Guided match | step order, unrelated events ignored, `endTurn` always escapes, completion clamps, skip is idempotent, every step watches a real engine event |
 
 Tests I did **not** run are listed as unrun in [docs/IMPLEMENTATION_LOG.md](docs/IMPLEMENTATION_LOG.md),
@@ -507,7 +687,8 @@ clearly labelled local profile and accounts report that cloud sync is disabled.
 | **M2-006** portable accounts, recovery codes, cross-device restore | ✅ done |
 | **M2-007** voxel combat presentation | ✅ done |
 | **M2-008 / UX-001** menu, How to Play, guided first match, un-auto-launched boot | ✅ done |
-| **M2-009** unique voxel models for all 18 Vessels and the roster page | ✅ done |
+| **M2-009** unique voxel models and the roster page | ✅ done |
+| **CONTENT-001** 60 Vessels, 30 Actions, 12 Relics, keyword vocabulary, manifest pipeline | ✅ done |
 | **M3** collection, deck builder, shop, packs | next |
 | **M4** trusted backend, authoritative matches, throttling | planned |
 | **M5** lobbies and Tag | planned |

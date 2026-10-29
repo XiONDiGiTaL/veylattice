@@ -5,8 +5,9 @@
  */
 
 import { box, both, pair } from "./_parts.js";
+import { construct, humanoid, serpent } from "./blueprints.js";
 
-export const METAL_VESSELS = [
+const METAL_CORE = [
   {
     id: "argent_nightlancer",
     element: "metal",
@@ -227,4 +228,30 @@ export const METAL_VESSELS = [
       box("base", 0, 0.35, 0, 0.9, 0.35, 0.9, "glow", "crystal"),
     ],
   },
+];
+
+export const METAL_VESSELS = [
+  ...METAL_CORE,
+  humanoid({ id: "copper_squire", element: "metal", head: "helm", weapon: "sword", offhand: "buckler", cape: "short", crest: "none", stance: "narrow", pauldrons: 1.15, height: 0.9, bulk: 0.9, accent: "light", tone: "base" }),
+  humanoid({ id: "lattice_artificer", element: "metal", head: "mask", weapon: "staff", offhand: "tome", cape: "short", crest: "none", stance: "stilt", height: 0.95, bulk: 0.98, accent: "glow", tone: "cloth" }),
+  humanoid({ id: "razorline_duelist", element: "metal", head: "mask", weapon: "wire", offhand: "none", cape: "long", crest: "none", stance: "narrow", height: 0.99, bulk: 0.88, accent: "light", tone: "dark" }),
+  // Tall, narrow-faced and fair, with an auburn braid and a mail coat. She rests
+  // the axe head against her shoulder: the only human holding a weapon up.
+  humanoid({
+    id: "ironvow_paladin", element: "metal", human: true, head: "human",
+    hair: "braid", beard: "none", pose: "shoulder", garment: "mail",
+    headW: 0.9, headH: 1.08, jaw: 0.9, nose: 0.85, ears: 0.9,
+    palette: { skin: "#e6bf9f", skinShade: "#c29474", hair: "#6d3a22", eye: "#8fbfd6" },
+    frame: 0.98, sleeves: "long", weapon: "axe", offhand: "none",
+    cape: "long", capeTone: "cloth", stance: "normal", height: 1.07, bulk: 1.0, accent: "brass", tone: "base", bracer: true,
+  }),
+  humanoid({ id: "null_choir_cantor", element: "metal", head: "mask", weapon: "staff", offhand: "orb", cape: "long", crest: "none", robe: true, arms: 4, height: 1.04, bulk: 1.0, accent: "glow", tone: "cloth" }),
+  // Ironstep is a narrow piston-legged walker with a single lamp head and an
+  // antenna spine: deliberately nothing like the coiled hydra below.
+  construct({ id: "ironstep_sentinel", element: "metal", frame: "slim", crest: "antenna", height: 1.02, bulk: 0.88, accent: "glow", tone: "metal" }),
+  humanoid({ id: "stormforge_lancer", element: "metal", head: "helm", weapon: "spear", offhand: "shield", cape: "short", crest: "plume", stance: "wide", pauldrons: 1.3, height: 1.08, bulk: 1.04, accent: "glow", tone: "base" }),
+  // The hydra is a serpent, not a two-legged chassis: coils, three fanned
+  // necks, no legs, brass scale plates along the spine.
+  serpent({ id: "clockwork_hydra", element: "metal", body: "coiled", heads: 3, coils: 3, forelegs: true, hood: false, height: 1.02, bulk: 1.12, scale: 1.06, accent: "glow", tone: "metal" }),
+  construct({ id: "quiet_engine", element: "metal", frame: "quad", crest: "ring", height: 1.14, bulk: 1.1, accent: "glow", tone: "dark" }),
 ];

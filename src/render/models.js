@@ -23,30 +23,35 @@ export const ELEMENT_PALETTES = Object.freeze({
     glow: "#ff6a2a", ember: "#ff7a3c", metal: "#d8c2a4", ink: "#1a0906", eye: "#ffe9a8",
     stone: "#6b3a2c", cloth: "#8c2f22", leather: "#3a2118", wood: "#5c3220",
     bone: "#e8d9bd", crystal: "#ff8a3c", brass: "#c98f45", void: "#140708",
+    skin: "#c98a63", skinShade: "#a5694a", hair: "#241812",
   },
   water: {
     base: "#2f7fa8", dark: "#0f3348", light: "#8fe0ff", accent: "#bff3ff",
     glow: "#67d5ff", ember: "#7fe6ff", metal: "#a9c6d8", ink: "#061722", eye: "#d8fbff",
     stone: "#3d5566", cloth: "#1b4a63", leather: "#16262e", wood: "#2c3f46",
     bone: "#dff1f5", crystal: "#7fe6ff", brass: "#c2a06a", void: "#05121b",
+    skin: "#d09a74", skinShade: "#ab7852", hair: "#221c1a",
   },
   earth: {
     base: "#8a6a43", dark: "#3f2c1e", light: "#d8b98a", accent: "#a8d08d",
     glow: "#e8c88a", ember: "#f0c070", metal: "#b8ab97", ink: "#1c130c", eye: "#ffe6b0",
     stone: "#7b7466", cloth: "#6b573c", leather: "#4a3524", wood: "#5d4327",
     bone: "#e6dcc4", crystal: "#9fd6a8", brass: "#b08a4e", void: "#150f09",
+    skin: "#c69b70", skinShade: "#a27a56", hair: "#33241a",
   },
   metal: {
     base: "#7d8aa3", dark: "#232b3a", light: "#ccd7ea", accent: "#9ef0ff",
     glow: "#7ad7ff", ember: "#9ef0ff", metal: "#e2ecff", ink: "#0b1018", eye: "#d9f7ff",
     stone: "#5a6478", cloth: "#33405a", leather: "#242c3a", wood: "#3c4658",
     bone: "#dbe6f5", crystal: "#8fe4ff", brass: "#c9a468", void: "#080c12",
+    skin: "#d5a682", skinShade: "#ae8160", hair: "#2b2730",
   },
   wood: {
     base: "#4f8a4a", dark: "#1f3319", light: "#a8d98a", accent: "#e6ff9a",
     glow: "#a4ff86", ember: "#c8ff9e", metal: "#9aa47c", ink: "#0c1509", eye: "#e9ffbe",
     stone: "#5f6152", cloth: "#3a5b33", leather: "#33401f", wood: "#58412a",
     bone: "#e2e4c0", crystal: "#b6f08a", brass: "#a68a4e", void: "#090f07",
+    skin: "#c89a70", skinShade: "#a4794f", hair: "#3a2a18",
   },
 });
 

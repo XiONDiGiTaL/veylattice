@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createMatch, getLegalActions, unitsOf } from "../src/game/engine.js";
+import { cellIndex, createMatch, getLegalActions, unitsOf } from "../src/game/engine.js";
 import { CATALOG, START, run, seededRng } from "./support.js";
 
 /**
@@ -64,7 +64,7 @@ test("a complete match can be played to an honest end state through public comma
   }
   assert.equal(state.deadlineAt, null);
   for (const unit of Object.values(state.units)) {
-    assert.equal(state.board[unit.y * 7 + unit.x], unit.id, "board and unit registry agree");
+    assert.equal(state.board[cellIndex(unit.x, unit.y)], unit.id, "board and unit registry agree");
     assert.ok(unit.guard > 0, "no defeated Vessel is left on the board");
   }
   assert.ok(CATALOG.byId.size >= 18);

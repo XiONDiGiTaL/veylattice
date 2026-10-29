@@ -9,7 +9,7 @@
  * command the state is unchanged and the rejection is surfaced in the log.
  */
 
-import { createCatalog } from "./game/content.js";
+import { buildPracticeDeck, createCatalog } from "./game/content.js";
 import {
   applyCommand,
   canSummon,
@@ -25,6 +25,9 @@ import {
   ELEMENT_LABELS,
   MAX_RELICS_PER_SEAT,
   MAX_UNITS_PER_SEAT,
+  VESSEL_KEYWORDS,
+  deploymentBounds,
+  rowOwner,
 } from "./game/constants.js";
 import { previewDamage } from "./game/elemental-rules.js";
 import {
@@ -49,6 +52,8 @@ import {
 } from "./net/profile.js";
 import { formatCode, normaliseCode, readSession, rotateRecoveryCode } from "./net/account.js";
 import { modelFor } from "./render/models.js";
+import { illustrationDataUri } from "./render/illustration.js";
+import { cardFaceDataUri } from "./render/card-face.js";
 import { buildPlaceholderModel, buildVoxelModel } from "./render/voxel.js";
 import { ARENA, propsAt, terrainAt } from "./render/terrain.js";
 import {
@@ -58,6 +63,7 @@ import {
   skipTutorial,
   tutorialStep,
 } from "./ui/tutorial.js";
+import { fieldState } from "./ui/fields.js";
 
 const GUIDE_SEEN_KEY = "veylattice.guide.seen.v1";
 
@@ -106,6 +112,8 @@ const ui = {
   recorded: false,
   persistTimer: null,
   accountBusy: false,
+  library: { category: "all", element: "all" },
+  libraryBuilt: false,
 };
 
 /* ------------------------------ helpers ------------------------------ */
@@ -209,6 +217,18 @@ function effectSummary(def) {
       return `Draw ${effect.amount} card${effect.amount === 1 ? "" : "s"}.`;
     case "nexusDamage":
       return `Deal ${effect.amount} damage to the enemy Nexus.`;
+    case "nexusHeal":
+      return `Restore ${effect.amount} Vitality to your Nexus.`;
+    case "drain":
+      return `Deal ${effect.amount} damage and restore half of it to your Nexus.`;
+    case "stun":
+      return "Stun an enemy Vessel: it misses its next activation.";
+    case "ready":
+      return "Ready a Vessel you control so it can move and attack again.";
+    case "revive":
+      return "Return your most expensive defeated Vessel from the discard to your hand.";
+    case "flux":
+      return `Gain ${effect.amount} Flux this turn.`;
     case "attackAura":
       return `Relic · your Vessels' attacks deal +${effect.amount}.`;
     case "armorAura":
@@ -217,9 +237,23 @@ function effectSummary(def) {
       return `Relic · at the start of your turn, heal ${effect.amount} Guard.`;
     case "guardAura":
       return `Relic · your Vessels have +${effect.amount} Guard.`;
+    case "wardAura":
+      return `Relic · your Vessels take ${effect.amount} less Action damage.`;
+    case "swiftAura":
+      return "Relic · your Vessels enter play ready.";
+    case "drawAura":
+      return `Relic · draw ${effect.amount} extra card at the start of your turn.`;
     default:
       return def.flavorText ?? "";
   }
+}
+
+/** Plain English for a Vessel's closed keyword list. */
+function abilitySummary(def) {
+  const keywords = def?.abilities ?? [];
+  return keywords
+    .map((keyword) => `${keyword.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())} — ${VESSEL_KEYWORDS[keyword] ?? ""}`)
+    .join(" ");
 }
 
 function categoryLabel(def) {
@@ -372,8 +406,12 @@ function newMatch(options = {}) {
   ui.aiBusy = false;
   ui.recorded = false;
   const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+  // Fresh 40-card practice selection each match so the 65-Vessel pool is
+  // actually reachable before a deck builder exists.
+  const practiceDeck = buildPracticeDeck(ui.catalog, { rng: seededRng(seed ^ 0x9e3779b9) });
   ui.match = createMatch({
     catalog: ui.catalog,
+    decks: [practiceDeck, practiceDeck],
     rng: seededRng(seed),
     now: Date.now(),
   });
@@ -387,7 +425,7 @@ function newMatch(options = {}) {
     setMessage("Guided match: follow the checklist above the battlefield.");
   } else {
     setMessage(
-      `${currentArchetype().label} on ${currentDifficulty().label.toLowerCase()} difficulty. Summon into your three home rows, then advance on the enemy Nexus.`,
+      `${currentArchetype().label} on ${currentDifficulty().label.toLowerCase()} difficulty. Summon onto your home rows, then advance on the enemy Nexus.`,
     );
   }
   render();
@@ -531,6 +569,10 @@ function renderChip() {
   if (!ui.profile) return;
   $("#profile-chip-avatar").src = avatarFor(ui.profile);
   $("#profile-chip-name").textContent = ui.profile.displayName;
+  const hudAvatar = $("#player-avatar");
+  if (hudAvatar) hudAvatar.src = avatarFor(ui.profile);
+  const hudName = $("#player-name");
+  if (hudName) hudName.textContent = ui.profile.displayName;
   renderSync();
 }
 
@@ -693,8 +735,8 @@ function summonBlockReason(card, x, y) {
   const match = ui.match;
   const player = match.players[HUMAN_SEAT];
   if (unitAt(match, x, y)) return `${coordLabel(x, y)} already holds a Vessel.`;
-  if (y < BOARD_SIZE - 3) {
-    return `${coordLabel(x, y)} is outside your deployment zone — summon inside your three home rows.`;
+  if (y < deploymentBounds(HUMAN_SEAT).min) {
+    return `${coordLabel(x, y)} is outside your deployment zone — summon on the tinted home rows.`;
   }
   if (player.summonUsed >= 1) return "You have already summoned this turn. End the turn to summon again.";
   const count = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
@@ -807,7 +849,8 @@ async function playEvents(events, before) {
         break;
       }
       case "playRelic": {
-        pulse($("#back-row"), "fx-buff", 520);
+        const field = $("#player-action-slots");
+        pulse(field, "fx-buff", 520);
         break;
       }
       case "attack": {
@@ -902,6 +945,9 @@ async function playEvents(events, before) {
 
 function renderBoard() {
   const board = $("#board");
+  // The CSS grid follows the rule geometry, not a literal in the stylesheet.
+  board.style.setProperty("--grid", String(BOARD_SIZE));
+  board.setAttribute("aria-label", `${BOARD_SIZE} by ${BOARD_SIZE} tactical battlefield`);
   board.replaceChildren();
   const match = ui.match;
   if (!match) return;
@@ -927,10 +973,11 @@ function renderBoard() {
     for (let x = 0; x < BOARD_SIZE; x += 1) {
       const occupant = unitAt(match, x, y);
       const legalSummon = summonCard ? canSummon(match, summonCard.instanceId, x, y) : false;
-      const zone = y <= 2 ? "zone-opponent" : y <= 3 ? "zone-contested" : "zone-home";
+      const zone = `zone-${rowOwner(y)}`;
       const classes = ["cell", zone];
       if (legalSummon) classes.push("legal");
-      else if (summonCard && !occupant && y > BOARD_SIZE - 4) classes.push("deploy-blocked");
+      else if (summonCard && !occupant && y >= deploymentBounds(HUMAN_SEAT).min)
+        classes.push("deploy-blocked");
       if (moveKeys.has(`${x},${y}`)) classes.push("move");
       if (occupant && attackIds.has(occupant.id)) classes.push("attack");
       if (targetKeys.has(`${x},${y}`)) classes.push("target");
@@ -953,7 +1000,16 @@ function renderBoard() {
       const terrain = terrainAt(x, y);
       cell.dataset.terrain = terrain.id;
       cell.style.setProperty("--lift", `${terrain.lift}px`);
+      // The block's side wall runs from the raised top face down past the board
+      // plane, so every tile has a visible thickness of its own.
+      cell.style.setProperty("--block", `${Math.max(12, terrain.lift + 13)}px`);
+      // Deterministic tone variation: neighbouring tiles stop repeating without
+      // introducing randomness into the arena. Presentation only.
+      cell.style.setProperty("--tone", (1 + (((x * 5 + y * 11) % 7) - 3) * 0.014).toFixed(3));
       cell.append(el("span", { class: "cell-ground", "aria-hidden": "true" }));
+      // Voxel grain and the sunlight/shadows of the face, painted above the
+      // terrain colour but below scenery and units.
+      cell.append(el("span", { class: "cell-grain", "aria-hidden": "true" }));
       for (const prop of propsAt(x, y)) {
         const propNode = buildVoxelModel(
           { ...prop.model, id: `${prop.model.id}_${x}_${y}`, scale: (prop.model.scale ?? 1) * prop.scale },
@@ -1028,6 +1084,11 @@ function renderHand() {
       type: "button",
       class: `card ${def.element} ${kind}${ui.selectedCard === card.instanceId ? " selected" : ""}`,
       disabled: interactive ? undefined : "disabled",
+      title: `${def.name} — double-click for the printed card`,
+      ondblclick: (event) => {
+        event.preventDefault();
+        openCardViewer(def);
+      },
       onclick: () => {
         if (!humanCanAct()) return;
         ui.selectedCard = ui.selectedCard === card.instanceId ? null : card.instanceId;
@@ -1048,10 +1109,24 @@ function renderHand() {
         render();
       },
     });
+    // Full-bleed card art behind the text: generated from the same voxel model
+    // the battlefield renders, so the card and the unit cannot disagree.
+    button.append(
+      el("img", {
+        class: "card-art",
+        src: illustrationDataUri(def),
+        alt: "",
+        "aria-hidden": "true",
+        loading: "lazy",
+        decoding: "async",
+      }),
+    );
     button.append(
       el("span", { class: "cost" + (affordable ? "" : " unaffordable"), text: String(def.cost) }),
-      el("span", { class: "card-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
-      el("span", { class: "card-kind", text: categoryLabel(def) }),
+      el("span", { class: "card-tags" }, [
+        el("span", { class: "card-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
+        el("span", { class: "card-kind", text: categoryLabel(def) }),
+      ]),
       el("h3", { text: def.name }),
     );
     if (kind === "vessel") {
@@ -1067,6 +1142,8 @@ function renderHand() {
     } else {
       button.append(el("p", { class: "card-effect", text: effectSummary(def) }));
     }
+    // Keywords stay in the inspector and roster: the hand rail is 84 px tall and
+    // an extra line there clips the stats on larger Vessels.
     button.append(el("p", { class: "card-flavor", text: def.flavorText ?? "" }));
     hand.append(button);
   }
@@ -1085,6 +1162,13 @@ function renderSelectedPanel() {
     const def = card ? match.catalog.get(card.cardId) : null;
     if (def) {
       const entry = selectedCardEntry();
+      panel.append(
+        el("img", {
+          class: "inspector-art",
+          src: illustrationDataUri(def),
+          alt: `${def.name} card illustration`,
+        }),
+      );
       if (def.category !== "vessel") {
         panel.append(
           el("h4", { text: def.name }),
@@ -1116,6 +1200,7 @@ function renderSelectedPanel() {
         el("p", {
           text: `Attack ${def.attack ?? "—"} · Guard ${def.guard ?? "—"} · Movement ${def.movement ?? "—"} · Range ${def.range ?? "—"}`,
         }),
+        ...(abilitySummary(def) ? [el("p", { class: "preview", text: abilitySummary(def) })] : []),
         el("p", { class: "card-flavor", text: def.flavorText ?? "" }),
       );
       return;
@@ -1135,6 +1220,10 @@ function renderSelectedPanel() {
           text: `${unit.ready ? "Ready" : "Unready"} · ${unit.hasMoved ? "Moved" : "Can move"} · ${unit.hasAttacked ? "Attacked" : "Can attack"}`,
         }),
         el("p", { class: "muted", text: `Movement ${unit.movement} · Range ${unit.range}` }),
+        ...(unit.keywords?.length
+          ? [el("p", { class: "preview", text: abilitySummary({ abilities: unit.keywords }) })]
+          : []),
+        ...(unit.stunned ? [el("p", { class: "preview", text: "Stunned: misses its next activation." })] : []),
       );
       const attacks = humanCanAct() ? getLegalAttacks(match, unit.id) : [];
       const targets = Object.values(match.units).filter((u) => attacks.some((a) => a.unitId === u.id));
@@ -1174,30 +1263,220 @@ function renderTimer() {
   timer.setAttribute("aria-label", `${seconds} seconds remaining in this turn`);
 }
 
-function renderRelics() {
-  const slots = $("#back-row");
-  if (!slots || !ui.match) return;
-  const relics = ui.match.players[HUMAN_SEAT].relics;
-  slots.replaceChildren();
-  for (let index = 0; index < MAX_RELICS_PER_SEAT; index += 1) {
-    const relic = relics[index];
-    const def = relic ? ui.match.catalog.get(relic.cardId) : null;
-    slots.append(
-      el("div", { class: `relic-slot${def ? " filled" : ""}` }, [
-        el("span", { class: "slot-index", text: `SLOT ${index + 1}` }),
-        def
-          ? el("div", { class: "slot-body" }, [
-              el("strong", { text: def.name }),
-              el("span", { class: "slot-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
-              el("span", { class: "slot-effect", text: effectSummary(def) }),
-            ])
-          : el("p", { class: "slot-empty", text: "Empty — set a Relic from your hand" }),
-      ]),
-    );
+/* --------------------------- card fields --------------------------- */
+
+/** A miniature copy of the real battlefield model, used inside a card zone. */
+function slotModel(cardId) {
+  const stage = el("span", { class: "slot-model", "aria-hidden": "true" });
+  const model = modelFor(cardId);
+  if (model) stage.append(buildVoxelModel(model, { className: "slot-vox" }));
+  stage.append(el("i", { class: "model-shadow" }));
+  return stage;
+}
+
+function emptyZone(label) {
+  return [
+    el("span", { class: "slot-empty" }, [
+      el("span", { class: "socket", "aria-hidden": "true", text: "+" }),
+      el("span", { text: label }),
+    ]),
+  ];
+}
+
+/**
+ * One front-row Vessel zone.
+ *
+ * Occupied zones mirror the Vessel that owns them, including its live Guard,
+ * and are the fastest way to select a unit. Empty zones explain what the row
+ * is for instead of being decorative holes.
+ */
+function vesselZone(seat, index, unit) {
+  const mine = seat === HUMAN_SEAT;
+  const field = fieldState(ui.match, seat);
+  const classes = ["zone-slot", `zone-vessel-${index}`];
+  const card = mine ? selectedCardEntry() : null;
+  if (card?.category === "vessel") classes.push("is-ready");
+
+  if (!unit) {
+    classes.push("is-empty");
+    const emptyLabel = mine && card?.category === "vessel" ? "Choose a tile" : "Summon zone";
+    const node = el(mine ? "button" : "div", {
+      class: classes.join(" "),
+      dataset: { slot: `vessel-${index}`, seat: String(seat), occupied: "false" },
+      ...(mine ? { type: "button", onclick: () => onVesselSlotClick(seat, index) } : { role: "listitem" }),
+      "aria-label": `${mine ? "Your" : "Opponent"} front-row Vessel zone ${index + 1}, empty`,
+    }, emptyZone(emptyLabel));
+    node.title = mine
+      ? "A free Vessel zone. Summon a Vessel onto a highlighted battlefield tile."
+      : `Opponent Vessel zone ${index + 1} · empty`;
+    return node;
   }
-  const label = `${relics.length} / ${MAX_RELICS_PER_SEAT}`;
-  $("#relic-count").textContent = label;
-  $("#back-row-count").textContent = label;
+
+  classes.push("is-filled", `element-${unit.element}`, mine ? "is-mine" : "is-enemy");
+  if (mine && ui.selectedUnit === unit.id) classes.push("is-selected");
+  const guard = Math.max(0, unit.guard);
+  const node = el(mine ? "button" : "div", {
+    class: classes.join(" "),
+    dataset: { slot: `vessel-${index}`, seat: String(seat), occupied: "true", unitId: unit.id },
+    ...(mine ? { type: "button", onclick: () => onVesselSlotClick(seat, index) } : { role: "listitem" }),
+    "aria-label": `${unit.name}, ${ELEMENT_LABELS[unit.element]} ${unit.subtype ?? "Vessel"}, Attack ${unit.attack}, Guard ${guard} of ${unit.maxGuard}${
+      mine ? (unit.ready ? ", ready" : ", not ready this turn") : ""
+    }`,
+  }, [
+    slotModel(unit.cardId),
+    el("span", { class: "slot-card" }, [
+      el("span", { class: "slot-name", text: unit.name }),
+      el("span", { class: "slot-stats" }, [
+        el("span", { class: "atk", text: `ATK ${unit.attack}` }),
+        el("span", { class: "gd", text: `GD ${guard}/${unit.maxGuard}` }),
+        el("span", { text: `MV ${unit.movement}` }),
+        el("span", { text: `RG ${unit.range}` }),
+      ]),
+    ]),
+    el("span", { class: "slot-tag", text: mine && !unit.ready ? "WAIT" : ELEMENT_ABBR[unit.element] ?? "" }),
+  ]);
+  node.title = `${unit.name} · ${unit.ready || !mine ? "ready" : "not ready this turn"} · Guard ${guard}/${unit.maxGuard}. Click to select.`;
+  return node;
+}
+
+/** One back-row Action zone: a set Relic, or the next free socket. */
+function actionZone(seat, index, relic) {
+  const mine = seat === HUMAN_SEAT;
+  const field = fieldState(ui.match, seat);
+  const nextFree = field.relics.findIndex((entry) => !entry);
+  const classes = ["zone-slot", `zone-action-${index}`];
+  const card = mine ? selectedCardEntry() : null;
+  if (!relic) {
+    classes.push("is-empty");
+    if (mine && card?.category === "relic") classes.push(nextFree === index ? "is-ready" : "is-blocked");
+    const label = mine && card?.category === "relic" && nextFree === index ? "Set here" : "Relic zone";
+    const node = el(mine ? "button" : "div", {
+      class: classes.join(" "),
+      dataset: { slot: `action-${index}`, seat: String(seat), occupied: "false" },
+      ...(mine ? { type: "button", onclick: () => onActionSlotClick(seat, index) } : { role: "listitem" }),
+      "aria-label": `${mine ? "Your" : "Opponent"} back-row Action zone ${index + 1}, empty`,
+    }, emptyZone(label));
+    node.title = mine
+      ? "An empty back-row zone. Relics fill these four sockets from the left."
+      : `Opponent Action zone ${index + 1} · empty`;
+    return node;
+  }
+
+  const def = ui.match.catalog.get(relic.cardId);
+  classes.push("is-filled", `element-${def?.element ?? "metal"}`, mine ? "is-mine" : "is-enemy");
+  const node = el(mine ? "button" : "div", {
+    class: classes.join(" "),
+    dataset: { slot: `action-${index}`, seat: String(seat), occupied: "true" },
+    ...(mine ? { type: "button", onclick: () => onActionSlotClick(seat, index) } : { role: "listitem" }),
+    "aria-label": `${def?.name ?? "Relic"}, ${ELEMENT_LABELS[def?.element] ?? "unknown"} Relic, ${def ? effectSummary(def) : ""}`,
+  }, [
+    el("span", { class: "slot-card" }, [
+      el("span", { class: "slot-name", text: def?.name ?? "Relic" }),
+      el("span", { class: "slot-meta", text: def ? effectSummary(def) : "" }),
+    ]),
+    el("span", { class: "slot-tag", text: `${ELEMENT_ABBR[def?.element] ?? ""} · SET` }),
+  ]);
+  node.title = def ? `${def.name} · ${effectSummary(def)}` : "Relic";
+  return node;
+}
+
+/**
+ * Both seats' fields, rebuilt from match state on every render.
+ * The zones are a projection: no occupancy is stored in the DOM.
+ */
+function renderFields() {
+  if (!ui.match) return;
+  for (const [seat, prefix] of [[AI_SEAT, "enemy"], [HUMAN_SEAT, "player"]]) {
+    const field = fieldState(ui.match, seat);
+    const vesselHost = $(`#${prefix}-vessel-slots`);
+    const actionHost = $(`#${prefix}-action-slots`);
+    if (vesselHost) {
+      vesselHost.replaceChildren(...field.vessels.map((unit, index) => vesselZone(seat, index, unit)));
+      vesselHost.dataset.occupied = String(field.unitCount);
+    }
+    if (actionHost) {
+      actionHost.replaceChildren(...field.relics.map((relic, index) => actionZone(seat, index, relic)));
+      actionHost.dataset.occupied = String(field.relicCount);
+    }
+  }
+}
+
+function onVesselSlotClick(seat, index) {
+  if (!ui.match) return;
+  const unit = fieldState(ui.match, seat).vessels[index];
+  if (!unit) {
+    const entry = selectedCardEntry();
+    if (entry?.category === "vessel") {
+      setMessage(
+        `${entry.name}: choose a highlighted tile in your deployment rows — the card joins this front row when it lands.`,
+      );
+    } else {
+      setMessage(
+        `Front-row zone ${index + 1} is open. Select a Vessel in your hand, then choose a highlighted battlefield tile to summon it.`,
+      );
+    }
+    return;
+  }
+  if (seat !== HUMAN_SEAT) {
+    setMessage(
+      `${unit.name} — ${ELEMENT_LABELS[unit.element]} ${unit.subtype ?? "Vessel"}, Attack ${unit.attack}, ` +
+        `Guard ${Math.max(0, unit.guard)}/${unit.maxGuard}, movement ${unit.movement}, range ${unit.range}.`,
+    );
+    return;
+  }
+  ui.selectedUnit = unit.id;
+  ui.selectedCard = null;
+  const state = unit.ready ? "Reachable tiles are highlighted." : "It was summoned this turn and acts from your next turn.";
+  setMessage(
+    `${unit.name}: Attack ${unit.attack}, Guard ${Math.max(0, unit.guard)}/${unit.maxGuard}, ` +
+      `movement ${unit.movement}, range ${unit.range}. ${state}`,
+  );
+  render();
+}
+
+function onActionSlotClick(seat, index) {
+  const match = ui.match;
+  if (!match) return;
+  const relic = fieldState(match, seat).relics[index];
+  if (seat !== HUMAN_SEAT) {
+    if (!relic) {
+      setMessage(`Opponent back-row zone ${index + 1} is empty.`);
+      return;
+    }
+    const def = match.catalog.get(relic.cardId);
+    setMessage(def ? `Opponent Relic: ${def.name} — ${effectSummary(def)}` : "Opponent Relic.");
+    return;
+  }
+  if (relic) {
+    const def = match.catalog.get(relic.cardId);
+    setMessage(def ? `${def.name} is set in back-row zone ${index + 1}: ${effectSummary(def)}` : "Relic set.");
+    return;
+  }
+  if (!humanCanAct()) return;
+  const entry = selectedCardEntry();
+  if (!entry) {
+    setMessage(`Back-row zone ${index + 1} is free. Select a Relic in your hand to set it here.`);
+    return;
+  }
+  if (entry.category === "relic") {
+    const nextFree = fieldState(match, HUMAN_SEAT).relics.findIndex((existing) => !existing);
+    if (nextFree !== index) {
+      setMessage(`Relics fill the back row from the left — zone ${nextFree + 1} is the next free socket.`);
+      return;
+    }
+    if (dispatch({ type: "playRelic", instanceId: entry.instanceId })) {
+      ui.selectedCard = null;
+      ui.selectedUnit = null;
+      setMessage(`${entry.name} is set in back-row zone ${index + 1}.`);
+      render();
+    }
+    return;
+  }
+  if (entry.category === "action") {
+    setMessage(`${entry.name} resolves from your hand and goes to the discard pile; it does not occupy a Relic zone.`);
+    return;
+  }
+  setMessage(`${entry.name} is a Vessel: choose a highlighted tile on the battlefield to summon it.`);
 }
 
 /* ----------------------------- menu & guide ----------------------------- */
@@ -1276,6 +1555,144 @@ function enableModelSpin(stage, modelNode) {
   });
 }
 
+/* ------------------------------ printed cards ------------------------------ */
+
+/**
+ * The shipped card face for one card.
+ *
+ * The games uses the built file in `Cards/cards/` when it is deployed and falls
+ * back to the same generator in memory, so a checkout without the built folder
+ * still shows the real design rather than a blank tile.
+ */
+function cardFaceSource(card) {
+  return `Cards/cards/${card.id}.svg`;
+}
+
+function openCardViewer(card) {
+  const modal = $("#card-modal");
+  if (!modal || !card) return;
+  const image = $("#card-modal-image");
+  image.src = cardFaceSource(card);
+  image.alt = `${card.name} printed card face`;
+  image.onerror = () => {
+    image.onerror = null;
+    image.src = cardFaceDataUri(card);
+  };
+  $("#card-modal-title").textContent = card.name;
+  const bits = [
+    ELEMENT_LABELS[card.element] ?? "Neutral",
+    categoryLabel(card),
+    `${card.cost} Flux`,
+    card.category === "vessel" ? `Attack ${card.attack} · Guard ${card.guard}` : null,
+    card.rarity ? String(card.rarity) : null,
+  ].filter(Boolean);
+  $("#card-modal-facts").textContent = bits.join(" · ");
+  const file = $("#card-modal-file");
+  file.href = cardFaceSource(card);
+  modal.hidden = false;
+  document.body.classList.add("card-modal-open");
+  $("#card-modal-close").focus();
+}
+
+function closeCardViewer() {
+  const modal = $("#card-modal");
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  document.body.classList.remove("card-modal-open");
+}
+
+const LIBRARY_CATEGORIES = [
+  ["all", "All cards"],
+  ["vessel", "Vessels"],
+  ["action", "Actions"],
+  ["relic", "Relics"],
+];
+
+function renderLibrary() {
+  const grid = $("#library-grid");
+  if (!grid || !ui.catalog) return;
+  if (!ui.libraryBuilt) {
+    buildLibraryFilters();
+    ui.libraryBuilt = true;
+  }
+  const { category, element } = ui.library;
+  const cards = ui.catalog.cards.filter(
+    (card) => (category === "all" || card.category === category) && (element === "all" || card.element === element),
+  );
+  grid.replaceChildren();
+  for (const card of cards) {
+    const tile = el(
+      "button",
+      {
+        type: "button",
+        class: `library-tile ${card.element ?? "neutral"}`,
+        onclick: () => openCardViewer(card),
+        "aria-label": `Open ${card.name}`,
+      },
+      [
+        el("img", {
+          src: cardFaceSource(card),
+          alt: "",
+          loading: "lazy",
+          decoding: "async",
+          onerror: (event) => {
+            const img = event.currentTarget;
+            if (img.dataset.fallback) return;
+            img.dataset.fallback = "1";
+            img.src = cardFaceDataUri(card);
+          },
+        }),
+        el("span", { class: "library-tile-name", text: card.name }),
+      ],
+    );
+    grid.append(tile);
+  }
+  const total = ui.catalog.cards.length;
+  $("#library-count").textContent = `${cards.length} card${cards.length === 1 ? "" : "s"} shown · ${total} in the set`;
+}
+
+function buildLibraryFilters() {
+  renderLibraryChips();
+}
+
+function renderLibraryChips() {
+  const categories = $("#library-categories");
+  const elements = $("#library-elements");
+  if (!categories || !elements) return;
+  const chip = (label, active, onSelect, tone) =>
+    el("button", {
+      type: "button",
+      class: `chip${active ? " active" : ""}${tone ? ` ${tone}` : ""}`,
+      text: label,
+      "aria-pressed": String(active),
+      onclick: onSelect,
+    });
+  categories.replaceChildren(
+    ...LIBRARY_CATEGORIES.map(([value, label]) =>
+      chip(label, ui.library.category === value, () => {
+        ui.library.category = value;
+        renderLibraryChips();
+        renderLibrary();
+      }),
+    ),
+  );
+  const elementRows = [["all", "All elements"], ...Object.keys(ELEMENT_LABELS).map((key) => [key, ELEMENT_LABELS[key]])];
+  elements.replaceChildren(
+    ...elementRows.map(([value, label]) =>
+      chip(
+        label,
+        ui.library.element === value,
+        () => {
+          ui.library.element = value;
+          renderLibraryChips();
+          renderLibrary();
+        },
+        value === "all" ? null : value,
+      ),
+    ),
+  );
+}
+
 function renderRoster() {
   const grid = $("#roster-grid");
   if (!grid || !ui.catalog || grid.childElementCount > 0) return;
@@ -1290,8 +1707,11 @@ function renderRoster() {
       role: "group",
       "aria-label": `${vessel.name} voxel model. Drag, or use the left and right arrow keys, to rotate.`,
     }, [modelNode]);
+    // The scene behind the live model is the same environment its card art
+    // uses, minus the painted figure: one art direction, two presentations.
+    stage.style.backgroundImage = `url("${illustrationDataUri(vessel, { figure: false })}")`;
     if (model) enableModelSpin(stage, modelNode);
-    const ability = vessel.abilities?.[0]?.text ?? vessel.designDescription ?? "";
+    const ability = abilitySummary(vessel) || vessel.designDescription || "";
     grid.append(
       el("article", { class: `roster-card ${vessel.element}` }, [
         stage,
@@ -1307,6 +1727,12 @@ function renderRoster() {
           ]),
           el("p", { class: "roster-flavor", text: vessel.flavorText ?? "" }),
           el("p", { class: "roster-ability muted small", text: ability }),
+          el("button", {
+            type: "button",
+            class: "roster-print button secondary small",
+            text: "Printed card",
+            onclick: () => openCardViewer(vessel),
+          }),
         ]),
       ]),
     );
@@ -1368,11 +1794,8 @@ function renderOpponent() {
   const difficulty = currentDifficulty();
   $("#opponent-avatar").src = emblemAvatar(archetype.id, archetype.label);
   $("#opponent-name").textContent = `The ${archetype.label}`;
-  const aiPlayer = match.players[AI_SEAT];
-  $("#opponent-style").textContent =
-    `${difficulty.label} difficulty · ${archetype.description} · ${aiPlayer.flux} Flux · ` +
-    `${aiPlayer.hand.length} cards · ${Object.values(match.units).filter((u) => u.owner === AI_SEAT).length} Vessels · ` +
-    `${aiPlayer.relics.length} Relics`;
+  const nameHint = $("#opponent-name");
+  if (nameHint) nameHint.title = `${difficulty.label} difficulty · ${archetype.description}`;
   $("#opponent-difficulty").textContent = difficulty.label.toUpperCase();
   if (!ui.aiBusy) $("#opponent-status").textContent = match.active === AI_SEAT ? "Ready" : "Waiting";
 }
@@ -1393,19 +1816,42 @@ function render() {
   renderMenuState();
   const match = ui.match;
   if (!match) return;
+  // A selected Vessel can be destroyed by an Action or a counterattack; drop
+  // stale selections so the hint line and highlights never describe a ghost.
+  if (ui.selectedUnit && !match.units[ui.selectedUnit]) {
+    ui.selectedUnit = null;
+    setMessage("That Vessel was destroyed. Select another card or Vessel.");
+  }
+  if (ui.selectedCard && !match.players[HUMAN_SEAT].hand.some((card) => card.instanceId === ui.selectedCard)) {
+    ui.selectedCard = null;
+  }
   renderBoard();
   renderHand();
   renderSelectedPanel();
   renderTimer();
   renderOpponent();
-  renderRelics();
+  renderFields();
   renderLog();
   renderTutorial();
   renderPrompt();
 
   const human = match.players[HUMAN_SEAT];
+  const ai = match.players[AI_SEAT];
+  const vitalityPct = (value) => `${Math.max(0, Math.min(100, (value / 30) * 100)).toFixed(1)}%`;
+  for (const [value, bar] of [
+    [human.vitality, "#player-vitality-bar"],
+    [ai.vitality, "#enemy-vitality-bar"],
+  ]) {
+    const fill = $(bar);
+    if (fill) fill.style.width = vitalityPct(value);
+  }
   $("#player-vitality").textContent = String(human.vitality);
-  $("#enemy-vitality").textContent = String(match.players[AI_SEAT].vitality);
+  $("#enemy-vitality").textContent = String(ai.vitality);
+  $("#enemy-flux").textContent = String(ai.flux);
+  $("#enemy-hand").textContent = String(ai.hand.length);
+  const aiUnitCount = Object.values(match.units).filter((u) => u.owner === AI_SEAT).length;
+  $("#enemy-unit-count").textContent = String(aiUnitCount);
+  $("#log-count").textContent = String(ui.log.length);
   $("#turn-number").textContent = String(match.turn);
   $("#turn-owner").textContent =
     match.phase === "over"
@@ -1424,6 +1870,7 @@ function render() {
   $("#discard-count").textContent = String(human.discard.length);
   const unitCount = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
   $("#unit-count").textContent = `${unitCount} / ${MAX_UNITS_PER_SEAT}`;
+  $("#relic-count").textContent = `${fieldState(match, HUMAN_SEAT).relicCount} / ${MAX_RELICS_PER_SEAT}`;
 
   const actions = getLegalActions(match);
   const canAct = humanCanAct();
@@ -1553,12 +2000,15 @@ const VIEWS = Object.freeze({
   battle: "#view-battle",
   guide: "#view-guide",
   roster: "#view-roster",
+  library: "#view-library",
   profile: "#view-profile",
 });
 
 function showView(requested) {
   const view = requested === "battle" && !ui.match ? "menu" : requested;
   ui.view = view;
+  // Lets the battle screen reclaim header space without changing other views.
+  document.body.dataset.view = view;
   for (const [name, selector] of Object.entries(VIEWS)) {
     const node = $(selector);
     if (node) node.hidden = name !== view;
@@ -1571,6 +2021,7 @@ function showView(requested) {
   if (view === "battle") render();
   else if (view === "profile") renderProfileForm();
   else if (view === "roster") renderRoster();
+  else if (view === "library") renderLibrary();
   else if (view === "menu") renderMenuState();
   else if (view === "guide") markGuideSeen();
   if (typeof window !== "undefined" && window.scrollTo) {
@@ -1597,6 +2048,15 @@ function bind() {
   $("#guide-start").addEventListener("click", () => newMatch({ guided: true }));
   $("#guide-back").addEventListener("click", () => showView("menu"));
   $("#roster-menu").addEventListener("click", () => showView("menu"));
+  $("#menu-library").addEventListener("click", () => showView("library"));
+  $("#library-menu").addEventListener("click", () => showView("menu"));
+  $("#card-modal-close").addEventListener("click", closeCardViewer);
+  $("#card-modal").addEventListener("click", (event) => {
+    if (event.target.dataset.close === "true") closeCardViewer();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeCardViewer();
+  });
   $("#cancel-btn").addEventListener("click", cancelSelection);
   $("#turn-bar-cancel").addEventListener("click", cancelSelection);
   $("#tutorial-skip").addEventListener("click", () => {
@@ -1838,14 +2298,22 @@ function bind() {
 async function boot() {
   bind();
   try {
-    const [vessels, extras] = await Promise.all(
-      ["./src/cards/starter-set.json", "./src/cards/actions-relics.json"].map(async (path) => {
+    // Sets are discovered from the manifest, so a new expansion file is picked
+    // up without editing this loader, the engine or the HUD.
+    const manifestResponse = await fetch("./src/cards/manifest.json");
+    if (!manifestResponse.ok) {
+      throw new Error(`Card manifest request failed (${manifestResponse.status}).`);
+    }
+    const manifest = await manifestResponse.json();
+    const sets = await Promise.all(
+      manifest.sets.map(async (set) => {
+        const path = `./src/cards/${set.file}`;
         const response = await fetch(path);
         if (!response.ok) throw new Error(`Card data request failed (${response.status}) for ${path}.`);
         return response.json();
       }),
     );
-    ui.catalog = createCatalog([...vessels, ...extras]);
+    ui.catalog = createCatalog(sets.flat());
   } catch (error) {
     console.error(error);
     setMessage(
@@ -1870,6 +2338,10 @@ async function boot() {
   renderProfileForm();
   const arenaName = $("#arena-name");
   if (arenaName) arenaName.textContent = ARENA.name;
+  const gridLabel = $("#grid-label");
+  if (gridLabel) {
+    gridLabel.textContent = `${BOARD_SIZE} × ${BOARD_SIZE} grid · ${BOARD_SIZE * BOARD_SIZE} tiles`;
+  }
   $("#board")?.setAttribute("data-arena", ARENA.id);
   // First visit: open the rules page rather than dropping straight into a match.
   showView(tutorialSeen() ? "menu" : "guide");

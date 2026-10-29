@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1086 2048" width="1086" height="2048" class="card-face" role="img" aria-label="Lantern of the Lost Choir, Water Vessel, cost 3, Attack 3, Guard 4">
+  <defs>
+    <linearGradient id="cf-bg-vessel_lantern_lost_choir" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#152731"/>
+      <stop offset="1" stop-color="#0b151b"/>
+    </linearGradient>
+    <linearGradient id="cf-plate-vessel_lantern_lost_choir" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#203845"/>
+      <stop offset="0.5" stop-color="#16262f"/>
+      <stop offset="1" stop-color="#0f1a21"/>
+    </linearGradient>
+    <radialGradient id="cf-medal-vessel_lantern_lost_choir" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#203845"/>
+      <stop offset="0.62" stop-color="#16262f"/>
+      <stop offset="1" stop-color="#182f3d"/>
+    </radialGradient>
+    <linearGradient id="cf-title-vessel_lantern_lost_choir" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dddddd"/>
+    </linearGradient>
+  </defs>
+  
+  <rect x="0" y="0" width="1086" height="2048" rx="46" fill="url(#cf-bg-vessel_lantern_lost_choir)"/>
+  <rect x="10" y="10" width="1066" height="2028" rx="40" fill="none" stroke="#182f3d" stroke-width="18"/>
+  <rect x="26" y="26" width="1034" height="1996" rx="30" fill="url(#cf-plate-vessel_lantern_lost_choir)" stroke="#2f5f78" stroke-width="5"/>
+  <rect x="44" y="44" width="998" height="1960" rx="22" fill="none" stroke="#a8c6cf" stroke-width="2.5" opacity="0.55"/>
+  <g><rect x="18" y="620" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="31" cy="663" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="1042" y="620" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="1055" cy="663" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="18" y="820" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="31" cy="863" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="1042" y="820" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="1055" cy="863" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="18" y="1020" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="31" cy="1063" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="1042" y="1020" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="1055" cy="1063" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="18" y="1220" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="31" cy="1263" r="6" fill="#7fd08a" opacity="0.65"/></g><g><rect x="1042" y="1220" width="26" height="86" rx="10" fill="#182f3d" stroke="#2f5f78" stroke-width="3"/>
+         <circle cx="1055" cy="1263" r="6" fill="#7fd08a" opacity="0.65"/></g>
+  <g transform="translate(26 26) scale(1 1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#a8c6cf" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="10.6" fill="#203845" stroke="#a8c6cf" stroke-width="3"/>
+       <circle cx="30" cy="30" r="4.4" fill="#7fd08a" opacity="0.9"/>
+     </g><g transform="translate(1060 26) scale(-1 1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#a8c6cf" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="10.6" fill="#203845" stroke="#a8c6cf" stroke-width="3"/>
+       <circle cx="30" cy="30" r="4.4" fill="#7fd08a" opacity="0.9"/>
+     </g><g transform="translate(26 2022) scale(1 -1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#a8c6cf" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="10.6" fill="#203845" stroke="#a8c6cf" stroke-width="3"/>
+       <circle cx="30" cy="30" r="4.4" fill="#7fd08a" opacity="0.9"/>
+     </g><g transform="translate(1060 2022) scale(-1 -1)">
+       <path d="M0 74 L0 26 Q0 0 26 0 L74 0" fill="none" stroke="#a8c6cf" stroke-width="7" opacity="0.85"/>
+       <circle cx="30" cy="30" r="10.6" fill="#203845" stroke="#a8c6cf" stroke-width="3"/>
+       <circle cx="30" cy="30" r="4.4" fill="#7fd08a" opacity="0.9"/>
+     </g>
+  <g opacity="0.9"><line x1="70" y1="60" x2="96" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="116" y1="60" x2="142" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="162" y1="60" x2="188" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="208" y1="60" x2="234" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="254" y1="60" x2="280" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="300" y1="60" x2="326" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="346" y1="60" x2="372" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="392" y1="60" x2="418" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="438" y1="60" x2="464" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="484" y1="60" x2="510" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="530" y1="60" x2="556" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="576" y1="60" x2="602" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="622" y1="60" x2="648" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="668" y1="60" x2="694" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="714" y1="60" x2="740" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="760" y1="60" x2="786" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="806" y1="60" x2="832" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="852" y1="60" x2="878" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="898" y1="60" x2="924" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="944" y1="60" x2="970" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/><line x1="990" y1="60" x2="1016" y2="150" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/></g>
+
+  <!-- header -->
+  <g>
+    <rect x="70" y="62" width="770" height="128" rx="18" fill="#0f1a21" stroke="#a8c6cf" stroke-width="3" opacity="0.95"/>
+    <text x="108" y="152" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="48" font-weight="700" fill="url(#cf-title-vessel_lantern_lost_choir)" letter-spacing="1">Lantern of the Lost Choir</text>
+  </g>
+  <g>
+    <rect x="70" y="206" width="946" height="66" rx="12" fill="#16262f" stroke="#2f5f78" stroke-width="2.5"/>
+    <text x="104" y="250" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="34" fill="#d8fbff" letter-spacing="1.2">Element: Water / Spirit Vessel</text>
+  </g>
+  <g>
+    
+    <circle cx="968" cy="128" r="112" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <circle cx="968" cy="128" r="104" fill="url(#cf-medal-vessel_lantern_lost_choir)" stroke="#a8c6cf" stroke-width="5"/>
+    <circle cx="968" cy="128" r="92" fill="none" stroke="#67d5ff" stroke-width="1.6" opacity="0.5"/>
+    <g transform="translate(968 128)">
+      <circle cx="0" cy="0" r="86" fill="#0f1a21" opacity="0.55"/>
+      <circle cx="0" cy="0" r="86" fill="none" stroke="#67d5ff" stroke-width="1.5" opacity="0.45"/>
+      <text x="0" y="40.1" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="118" font-weight="700" fill="#0f1a21" stroke="#0f1a21" stroke-width="20" stroke-linejoin="round" opacity="0.8">3</text>
+      <text x="0" y="40.1" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="118" font-weight="700" fill="#ffffff" stroke="#0f1a21" stroke-width="4.5" paint-order="stroke" stroke-linejoin="round">3</text>
+    </g>
+  </g>
+
+  <!-- illustration and emblems -->
+  
+  <g>
+    <rect x="84" y="312" width="918" height="716" rx="16" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <clipPath id="art-clip-vessel_lantern_lost_choir">
+      <rect x="92" y="320" width="902" height="700" rx="10"/>
+    </clipPath>
+    <g clip-path="url(#art-clip-vessel_lantern_lost_choir)">
+      <svg x="92" y="320" width="902" height="700" viewBox="0 0 400 310" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky-fill" x1="0" y1="0" x2="0.15" y2="1">
+      <stop offset="0" stop-color="#061722"/>
+      <stop offset="0.62" stop-color="#2a7593"/>
+      <stop offset="1" stop-color="#0f3040"/>
+    </linearGradient>
+    <radialGradient id="horizon-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="rgba(143, 240, 255, 0.42)"/>
+      <stop offset="0.5" stop-color="rgba(143, 240, 255, 0.14)"/>
+      <stop offset="1" stop-color="rgba(143, 240, 255, 0)"/>
+    </radialGradient>
+    <linearGradient id="fog-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="rgba(143, 240, 255, 0)"/>
+      <stop offset="0.55" stop-color="rgba(143, 240, 255, 0.26)"/>
+      <stop offset="1" stop-color="rgba(143, 240, 255, 0)"/>
+    </linearGradient>
+    <linearGradient id="ground-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a2030"/>
+      <stop offset="1" stop-color="#051018"/>
+    </linearGradient>
+    <radialGradient id="vignette-vessel_lantern_lost_choir" cx="0.5" cy="0.44" r="0.8">
+      <stop offset="0.62" stop-color="rgba(0,0,0,0)"/>
+      <stop offset="1" stop-color="rgba(3,5,9,0.62)"/>
+    </radialGradient>
+  </defs>
+  <rect x="0.0" y="0.0" width="400.0" height="310.0" fill="url(#sky-fill)"/><ellipse cx="200" cy="166" rx="250" ry="110" fill="url(#horizon-glow)"/><rect x="-9.4" y="107.2" width="28.9" height="132.8" fill="#0f3040"/><polygon points="-9.4,107.2 5.1,90.7 19.6,107.2" fill="#0f3040"/><rect x="1.6" y="119.2" width="6.9" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="202.3" y="98.3" width="44.8" height="141.7" fill="#0f3040"/><polygon points="202.3,98.3 224.7,84.0 247.2,98.3" fill="#0f3040"/><rect x="219.4" y="110.3" width="10.8" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="-7.0" y="121.1" width="45.6" height="118.9" fill="#0c2633"/><polygon points="-7.0,121.1 15.8,107.6 38.6,121.1" fill="#0c2633"/><rect x="136.7" y="142.2" width="29.1" height="97.8" fill="#0c2633"/><polygon points="136.7,142.2 151.3,125.5 165.9,142.2" fill="#0c2633"/><rect x="279.5" y="121.9" width="43.1" height="118.1" fill="#0c2633"/><polygon points="279.5,121.9 301.1,100.4 322.6,121.9" fill="#0c2633"/><rect x="295.9" y="133.9" width="10.4" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="-19.0" y="120.4" width="30.9" height="119.6" fill="#030d15"/><polygon points="-19.0,120.4 -3.5,104.7 11.9,120.4" fill="#030d15"/><rect x="-7.2" y="132.4" width="7.4" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="107.5" y="111.1" width="28.2" height="128.9" fill="#030d15"/><polygon points="107.5,111.1 121.5,98.0 135.6,111.1" fill="#030d15"/><rect x="118.2" y="123.1" width="6.8" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="205.9" y="135.9" width="43.8" height="104.1" fill="#030d15"/><polygon points="205.9,135.9 227.8,116.1 249.7,135.9" fill="#030d15"/><rect x="222.5" y="147.9" width="10.5" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="310.2" y="135.7" width="35.6" height="104.3" fill="#030d15"/><polygon points="310.2,135.7 328.0,114.9 345.8,135.7" fill="#030d15"/><rect x="323.7" y="147.7" width="8.6" height="9.0" fill="rgba(3, 13, 21, 0.85)"/><rect x="0.0" y="70.0" width="54.0" height="130.0" fill="#030d15"/><rect x="346.0" y="70.0" width="54.0" height="130.0" fill="#030d15"/><ellipse cx="200" cy="154" rx="112" ry="94" fill="rgba(143, 240, 255, 0.24)"/><rect x="67.0" y="89.9" width="38.0" height="110.1" fill="#3a5c6c"/><rect x="60.0" y="77.9" width="52.0" height="12.0" fill="#7ea9bb"/><rect x="60.0" y="194.0" width="52.0" height="8.0" fill="#7ea9bb"/><rect x="84.5" y="99.9" width="3.0" height="86.1" fill="rgba(143, 240, 255, 0.30)"/><rect x="70.0" y="89.9" width="1.6" height="110.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="78.0" y="89.9" width="1.6" height="110.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="86.0" y="89.9" width="1.6" height="110.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="94.0" y="89.9" width="1.6" height="110.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="102.0" y="89.9" width="1.6" height="110.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="149.0" y="95.4" width="38.0" height="104.6" fill="#3a5c6c"/><rect x="142.0" y="83.4" width="52.0" height="12.0" fill="#7ea9bb"/><rect x="142.0" y="194.0" width="52.0" height="8.0" fill="#7ea9bb"/><rect x="166.5" y="105.4" width="3.0" height="80.6" fill="rgba(143, 240, 255, 0.30)"/><rect x="152.0" y="95.4" width="1.6" height="104.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="160.0" y="95.4" width="1.6" height="104.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="168.0" y="95.4" width="1.6" height="104.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="176.0" y="95.4" width="1.6" height="104.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="184.0" y="95.4" width="1.6" height="104.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="213.0" y="91.4" width="38.0" height="108.6" fill="#3a5c6c"/><rect x="206.0" y="79.4" width="52.0" height="12.0" fill="#7ea9bb"/><rect x="206.0" y="194.0" width="52.0" height="8.0" fill="#7ea9bb"/><rect x="230.5" y="101.4" width="3.0" height="84.6" fill="rgba(143, 240, 255, 0.30)"/><rect x="216.0" y="91.4" width="1.6" height="108.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="224.0" y="91.4" width="1.6" height="108.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="232.0" y="91.4" width="1.6" height="108.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="240.0" y="91.4" width="1.6" height="108.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="248.0" y="91.4" width="1.6" height="108.6" fill="rgba(3, 13, 21, 0.40)"/><rect x="295.0" y="88.9" width="38.0" height="111.1" fill="#3a5c6c"/><rect x="288.0" y="76.9" width="52.0" height="12.0" fill="#7ea9bb"/><rect x="288.0" y="194.0" width="52.0" height="8.0" fill="#7ea9bb"/><rect x="312.5" y="98.9" width="3.0" height="87.1" fill="rgba(143, 240, 255, 0.30)"/><rect x="298.0" y="88.9" width="1.6" height="111.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="306.0" y="88.9" width="1.6" height="111.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="314.0" y="88.9" width="1.6" height="111.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="322.0" y="88.9" width="1.6" height="111.1" fill="rgba(3, 13, 21, 0.40)"/><rect x="330.0" y="88.9" width="1.6" height="111.1" fill="rgba(3, 13, 21, 0.40)"/><polygon points="44.0,74.0 200.0,26.0 286.0,58.0 286.0,70.0 200.0,40.0 56.0,86.0" fill="#7ea9bb"/><rect x="44.0" y="70.0" width="222.0" height="10.0" fill="#3a5c6c"/><polygon points="286.0,58.0 372.0,66.0 372.0,78.0 286.0,70.0" fill="rgba(58, 92, 108, 0.90)"/><path d="M34.0 101.2 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M289.0 102.5 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M89.7 27.5 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M398.4 74.1 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M234.0 66.1 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M329.1 30.3 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M97.9 7.4 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M23.1 87.1 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M171.2 124.2 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M212.4 32.6 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M184.1 0.3 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M361.2 52.4 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M135.7 85.0 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M4.2 165.0 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M210.3 18.5 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><path d="M275.8 102.9 l -2 10" stroke="rgba(189, 241, 255, 0.20)" stroke-width="1.2"/><rect x="0.0" y="200.0" width="400.0" height="110.0" fill="url(#ground-fill)"/><ellipse cx="200" cy="230" rx="118" ry="22" fill="rgba(143, 240, 255, 0.18)"/><ellipse cx="200" cy="230" rx="152" ry="28" fill="none" stroke="rgba(143, 240, 255, 0.28)" stroke-width="1.6"/><path d="M131.9 217.6 q 57.6 -3.3 115.3 0" stroke="rgba(143, 240, 255, 0.29)" stroke-width="1.2" fill="none"/><path d="M152.0 225.2 q 37.1 -1.8 74.2 0" stroke="rgba(143, 240, 255, 0.18)" stroke-width="1.2" fill="none"/><path d="M85.7 237.8 q 63.3 -1.7 126.7 0" stroke="rgba(143, 240, 255, 0.23)" stroke-width="1.2" fill="none"/><path d="M105.5 250.2 q 65.4 -2.4 130.8 0" stroke="rgba(143, 240, 255, 0.18)" stroke-width="1.2" fill="none"/><path d="M202.7 261.2 q 37.2 -2.5 74.5 0" stroke="rgba(143, 240, 255, 0.19)" stroke-width="1.2" fill="none"/><path d="M198.0 270.7 q 64.8 -1.9 129.6 0" stroke="rgba(143, 240, 255, 0.29)" stroke-width="1.2" fill="none"/><path d="M192.8 281.8 q 23.4 -3.2 46.8 0" stroke="rgba(143, 240, 255, 0.30)" stroke-width="1.2" fill="none"/><path d="M135.7 293.7 q 63.1 -1.9 126.2 0" stroke="rgba(143, 240, 255, 0.23)" stroke-width="1.2" fill="none"/><rect x="0" y="170" width="400" height="34" fill="url(#fog-fill)"/><rect x="0" y="202" width="400" height="18" fill="rgba(143, 240, 255, 0.07)"/><path d="M289.5 11.8 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M269.4 165.2 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M268.6 203.1 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M133.6 55.8 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M253.7 183.6 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M328.4 74.5 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M121.2 228.4 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M125.2 50.9 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M386.9 66.7 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M270.2 122.9 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M69.5 8.7 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M36.3 122.3 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M139.2 108.3 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M275.2 112.2 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M200.6 138.4 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M345.8 193.9 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M235.7 79.9 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/><path d="M85.6 105.0 l -3 16" stroke="rgba(189, 241, 255, 0.22)" stroke-width="1"/>
+  <ellipse cx="200.0" cy="227" rx="96.6" ry="13" fill="rgba(0,0,0,0.45)"/>
+  <g class="art-figure"><polygon points="215.0,157.0 218.2,157.8 218.2,68.1 215.0,67.3" fill="#94aebd"/><polygon points="177.4,157.1 180.7,157.9 180.7,68.2 177.4,67.4" fill="#94aebd"/><polygon points="218.2,157.8 223.9,157.3 223.9,67.6 218.2,68.1" fill="#8197a5"/><polygon points="180.7,157.9 186.4,157.4 186.4,67.7 180.7,68.2" fill="#8197a5"/><polygon points="218.2,68.1 223.9,67.6 220.7,66.9 215.0,67.3" fill="#cef1ff"/><polygon points="180.7,68.2 186.4,67.7 183.1,67.0 177.4,67.4" fill="#cef1ff"/><polygon points="232.9,112.2 253.3,110.7 250.7,110.2 230.3,111.7" fill="#cef1ff"/><polygon points="232.9,117.4 253.3,115.9 253.3,110.7 232.9,112.2" fill="#8197a5"/><polygon points="230.3,116.8 232.9,117.4 232.9,112.2 230.3,111.7" fill="#94aebd"/><polygon points="193.5,214.1 224.1,211.8 206.5,207.9 175.9,210.1" fill="#6ee4ff" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="238.6,210.8 248.4,207.2 245.4,206.5 235.5,210.1" fill="#daffff" fill-opacity="0.82"/><polygon points="184.3,180.5 257.7,175.1 215.7,165.5 142.3,171.0" fill="#113950"/><polygon points="237.2,217.9 240.3,218.6 238.6,210.8 235.5,210.1" fill="#8cb2bb" fill-opacity="0.82"/><polygon points="240.3,218.6 250.2,215.0 248.4,207.2 238.6,210.8" fill="#97c0ca" fill-opacity="0.82"/><polygon points="186.3,167.9 250.5,163.1 213.7,154.8 149.5,159.6" fill="#cef1ff"/><polygon points="239.8,40.7 249.3,38.5 242.6,38.0 233.2,40.3" fill="#f8ffff"/><polygon points="239.8,58.2 249.3,55.9 249.3,38.5 239.8,40.7" fill="#7b8587"/><polygon points="175.9,215.3 193.5,219.2 193.5,214.1 175.9,210.1" fill="#5cbee3" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="240.0,48.1 247.1,47.6 246.0,47.3 238.8,47.8" fill="#071a26"/><polygon points="240.0,51.8 247.1,51.3 247.1,47.6 240.0,48.1" fill="#05121a"/><polygon points="238.8,51.5 240.0,51.8 240.0,48.1 238.8,47.8" fill="#05141d"/><polygon points="237.5,174.1 243.6,174.3 240.8,173.6 234.7,173.5" fill="#98eeff" fill-opacity="0.82"/><polygon points="231.9,210.8 234.7,211.5 237.5,174.1 234.7,173.5" fill="#82cce8" fill-opacity="0.82"/><polygon points="234.7,211.5 240.8,211.6 243.6,174.3 237.5,174.1" fill="#71b1ca" fill-opacity="0.82"/><polygon points="193.2,118.0 224.9,115.6 206.8,111.5 175.1,113.9" fill="#edc381"/><polygon points="196.9,112.7 211.2,111.7 203.1,109.8 188.8,110.9" fill="#f9ffff" stroke="#a5eaff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="233.2,161.2 236.4,161.9 236.4,72.2 233.2,71.5" fill="#94aebd"/><polygon points="233.2,57.8 239.8,58.2 239.8,40.7 233.2,40.3" fill="#d0e0e4"/><polygon points="157.9,161.3 161.1,162.0 161.1,72.3 157.9,71.6" fill="#94aebd"/><polygon points="195.0,102.0 218.4,100.3 205.0,97.2 181.6,99.0" fill="#93ffff" stroke="#74deff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="236.4,161.9 242.1,161.5 242.1,71.8 236.4,72.2" fill="#8197a5"/><polygon points="193.5,219.2 224.1,217.0 224.1,211.8 193.5,214.1" fill="#55b1d4" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="161.1,162.0 166.8,161.6 166.8,71.9 161.1,72.3" fill="#8197a5"/><polygon points="188.8,133.0 196.9,134.9 196.9,112.7 188.8,110.9" fill="#e6ffff" stroke="#a5eaff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="235.6,165.6 241.7,165.2 238.2,164.4 232.1,164.8" fill="#edc381"/><polygon points="191.9,90.7 229.7,87.9 208.1,83.0 170.3,85.8" fill="#6ee4ff" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="191.7,83.8 230.5,80.9 208.3,75.9 169.5,78.7" fill="#9cf4ff" fill-opacity="0.82"/><polygon points="232.1,171.8 235.6,172.6 235.6,165.6 232.1,164.8" fill="#aa8c5d"/><polygon points="189.3,81.4 239.3,77.7 210.7,71.2 160.7,74.9" fill="#338ab7" fill-opacity="0.82"/><polygon points="236.4,72.2 242.1,71.8 238.9,71.0 233.2,71.5" fill="#cef1ff"/><polygon points="181.6,142.1 195.0,145.1 195.0,102.0 181.6,99.0" fill="#87f5ff" stroke="#74deff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="161.1,72.3 166.8,71.9 163.6,71.1 157.9,71.6" fill="#cef1ff"/><polygon points="196.9,134.9 211.2,133.8 211.2,111.7 196.9,112.7" fill="#e0ffff" stroke="#a5eaff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="235.6,172.6 241.7,172.2 241.7,165.2 235.6,165.6" fill="#947a51"/><polygon points="189.3,63.9 239.3,60.2 210.7,53.8 160.7,57.5" fill="#cef1ff"/><polygon points="195.2,53.0 217.6,51.3 204.8,48.4 182.4,50.1" fill="#edc381"/><polygon points="175.1,118.6 193.2,122.7 193.2,118.0 175.1,113.9" fill="#aa8c5d"/><polygon points="169.5,155.6 191.7,160.7 191.7,83.8 169.5,78.7" fill="#7cc2dd" fill-opacity="0.82"/><polygon points="195.0,145.1 218.4,143.4 218.4,100.3 195.0,102.0" fill="#83eeff" stroke="#74deff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="149.5,172.4 186.3,180.7 186.3,167.9 149.5,159.6" fill="#94aebd"/><polygon points="142.3,180.3 184.3,189.8 184.3,180.5 142.3,171.0" fill="#0d2b3d"/><polygon points="160.7,158.8 189.3,165.3 189.3,81.4 160.7,74.9" fill="#296e91" fill-opacity="0.82"/><polygon points="170.3,93.9 191.9,98.8 191.9,90.7 170.3,85.8" fill="#5cbee3" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="182.4,59.4 195.2,62.3 195.2,53.0 182.4,50.1" fill="#aa8c5d"/><polygon points="193.2,122.7 224.9,120.3 224.9,115.6 193.2,118.0" fill="#947a51"/><polygon points="191.7,160.7 230.5,157.8 230.5,80.9 191.7,83.8" fill="#71b1ca" fill-opacity="0.82"/><polygon points="195.2,62.3 217.6,60.6 217.6,51.3 195.2,53.0" fill="#947a51"/><polygon points="160.7,70.3 189.3,76.8 189.3,63.9 160.7,57.5" fill="#94aebd"/><polygon points="218.6,181.5 235.3,179.8 231.0,179.1 214.3,180.8" fill="#f8ffff"/><polygon points="191.9,98.8 229.7,96.0 229.7,87.9 191.9,90.7" fill="#55b1d4" stroke="#67d5ff" stroke-width="0.8" stroke-opacity="0.75"/><polygon points="218.6,197.8 235.3,196.1 235.3,179.8 218.6,181.5" fill="#a0adb0"/><polygon points="223.4,188.0 230.6,187.5 229.4,187.3 222.3,187.8" fill="#071a26"/><polygon points="223.4,191.5 230.6,191.0 230.6,187.5 223.4,188.0" fill="#05121a"/><polygon points="149.3,118.5 169.7,116.9 167.1,116.4 146.7,117.9" fill="#cef1ff"/><polygon points="189.3,165.3 239.3,161.6 239.3,77.7 189.3,81.4" fill="#256485" fill-opacity="0.82"/><polygon points="222.3,191.3 223.4,191.5 223.4,188.0 222.3,187.8" fill="#05141d"/><polygon points="186.3,180.7 250.5,176.0 250.5,163.1 186.3,167.9" fill="#8197a5"/><polygon points="149.3,123.6 169.7,122.1 169.7,116.9 149.3,118.5" fill="#8197a5"/><polygon points="214.3,197.1 218.6,197.8 218.6,181.5 214.3,180.8" fill="#c5d5d8"/><polygon points="187.1,219.6 189.9,220.2 187.2,177.4 184.4,176.8" fill="#77bad3" fill-opacity="0.82"/><polygon points="189.9,220.2 196.4,219.2 193.8,176.4 187.2,177.4" fill="#71b1ca" fill-opacity="0.82"/><polygon points="180.5,223.7 191.4,226.0 193.1,218.0 182.3,215.7" fill="#97c0ca" fill-opacity="0.82"/><polygon points="177.5,223.0 180.5,223.7 182.3,215.7 179.2,215.0" fill="#bbeefa" fill-opacity="0.82"/><polygon points="184.3,189.8 257.7,184.4 257.7,175.1 184.3,180.5" fill="#0b2737"/><polygon points="187.2,177.4 193.8,176.4 191.0,175.8 184.4,176.8" fill="#9ef8ff" fill-opacity="0.82"/><polygon points="205.4,78.7 223.8,77.3 221.4,76.8 203.1,78.2" fill="#edc381"/><polygon points="146.7,123.0 149.3,123.6 149.3,118.5 146.7,117.9" fill="#94aebd"/><polygon points="188.7,169.1 194.8,168.6 191.3,167.9 185.2,168.3" fill="#edc381"/><polygon points="205.4,83.8 223.8,82.4 223.8,77.3 205.4,78.7" fill="#947a51"/><polygon points="189.3,76.8 239.3,73.1 239.3,60.2 189.3,63.9" fill="#8197a5"/><polygon points="185.2,175.3 188.7,176.1 188.7,169.1 185.2,168.3" fill="#aa8c5d"/><polygon points="213.6,165.3 216.9,166.0 216.9,76.3 213.6,75.6" fill="#94aebd"/><polygon points="188.7,176.1 194.8,175.6 194.8,168.6 188.7,169.1" fill="#947a51"/><polygon points="203.1,83.3 205.4,83.8 205.4,78.7 203.1,78.2" fill="#aa8c5d"/><polygon points="176.1,165.4 179.3,166.1 179.3,76.4 176.1,75.7" fill="#94aebd"/><polygon points="216.9,166.0 222.6,165.6 222.6,75.9 216.9,76.3" fill="#8197a5"/><polygon points="179.3,166.1 185.0,165.7 185.0,76.0 179.3,76.4" fill="#8197a5"/><polygon points="159.2,94.0 160.0,95.1 160.0,76.4 159.2,75.4" fill="#a1aeb1"/><polygon points="216.9,76.3 222.6,75.9 219.3,75.2 213.6,75.6" fill="#cef1ff"/><polygon points="160.0,76.4 182.3,76.2 181.4,75.1 159.2,75.4" fill="#f8ffff"/><polygon points="179.3,76.4 185.0,76.0 181.8,75.3 176.1,75.7" fill="#cef1ff"/><polygon points="169.2,84.1 177.4,83.5 176.2,83.2 168.1,83.8" fill="#071a26"/><polygon points="160.0,95.1 182.3,94.8 182.3,76.2 160.0,76.4" fill="#c4d4d7"/><polygon points="169.2,88.3 177.4,87.7 177.4,83.5 169.2,84.1" fill="#05121a"/><polygon points="168.1,88.0 169.2,88.3 169.2,84.1 168.1,83.8" fill="#05141d"/></g>
+  <path d="M0 236.0 q 50 -6.0 100 0 t 100 0 t 100 0 t 100 0" stroke="rgba(3, 13, 21, 0.72)" stroke-width="5.0" fill="none"/><path d="M0 254.0 q 50 -6.0 100 0 t 100 0 t 100 0 t 100 0" stroke="rgba(3, 13, 21, 0.60)" stroke-width="7.5" fill="none"/><path d="M0 272.0 q 50 -6.0 100 0 t 100 0 t 100 0 t 100 0" stroke="rgba(3, 13, 21, 0.48)" stroke-width="10.0" fill="none"/><path d="M0 290.0 q 50 -6.0 100 0 t 100 0 t 100 0 t 100 0" stroke="rgba(3, 13, 21, 0.36)" stroke-width="12.5" fill="none"/><path d="M86.0 310 q 0.2 -20 2.7 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M291.5 310 q 3.2 -20 4.4 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M374.8 310 q 3.4 -20 5.5 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M299.3 310 q -0.7 -20 4.7 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M337.2 310 q 3.2 -20 6.4 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M338.1 310 q 2.9 -20 6.4 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/><path d="M273.5 310 q -2.2 -20 4.0 -34" stroke="rgba(3, 13, 21, 0.88)" stroke-width="2.2" fill="none"/>
+  <path d="M206.3 197.9 A 96 48.0 0 0 1 127.4 181.4" fill="none" stroke="rgba(0, 0, 0, 0.23)" stroke-width="1.35"/>
+  <circle cx="233.6" cy="236.2" r="1.6" fill="rgba(0, 0, 0, 0.763)"/><circle cx="81.4" cy="220.6" r="1.7" fill="rgba(0, 0, 0, 0.458)"/><circle cx="263.2" cy="158.9" r="2.5" fill="rgba(0, 0, 0, 0.663)"/><circle cx="177.2" cy="166.8" r="2.8" fill="rgba(0, 0, 0, 0.377)"/><circle cx="46.6" cy="152.8" r="1.1" fill="rgba(0, 0, 0, 0.54)"/><circle cx="108.9" cy="150.9" r="2.5" fill="rgba(0, 0, 0, 0.826)"/><circle cx="305.6" cy="241.4" r="2.6" fill="rgba(0, 0, 0, 0.832)"/><circle cx="336.1" cy="72.8" r="2.0" fill="rgba(0, 0, 0, 0.795)"/><circle cx="384.3" cy="273.6" r="1.2" fill="rgba(0, 0, 0, 0.502)"/><circle cx="344.4" cy="81.4" r="2.0" fill="rgba(0, 0, 0, 0.5)"/><circle cx="259.3" cy="262.9" r="2.1" fill="rgba(0, 0, 0, 0.422)"/><circle cx="225.9" cy="166.2" r="2.6" fill="rgba(0, 0, 0, 0.49)"/><circle cx="236.2" cy="73.4" r="2.8" fill="rgba(0, 0, 0, 0.724)"/>
+  <rect width="400" height="310" fill="url(#vignette-vessel_lantern_lost_choir)"/>
+</svg>
+    </g>
+    <rect x="92" y="320" width="902" height="700" rx="10" fill="none" stroke="#a8c6cf" stroke-width="3" opacity="0.75"/>
+  </g>
+  <g transform="translate(172 404)">
+    
+    <circle cx="0" cy="0" r="66" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <circle cx="0" cy="0" r="58" fill="url(#cf-medal-vessel_lantern_lost_choir)" stroke="#a8c6cf" stroke-width="5"/>
+    <circle cx="0" cy="0" r="46" fill="none" stroke="#67d5ff" stroke-width="1.6" opacity="0.5"/>
+    <g fill="#d8fbff" stroke="#d8fbff" stroke-width="2" stroke-linejoin="round" transform="scale(1.25)"><path d="M0 -26 C12 -8 20 2 20 12 C20 21 11 27 0 27 C-11 27 -20 21 -20 12 C-20 2 -12 -8 0 -26 Z"/>
+          <path d="M-7 12 C-7 17 -3 21 1 21" fill="none" stroke-width="3" stroke-linecap="round" opacity="0.6"/></g>
+  </g>
+  <g transform="translate(172 482)">
+    <rect x="-72" y="-20" width="144" height="40" rx="9" fill="#0f1a21" stroke="#a8c6cf" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="10" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="25" letter-spacing="3" fill="#d8fbff">WATER</text>
+  </g>
+  <g transform="translate(914 404)">
+    
+    <circle cx="0" cy="0" r="66" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <circle cx="0" cy="0" r="58" fill="url(#cf-medal-vessel_lantern_lost_choir)" stroke="#a8c6cf" stroke-width="5"/>
+    <circle cx="0" cy="0" r="46" fill="none" stroke="#67d5ff" stroke-width="1.6" opacity="0.5"/>
+    <g fill="#d8fbff" stroke="#d8fbff" stroke-width="2" stroke-linejoin="round" transform="scale(1.05)"><circle cx="0" cy="0" r="22" fill="none" stroke-width="4"/><path d="M0 -14 L0 14 M-11 -6 L11 8 M-11 8 L11 -6" stroke-width="5" stroke-linecap="round"/></g>
+  </g>
+  <g transform="translate(914 482)">
+    <rect x="-74" y="-20" width="148" height="40" rx="9" fill="#0f1a21" stroke="#a8c6cf" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="10" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="25" letter-spacing="3" fill="#d8fbff">SPIRIT</text>
+  </g>
+
+  <!-- stats or category band -->
+  
+  <g>
+    <g transform="translate(154 1092)">
+    
+    <circle cx="0" cy="0" r="120" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <circle cx="0" cy="0" r="112" fill="url(#cf-medal-vessel_lantern_lost_choir)" stroke="#a8c6cf" stroke-width="5"/>
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#67d5ff" stroke-width="1.6" opacity="0.5"/>
+    <circle cx="0" cy="-66" r="38" fill="#0f1a21" stroke="#67d5ff" stroke-width="2.5" opacity="0.95"/>
+    <g transform="translate(0 -66) scale(0.92)" fill="#d8fbff" stroke="#d8fbff" stroke-width="1.8" stroke-linejoin="round"><g><path d="M2 -22 L8 -12 L8 12 L2 20 L-4 12 L-4 -12 Z"/><rect x="-14" y="12" width="28" height="6" rx="2"/><rect x="-3" y="18" width="7" height="12" rx="2"/><circle cx="0" cy="32" r="4"/></g></g>
+    <path d="M-54 -20 H54" stroke="#a8c6cf" stroke-width="2.5" opacity="0.75"/>
+    <circle cx="-54" cy="-20" r="3" fill="#67d5ff" opacity="0.8"/>
+    <circle cx="54" cy="-20" r="3" fill="#67d5ff" opacity="0.8"/>
+    <text x="0" y="78" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="96" font-weight="700"
+      fill="#0f1a21" stroke="#0f1a21" stroke-width="18" stroke-linejoin="round" opacity="0.85">3</text>
+    <text x="0" y="78" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="96" font-weight="700"
+      fill="#ffffff" stroke="#0f1a21" stroke-width="4" paint-order="stroke" stroke-linejoin="round">3</text>
+  </g>
+  <g transform="translate(154 1244)">
+    <rect x="-62" y="-23" width="124" height="44" rx="10" fill="#0f1a21" stroke="#a8c6cf" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="9" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" letter-spacing="3.5" fill="#d8fbff">ATTACK</text>
+  </g>
+    <g transform="translate(932 1092)">
+    
+    <circle cx="0" cy="0" r="120" fill="#182f3d" stroke="#2f5f78" stroke-width="4"/>
+    <circle cx="0" cy="0" r="112" fill="url(#cf-medal-vessel_lantern_lost_choir)" stroke="#a8c6cf" stroke-width="5"/>
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#67d5ff" stroke-width="1.6" opacity="0.5"/>
+    <circle cx="0" cy="-66" r="38" fill="#0f1a21" stroke="#67d5ff" stroke-width="2.5" opacity="0.95"/>
+    <g transform="translate(0 -66) scale(0.92)" fill="#d8fbff" stroke="#d8fbff" stroke-width="1.8" stroke-linejoin="round"><g><path d="M0 -24 L18 -16 L18 4 C18 16 9 24 0 30 C-9 24 -18 16 -18 4 L-18 -16 Z"/><path d="M0 -14 L10 -9 L10 3 C10 10 5 15 0 19 C-5 15 -10 10 -10 3 L-10 -9 Z" opacity="0.45"/></g></g>
+    <path d="M-54 -20 H54" stroke="#a8c6cf" stroke-width="2.5" opacity="0.75"/>
+    <circle cx="-54" cy="-20" r="3" fill="#67d5ff" opacity="0.8"/>
+    <circle cx="54" cy="-20" r="3" fill="#67d5ff" opacity="0.8"/>
+    <text x="0" y="78" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="96" font-weight="700"
+      fill="#0f1a21" stroke="#0f1a21" stroke-width="18" stroke-linejoin="round" opacity="0.85">4</text>
+    <text x="0" y="78" text-anchor="middle" font-family="Cambria, 'Palatino Linotype', 'Times New Roman', Times, serif" font-feature-settings="'lnum' 1, 'tnum' 1" font-variant-numeric="lining-nums tabular-nums" font-size="96" font-weight="700"
+      fill="#ffffff" stroke="#0f1a21" stroke-width="4" paint-order="stroke" stroke-linejoin="round">4</text>
+  </g>
+  <g transform="translate(932 1244)">
+    <rect x="-62" y="-23" width="124" height="44" rx="10" fill="#0f1a21" stroke="#a8c6cf" stroke-width="2" opacity="0.95"/>
+    <text x="0" y="9" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" letter-spacing="3.5" fill="#d8fbff">GUARD</text>
+  </g>
+    <g transform="translate(543 1092)">
+      <rect x="-176" y="-46" width="352" height="92" rx="40" fill="#0f1a21" stroke="#a8c6cf" stroke-width="3"/>
+      <path d="M-176 -18 h352" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/>
+      <path d="M-176 18 h352" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/>
+      <text x="0" y="12" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="30" letter-spacing="4" fill="#d8fbff" opacity="0.9">COMBAT</text>
+    </g>
+  </g>
+  <g transform="translate(543 1214)">
+    <rect x="-190" y="-26" width="380" height="52" rx="12" fill="#16262f" stroke="#2f5f78" stroke-width="2"/>
+    <text x="0" y="9" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" letter-spacing="3" fill="#d8fbff" opacity="0.85">
+      MOVEMENT 1  ·  RANGE 2
+    </text>
+  </g>
+
+  <!-- rules and flavour -->
+  
+  <g>
+    <rect x="92" y="1300" width="902" height="469" rx="18" fill="#0f1a21" stroke="#a8c6cf" stroke-width="3.5"/>
+    <rect x="102" y="1310" width="882" height="449" rx="14" fill="none" stroke="rgba(8, 18, 24, 0.6)" stroke-width="2"/>
+    <text x="146" y="1392.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="42" fill="#f4efe4">A floating blue-glass lantern wrapped</text><text x="146" y="1449.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="42" fill="#f4efe4">in ribbon-like water and tiny mask</text><text x="146" y="1506.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="42" fill="#f4efe4">fragments that orbit its core.</text>
+    <line x1="146" y1="1605" x2="940" y2="1605" stroke="#a8c6cf" stroke-width="2" opacity="0.6"/>
+           <text x="146" y="1659.0" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="34" font-style="italic" fill="#cfc6b4">A small light that recalls forgotten names.</text>
+  </g>
+  
+  <g transform="translate(543 1936)">
+    <rect x="-300" y="-30" width="600" height="60" rx="16" fill="#16262f" stroke="#2f5f78" stroke-width="3"/>
+    <path d="M-300 0 h600" stroke="rgba(8, 18, 24, 0.6)" stroke-width="1.5" opacity="0.7"/>
+    <g transform="translate(-96 0)">
+      <path d="M0 -15 L13 -6 L9 13 L0 19 L-9 13 L-13 -6 Z" fill="#7fd08a" opacity="0.9"/>
+      <circle cx="0" cy="1" r="4" fill="#0b0f16" opacity="0.55"/>
+    </g>
+    <text x="16" y="9" text-anchor="middle" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="26" letter-spacing="6" fill="#d8fbff" opacity="0.85">UNCOMMON</text>
+  </g>
+</svg>

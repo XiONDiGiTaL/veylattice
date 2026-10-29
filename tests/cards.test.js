@@ -73,7 +73,7 @@ test("a disadvantaged Action is halved but never drops below one", () => {
 
 test("Actions reject wrong sides, missing targets and short Flux without changing state", () => {
   const base = place(prepare(matchWith(), { hand: [LANCE, MEND], flux: 6 }), 1, MIREGLASS, 3, 2).state;
-  const own = place(base, 0, ASHEN, 3, 5);
+  const own = place(base, 0, ASHEN, 2, 3);
   const withOwn = own.state;
 
   assert.equal(cast(withOwn, "test0_0", "u1").code, "INVALID_TARGET", "enemy-only Action");
@@ -94,7 +94,7 @@ test("healing is capped at maximum Guard and buffs are permanent", () => {
   assert.equal(healed.state.units[wounded.unitId].guard, 5, "capped at 5, not 6");
   assert.equal(healed.events.find((e) => e.type === "actionHeal").healed, 4);
 
-  const buffed = place(prepare(matchWith(), { hand: [VIGIL], flux: 4 }), 0, ASHEN, 3, 5);
+  const buffed = place(prepare(matchWith(), { hand: [VIGIL], flux: 4 }), 0, ASHEN, 2, 3);
   const after = cast(buffed.state, "test0_0", buffed.unitId);
   assert.equal(after.ok, true, after.message);
   const unit = after.state.units[buffed.unitId];
@@ -156,23 +156,24 @@ test("Relics leave the hand, stay on the table, and any cast card type is reject
   const wrongWay = run(set.state, { type: "playRelic", instanceId: "test0_1" });
   assert.equal(wrongWay.code, "UNSUPPORTED_CARD", "an Action cannot be set as a Relic");
 
-  const asSummon = run(base, { type: "summon", instanceId: "test0_0", x: 3, y: 5 });
+  const asSummon = run(base, { type: "summon", instanceId: "test0_0", x: 2, y: 3 });
   assert.equal(asSummon.code, "UNSUPPORTED_CARD", "a Relic cannot be summoned");
-  const actionAsSummon = run(base, { type: "summon", instanceId: "test0_1", x: 3, y: 5 });
+  const actionAsSummon = run(base, { type: "summon", instanceId: "test0_1", x: 2, y: 3 });
   assert.equal(actionAsSummon.code, "UNSUPPORTED_CARD", "an Action cannot be summoned");
 });
 
-test("the Relic limit is enforced and rejected plans change nothing", () => {
-  const base = prepare(matchWith(), { hand: [LENS, SIGIL, BELL], flux: 10 });
+test("the Relic limit matches the four back-row zones and rejected plans change nothing", () => {
+  const hand = [LENS, SIGIL, BELL, SEAL, LENS];
+  const base = prepare(matchWith(), { hand, flux: 12 });
   let state = base;
-  for (const [index] of [0, 1].entries()) {
+  for (let index = 0; index < MAX_RELICS_PER_SEAT; index += 1) {
     const step = run(state, { type: "playRelic", instanceId: `test0_${index}` });
     assert.equal(step.ok, true, step.message);
     state = step.state;
   }
   assert.equal(state.players[0].relics.length, MAX_RELICS_PER_SEAT);
 
-  const over = run(state, { type: "playRelic", instanceId: "test0_2" });
+  const over = run(state, { type: "playRelic", instanceId: `test0_${MAX_RELICS_PER_SEAT}` });
   assert.equal(over.code, "RELIC_LIMIT");
   assert.equal(over.state, state, "a rejected Relic leaves the match untouched");
 });
@@ -196,21 +197,21 @@ test("an attack Relic raises the damage of Vessel attacks only", () => {
 });
 
 test("a Guard Relic raises existing and future Vessels", () => {
-  const existing = place(prepare(matchWith(), { hand: [SEAL], flux: 8 }), 0, ASHEN, 3, 5);
+  const existing = place(prepare(matchWith(), { hand: [SEAL], flux: 8 }), 0, ASHEN, 2, 3);
   const set = run(existing.state, { type: "playRelic", instanceId: "test0_0" });
   assert.equal(set.ok, true, set.message);
   assert.equal(set.state.units[existing.unitId].guard, 6, "4 Guard plus 2");
   assert.equal(set.state.units[existing.unitId].maxGuard, 6);
 
   const summoned = prepare(set.state, { hand: [HOLLOWROOT], flux: 8 });
-  const next = run(summoned, { type: "summon", instanceId: "test0_0", x: 4, y: 5 });
+  const next = run(summoned, { type: "summon", instanceId: "test0_0", x: 1, y: 3 });
   assert.equal(next.ok, true, next.message);
   const unit = unitsOf(next.state, 0).find((u) => u.cardId === HOLLOWROOT);
   assert.equal(unit.guard, 7, "5 Guard plus 2 from the Relic");
 });
 
 test("a mend Relic heals the most wounded Vessel at the start of the turn", () => {
-  const placed = place(prepare(matchWith(), { hand: [BELL], flux: 8 }), 0, ASHEN, 3, 5);
+  const placed = place(prepare(matchWith(), { hand: [BELL], flux: 8 }), 0, ASHEN, 2, 3);
   const set = run(placed.state, { type: "playRelic", instanceId: "test0_0" });
   const damaged = structuredClone(set.state);
   damaged.units[placed.unitId].guard = 1;
@@ -229,7 +230,7 @@ test("a mend Relic heals the most wounded Vessel at the start of the turn", () =
 
 test("legal-action enumeration exposes playable Actions and Relics with targets", () => {
   const base = place(prepare(matchWith(), { hand: [LANCE, LENS, CANTICLE], flux: 8 }), 1, MIREGLASS, 3, 2).state;
-  const withOwn = place(base, 0, ASHEN, 4, 5).state;
+  const withOwn = place(base, 0, ASHEN, 3, 3).state;
   const actions = getLegalActions(withOwn);
 
   const lance = actions.actions.find((a) => a.cardId === LANCE);

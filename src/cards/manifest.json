@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 2,
+  "sets": [
+    { "id": "core-vessels", "title": "Core Vessels", "file": "starter-set.json" },
+    { "id": "core-extras", "title": "Core Actions and Relics", "file": "actions-relics.json" },
+    { "id": "expansion-01", "title": "Veylattice: Tidewake Expansion", "file": "expansion-set.json" }
+  ]
+}

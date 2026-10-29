@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { ELEMENT_PALETTES, MODEL_IDS, VOXEL_MODELS, modelFor, modelHeight, modelWidth } from "../src/render/models.js";
-import { BOARD_SIZE, CELL_COUNT, deploymentBounds } from "../src/game/constants.js";
+import { BOARD_SIZE, CELL_COUNT, deploymentBounds, enemyHomeRow, rowOwner } from "../src/game/constants.js";
 import { CATALOG, RAW_VESSELS } from "./support.js";
 
 const OFFICIAL_IDS = RAW_VESSELS.map((card) => card.id);
@@ -20,7 +20,7 @@ function silhouette(model) {
 }
 
 test("every official Vessel has its own model definition", () => {
-  assert.equal(OFFICIAL_IDS.length, 18);
+  assert.equal(OFFICIAL_IDS.length, 65);
   for (const id of OFFICIAL_IDS) {
     assert.ok(VOXEL_MODELS[id], `missing model for ${id}`);
     assert.equal(VOXEL_MODELS[id].id, id);
@@ -88,7 +88,7 @@ test("each model is individually constructed, not a generic humanoid recolour", 
       return `${Math.round(modelHeight(model))}x${Math.round(modelWidth(model))}`;
     }),
   );
-  assert.ok(proportions.size >= 10, `only ${proportions.size} distinct proportions across 18 models`);
+  assert.ok(proportions.size >= 18, `only ${proportions.size} distinct proportions across 65 models`);
 });
 
 test("models only reference real Vessel ids and real elements", () => {
@@ -113,7 +113,7 @@ test("the five elements have distinct palettes and distinct silhouettes per subt
       assert.ok(ELEMENT_PALETTES[element][key], `${element} palette is missing ${key}`);
     }
     const count = MODEL_IDS.filter((id) => VOXEL_MODELS[id].element === element).length;
-    assert.ok(count >= 3, `${element} only has ${count} models`);
+    assert.equal(count, 13, `${element} has ${count} models instead of 13`);
   }
 });
 
@@ -121,14 +121,14 @@ test("a missing model is reported, never silently replaced", () => {
   assert.equal(modelFor("vessel_not_a_thing"), null);
 });
 
-test("the board is 7x7 with two 21-tile deployment zones and one contested row", () => {
-  assert.equal(BOARD_SIZE, 7);
-  assert.equal(CELL_COUNT, 49);
+test("the board is 5x5 with two 10-tile deployment zones and one contested row", () => {
+  assert.equal(BOARD_SIZE, 5);
+  assert.equal(CELL_COUNT, 25);
 
   const human = deploymentBounds(0);
   const ai = deploymentBounds(1);
-  assert.deepEqual(human, { min: 4, max: 6 });
-  assert.deepEqual(ai, { min: 0, max: 2 });
+  assert.deepEqual(human, { min: 3, max: 4 });
+  assert.deepEqual(ai, { min: 0, max: 1 });
 
   const humanTiles = [];
   const aiTiles = [];
@@ -141,10 +141,21 @@ test("the board is 7x7 with two 21-tile deployment zones and one contested row",
       else contested.push(key);
     }
   }
-  assert.equal(humanTiles.length, 21);
-  assert.equal(aiTiles.length, 21);
-  assert.equal(contested.length, 7);
-  assert.equal(new Set([...humanTiles, ...aiTiles, ...contested]).size, 49);
+  assert.equal(humanTiles.length, 10);
+  assert.equal(aiTiles.length, 10);
+  assert.equal(contested.length, 5);
+  assert.equal(new Set([...humanTiles, ...aiTiles, ...contested]).size, 25);
   // Zone tints used by the UI follow the same split.
-  assert.equal(contested.every((key) => Number(key.split(",")[1]) === 3), true);
+  assert.equal(contested.every((key) => Number(key.split(",")[1]) === 2), true);
+});
+
+test("grid geometry is parameterised, so an alternative arena is testable without engine edits", () => {
+  assert.deepEqual(deploymentBounds(0, 7, 3), { min: 4, max: 6 });
+  assert.deepEqual(deploymentBounds(1, 7, 3), { min: 0, max: 2 });
+  assert.equal(enemyHomeRow(0, 7), 0);
+  assert.equal(enemyHomeRow(1, 7), 6);
+  assert.equal(rowOwner(0), "opponent");
+  assert.equal(rowOwner(2), "contested");
+  assert.equal(rowOwner(4), "home");
+  assert.throws(() => deploymentBounds(0, 5, 3), /Invalid battlefield geometry/);
 });

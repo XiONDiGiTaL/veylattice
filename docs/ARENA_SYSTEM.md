@@ -1,6 +1,10 @@
 # Arena System Specification
 
-**Status:** Design proposal. Implement only after core movement/combat rules are reliable.
+**Status:** Design proposal for terrain/hazard arenas. The *geometry* half is implemented: the shipped
+arena is a 5x5 grid (25 tiles) with two deployment rows per seat and one contested row, and every rule,
+tint and terrain map derives from `BOARD_SIZE`/`DEPLOYMENT_ROWS` in `src/game/constants.js`. The shipped
+arena's ground is decorative (`src/render/terrain.js`), so nothing below about passives, hazards or
+affinity is implemented yet.
 
 ## Arena data contract
 Each arena should be data-driven and include:

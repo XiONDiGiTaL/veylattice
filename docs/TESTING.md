@@ -12,17 +12,42 @@ node --test "tests/*.test.js"
 | File | Scope |
 |---|---|
 | `tests/elemental.test.js` | All 25 element pairs, rounding, minimum damage, preview reasons |
-| `tests/content.test.js` | 30-card catalog validation, frozen effects, practice deck legality, canonical deck rules |
+| `tests/content.test.js` | 102-card catalog validation through the set manifest, 60/30/12 counts, 12 Vessels per element, frozen effects, keyword and targeting contracts, every effect kind in use, curated 40-card practice deck, canonical deck rules |
 | `tests/engine.test.js` | Setup/Flux/draw, summon, movement, combat, retaliation, Nexus, mulligan, deadlines, fatigue, integrity, legal actions |
 | `tests/cards.test.js` | Actions and Relics: casts, targeting, heal caps, buffs, sweeps, Nexus armour, Relic limit, auras, AI play, no-op rejection |
+| `tests/keywords.test.js` | Stun timing, ready refresh, revive selection and empty discard, Flux cap and the 1-Flux floor, drain healing, Nexus heal cap, ward minimum 1, swift summons, stalwart, deathrattle draw, legal-action enumeration, keyword coverage |
 | `tests/match.test.js` | Full scripted match to completion, same-seed replay determinism, board/registry consistency |
 | `tests/profile.test.js` | Name/avatar/settings/stats sanitisation, forged identities, record maths |
-| `tests/models.test.js` | Voxel roster completeness, unique silhouettes (incl. rotations), ≥30 boxes / ≥4 groups / ≥4 materials, palette + material + pivot validity, footprint bounds, proportion variety, element palettes, explicit placeholder for unknown ids, 49-tile board split 21/7/21 |
-| `tests/terrain.test.js` | 49-tile terrain coverage, decorative-only contract, 180° symmetry, prop bounds/validity, no engine or AI import of terrain |
+| `tests/models.test.js` | Voxel roster completeness, unique silhouettes (incl. rotations), ≥30 boxes / ≥4 groups / ≥4 materials, palette + material + pivot validity, footprint bounds, proportion variety, element palettes, explicit placeholder for unknown ids, 25-tile board split 10/5/10, parameterised geometry and invalid-geometry rejection |
+| `tests/terrain.test.js` | 25-tile terrain coverage, map/board-size agreement, decorative-only contract, 180° symmetry, prop bounds/validity, no engine or AI import of terrain |
 | `tests/tutorial.test.js` | Guided-match step order, event filtering, `endTurn` escape, completion clamping, idempotent skip |
-| `tests/support.js` | Shared catalog loading (Vessels + Actions/Relics), seeded RNG, controlled hands, positional setup |
+| `tests/illustration.test.js` | Every card produces SVG; Vessel art is a projection of its model (part count, palette shading, declared voxel height); no figure clipped; no two Vessels share art; Action emblems differ by effect; output deterministic, script-free, <40 kB |
+| `tests/fields.test.js` | Four Vessel + four Action zones per seat, stable unique slot keys, engine-assigned zones survive movement, inserted units project to one slot each, Relics fill the back row in order, the Relic cap equals the zone count |
+| `tests/support.js` | Shared catalog loading from `src/cards/manifest.json` (so tests and the app load the same sets), seeded RNG, controlled hands, positional setup |
 
-Current result: `npm test` → **91 tests, 91 pass, 0 fail** (~0.5 s).
+Current result: `npm test` → **122 tests, 122 pass, 0 fail** (~0.9 s). `npm run check` adds
+`node --check` on the main modules before the suite.
+
+## War-table browser checks (2026-10-28)
+
+Run against the local static server in a fresh incognito context with the real
+engine, not a mock:
+
+| Check | Result |
+|---|---|
+| 1440×950: all four opponent + four player zones render, board fully visible, hand reachable | pass |
+| 1024×768: no horizontal overflow, all zones rendered, board capped by height | pass |
+| 390×844: board fits width, zones wrap to labelled rows, no horizontal overflow | pass |
+| Summon a Vessel (Ashen Crownblade, 3 Flux) | hand −1, Flux −3, next front-row zone fills, unit appears on the chosen tile, `Vessels 1/4` |
+| Set a Relic (Ember Lens) through the back row | first Action socket fills, `Relics 1/4`, card leaves hand, effect shown in the zone |
+| Relic card selected | only the next free Action socket glows `SET HERE`; the other three dim |
+| Select a Vessel by clicking its card zone | the zone and the unit highlight, the board rings reachable tiles, the inspect panel shows the right unit |
+| Vessel destroyed by the opponent | stale selection clears instead of describing a dead unit |
+| Console / network | no console errors; all modules, card data and the stylesheet returned 200/304 |
+
+Not tested in the browser: a completed Nexus strike through the HUD vitality
+bar (the engine path and the button handler are covered by unit tests and the
+same `attack` command, but a live undefended Nexus was not reached).
 
 Rules for new tests:
 
@@ -103,10 +128,23 @@ and confirm the old one is refused.
 Flow checks: a first visit must open **How to Play**, not a match; **Practice
 match** must create the board only on click; **Return to match** must appear only
 while a match is live; the Battle tab must be disabled before a match exists; the
-Vessel Roster must render 18 models; the guided match must advance a step for the
+Vessel Roster must render 60 models; the guided match must advance a step for the
 action it asks for, show a hint when that action is currently impossible, and
 never block on Skip. Escape and both Cancel buttons must clear a selection.
 
 A 120-second expiry should be confirmed against the engine tests; waiting out a
 real deadline in the browser is optional and must be reported honestly if
 skipped.
+
+## Card collection checks (CARDS-001)
+
+Build: `node tools/build-cards.mjs` must print `102 (60 V / 30 A / 12 R)` and zero missing data.
+`npm test` must stay green; `tests/card-files.test.js` fails when a face on disk no longer matches a
+fresh render, so rebuild after any edit under `src/cards/`, `src/render/card-face.js`,
+`src/render/scenery.js` or `src/render/illustration.js`.
+
+In the browser: the Cards tab must show 102 tiles with no broken images; the element chips must filter
+(All elements → All cards, then Metal → 21, then Vessels → 12); selecting a tile must open the face at
+full size with its name, category, cost, Attack and Guard; Escape and the backdrop must close it. On a
+390 px viewport the grid must fall to two columns and the viewer must fit inside the screen. A roster
+card's **Printed card** button and a double-click on a hand card must open the same viewer.

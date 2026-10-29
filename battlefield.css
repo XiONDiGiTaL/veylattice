@@ -1,0 +1,914 @@
+/* ==================================================================
+   War table: one integrated battlefield
+   ------------------------------------------------------------------
+   The whole match screen is a single object: opponent HUD and field
+   built into the top edge, the 7x7 diorama in the middle, the player
+   field built into the bottom edge, and one shared table under all of
+   it. The card zones are platforms on that table, not floating menus.
+   ================================================================== */
+
+.battle-view { margin-top: -2px; }
+
+/* The battle screen trades the marketing header for table space. */
+body[data-view="battle"] .topbar { padding: 8px clamp(16px, 4vw, 48px) 2px; }
+body[data-view="battle"] .topbar .eyebrow { display: none; }
+body[data-view="battle"] .brand-word { font-size: 24px; }
+body[data-view="battle"] main { padding-top: 2px; }
+
+.war-table {
+  --board-size: clamp(280px, 46vh, 620px);
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  --table-edge: #2d3850;
+  --table-line: rgba(122, 215, 255, 0.14);
+  --brass: #9a7f4e;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px clamp(8px, 1.2vw, 14px) 6px;
+  border: 1px solid var(--table-edge);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 70% at 50% 30%, rgba(72, 92, 122, 0.28), transparent 64%),
+    linear-gradient(180deg, #171e2c 0%, #101623 42%, #090d16 100%);
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Faint engraved rings on the table surface, behind every panel. */
+.war-table::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 52px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 52px),
+    radial-gradient(58% 46% at 50% 50%, rgba(122, 215, 255, 0.05), transparent 72%);
+  pointer-events: none;
+}
+
+/* ----------------------------- field HUD ----------------------------- */
+
+.field-hud {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  padding: 3px 9px;
+  border: 1px solid var(--table-line);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(28, 36, 54, 0.92), rgba(12, 17, 27, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.hud-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 104px;
+  max-width: 190px;
+}
+
+.hud-identity strong {
+  font-size: 12.5px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-hud .avatar-sm { width: 26px; height: 26px; border-radius: 7px; }
+
+.hud-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 8.5px;
+  letter-spacing: 0.17em;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hud-label b {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-vitality {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 130px;
+  min-width: 96px;
+  max-width: 300px;
+}
+
+.vitality-track {
+  display: block;
+  height: 6px;
+  border-radius: 4px;
+  border: 1px solid #28324c;
+  background: #080c15;
+  overflow: hidden;
+}
+
+.vitality-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3f9ac4, var(--accent));
+  transition: width 240ms ease;
+}
+
+.hud-vitality.enemy .vitality-track i {
+  background: linear-gradient(90deg, #b54858, var(--danger));
+}
+
+.hud-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+}
+
+.hud-chip {
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  border: 1px solid #26314a;
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: rgba(8, 12, 21, 0.65);
+  white-space: nowrap;
+}
+
+.hud-chip b {
+  color: var(--text);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.hud-status .thinking { font-size: 10px; }
+
+.end-turn {
+  flex: 0 0 auto;
+  min-width: 96px;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+/* ------------------------- card fields / zones ------------------------- */
+
+.battle-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px;
+  border: 1px solid rgba(122, 215, 255, 0.11);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 26%),
+    linear-gradient(180deg, #141b29, #0b101a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.35);
+}
+
+.opponent-field {
+  transform: perspective(1600px) rotateX(2.4deg);
+  transform-origin: 50% 0;
+}
+
+.player-field {
+  transform: perspective(1600px) rotateX(-2.4deg);
+  transform-origin: 50% 100%;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+}
+
+.row-tag {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  margin: 0;
+  padding: 0 0 0 7px;
+  border-left: 2px solid rgba(154, 127, 78, 0.55);
+}
+
+.row-tag span {
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: #b9c6e0;
+  text-transform: uppercase;
+}
+
+.row-tag em {
+  font-style: normal;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: #647192;
+  text-transform: uppercase;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+
+.zone-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 2px 6px;
+  border: 1px dashed rgba(122, 215, 255, 0.2);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #0d1524, #080c15);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  overflow: hidden;
+}
+
+/* Recessed socket shading, so an empty zone reads as a carved slot. */
+.zone-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.zone-slot.is-filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--slot-accent, #7ad7ff) 45%, #2b3550);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--slot-accent, #7ad7ff) 13%, transparent), transparent 58%),
+    linear-gradient(180deg, #121a2a, #0a0f1a);
+}
+
+.zone-slot.element-wood { --slot-accent: var(--wood); }
+.zone-slot.element-fire { --slot-accent: var(--fire); }
+.zone-slot.element-earth { --slot-accent: var(--earth); }
+.zone-slot.element-metal { --slot-accent: var(--metal); }
+.zone-slot.element-water { --slot-accent: var(--water); }
+
+.zone-slot.is-enemy { opacity: 0.94; }
+.zone-slot.is-enemy.is-filled { border-color: rgba(255, 107, 122, 0.32); }
+
+button.zone-slot { cursor: pointer; }
+button.zone-slot:hover:not(:disabled) { border-color: rgba(122, 215, 255, 0.55); }
+button.zone-slot:focus-visible,
+.nexus-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  z-index: 3;
+}
+
+.zone-slot.is-ready {
+  border-color: rgba(110, 231, 168, 0.8);
+  box-shadow:
+    inset 0 0 0 1px rgba(110, 231, 168, 0.3),
+    0 0 16px rgba(110, 231, 168, 0.16);
+  animation: slot-ready 1.9s ease-in-out infinite;
+}
+
+.zone-slot.is-blocked { opacity: 0.5; }
+
+.zone-slot.is-selected {
+  border-color: rgba(181, 139, 255, 0.95);
+  box-shadow:
+    inset 0 0 0 2px rgba(181, 139, 255, 0.4),
+    0 0 18px rgba(181, 139, 255, 0.22);
+}
+
+@keyframes slot-ready {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.25), 0 0 12px rgba(110, 231, 168, 0.12); }
+  50% { box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.45), 0 0 20px rgba(110, 231, 168, 0.22); }
+}
+
+.slot-model {
+  position: relative;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  perspective: 240px;
+  z-index: 1;
+}
+
+.slot-model .vox-model {
+  --u-base: 2.8px;
+  z-index: 1;
+  transition: transform 120ms ease;
+}
+
+.slot-model .model-shadow { width: 70%; height: 4px; }
+
+.zone-slot .slot-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  z-index: 1;
+}
+
+.slot-name {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-meta {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-stats {
+  display: flex;
+  gap: 5px;
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+  color: #d3dcf0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.slot-stats .atk { color: #ffb0a0; }
+.slot-stats .gd { color: #9fe8c8; }
+
+.slot-tag {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  color: rgba(154, 127, 78, 0.9);
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.slot-cost {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  min-width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  color: #cfefff;
+  background: rgba(11, 24, 36, 0.9);
+  border: 1px solid rgba(122, 215, 255, 0.5);
+  z-index: 2;
+}
+
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5d6b8c;
+  z-index: 1;
+}
+
+.slot-empty .socket {
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(122, 215, 255, 0.28);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(122, 215, 255, 0.65);
+}
+
+.zone-slot.is-ready .slot-empty { color: #9df0c2; }
+.zone-slot.is-ready .slot-empty .socket { border-color: rgba(110, 231, 168, 0.7); color: #9df0c2; }
+
+.action-grid .zone-slot { min-height: 28px; }
+.action-grid .slot-model { flex-basis: 22px; width: 22px; height: 26px; }
+.action-grid .slot-model .vox-model { --u-base: 2.2px; }
+.action-grid .slot-name { font-size: 10px; }
+.action-grid .slot-meta {
+  font-size: 8px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #a9b8d6;
+}
+
+/* ------------------------------- arena ------------------------------- */
+
+.arena-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(168px, 1fr) var(--board-size) minmax(238px, 1fr);
+  justify-content: stretch;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid #232e45;
+  border-radius: 13px;
+  background:
+    radial-gradient(70% 60% at 50% 50%, rgba(58, 82, 112, 0.22), transparent 74%),
+    linear-gradient(180deg, #0a0f1a, #060a12);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
+  min-height: 0;
+}
+
+.arena-wing {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #202b42;
+  border-radius: 9px;
+  background:
+    radial-gradient(120% 60% at 50% 18%, rgba(122, 215, 255, 0.06), transparent 62%),
+    linear-gradient(180deg, rgba(22, 29, 44, 0.94), rgba(9, 13, 22, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  overflow: hidden;
+}
+
+.arena-wing::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -30% -20%;
+  height: 60%;
+  background: radial-gradient(50% 50% at 50% 100%, rgba(154, 127, 78, 0.12), transparent 72%);
+  pointer-events: none;
+}
+
+.arena-wing-left { justify-content: flex-start; }
+
+.wing-kicker {
+  margin: 0;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: var(--brass);
+  text-transform: uppercase;
+}
+
+.arena-name {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: #eadfc4;
+  text-transform: none;
+}
+
+.wing-sub {
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.wing-objective {
+  margin: 6px 0 0;
+  padding: 6px 7px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: #9aa8c6;
+  border-left: 2px solid rgba(154, 127, 78, 0.5);
+  background: linear-gradient(90deg, rgba(154, 127, 78, 0.08), transparent 80%);
+}
+
+.wing-objective strong {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #d9c9a3;
+  margin-bottom: 2px;
+}
+
+.arena-wing .legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  justify-content: start;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(122, 215, 255, 0.1);
+  font-size: 9.5px;
+  color: #93a0bd;
+}
+
+.arena-core {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Engraved arena floor behind the diorama, so the board sits in a place. */
+.arena-core::before {
+  content: "";
+  position: absolute;
+  inset: 2px 0;
+  z-index: -1;
+  border-radius: 10px;
+  background:
+    radial-gradient(50% 46% at 50% 50%, rgba(170, 208, 235, 0.08), transparent 70%),
+    repeating-radial-gradient(circle at 50% 50%, rgba(190, 214, 244, 0.055) 0 1px, transparent 1px 34px);
+  pointer-events: none;
+}
+
+/* ------------------------------ nexuses ------------------------------ */
+
+/* The opponent's vitality bar is the Nexus itself: click it to strike. */
+.nexus-target {
+  border: 0;
+  background: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  flex: 1 1 130px;
+  max-width: 250px;
+  cursor: pointer;
+  position: relative;
+}
+
+.nexus-target.passive { cursor: default; }
+.nexus-target .hud-label { letter-spacing: 0.15em; }
+.nexus-target .vitality-track { height: 7px; }
+
+.nexus-target::after {
+  content: "";
+  position: absolute;
+  inset: auto 6px -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(154, 127, 78, 0.45), transparent);
+}
+
+.nexus-target.enemy.ready {
+  background: linear-gradient(180deg, rgba(255, 107, 122, 0.22), rgba(30, 10, 16, 0.6));
+  box-shadow: 0 0 20px rgba(255, 107, 122, 0.35);
+}
+
+.nexus-target.enemy.ready .hud-label { color: #ffd0d4; }
+
+.nexus-target.fx-nexus-hit {
+  background: rgba(255, 107, 122, 0.28);
+  box-shadow: 0 0 26px rgba(255, 107, 122, 0.55);
+}
+
+/* ------------------------------ the board ------------------------------ */
+
+.arena-core .board-wrap {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+.arena-core .board-stage {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.arena-core .board-stage::after {
+  background:
+    radial-gradient(120% 80% at 26% -10%, rgba(255, 238, 205, 0.06), transparent 58%),
+    radial-gradient(100% 100% at 50% 54%, transparent 66%, rgba(5, 8, 14, 0.26));
+}
+
+.arena-core .board {
+  width: 100%;
+  /* Wide earthen seams: each tile is a block of ground with a visible side. */
+  padding: 14px;
+  gap: 9px;
+  border-radius: 6px;
+  /* One continuous landmass on a stone slab: the padding ring is lawn edge,
+     not a UI frame. */
+  border-color: #7d7461;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 250, 232, 0.4),
+    inset 0 -3px 10px rgba(58, 48, 34, 0.4),
+    0 18px 30px rgba(0, 0, 0, 0.55);
+}
+
+.arena-core .board-post { width: 18px; height: 26px; }
+.arena-core .board-post.tl { left: -13px; top: -13px; }
+.arena-core .board-post.tr { right: -13px; top: -13px; }
+.arena-core .board-post.bl { left: -13px; bottom: -17px; }
+.arena-core .board-post.br { right: -13px; bottom: -17px; }
+
+/* Terrain keeps its own colour and depth; zones are marked with an edge only. */
+.war-table :where(.cell).zone-opponent { border-color: rgba(255, 107, 122, 0.34); }
+.war-table :where(.cell).zone-contested { border-color: rgba(255, 209, 102, 0.26); }
+.war-table :where(.cell).zone-home { border-color: rgba(122, 215, 255, 0.36); }
+
+/* Ground keeps the material's own shading; only the tile tone varies here. */
+.war-table :where(.cell) .cell-ground {
+  filter: brightness(var(--tone, 1));
+}
+
+/* --------------------------- side consoles --------------------------- */
+
+.turn-console {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 6px 8px;
+  border: 1px solid #26314a;
+  border-radius: 7px;
+  background: rgba(9, 13, 22, 0.7);
+}
+
+.turn-console .hud-label { grid-column: 1 / -1; }
+.turn-console .turn-owner { font-size: 11px; }
+.turn-console .timer { font-size: 15px; padding: 1px 8px; min-width: 0; }
+
+.selected-card {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow: auto;
+}
+
+.selected-card h4 { font-size: 12px; margin-bottom: 3px; }
+.selected-card p { margin: 2px 0; font-size: 10px; }
+.selected-card .card-flavor { display: none; }
+.selected-card .preview { font-size: 10px; }
+
+.flux-console {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid #26314a;
+  border-radius: 7px;
+  background: rgba(9, 13, 22, 0.7);
+}
+
+.flux-track { gap: 3px; }
+.flux-orb { width: 11px; height: 11px; }
+
+.arena-wing-right .button-stack { margin-top: auto; gap: 5px; }
+.arena-wing-right .button { padding: 6px 10px; font-size: 11px; }
+
+/* -------------------------------- hand -------------------------------- */
+
+.hand-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 8px 5px;
+  border: 1px solid rgba(122, 215, 255, 0.11);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 27, 41, 0.9), rgba(9, 13, 21, 0.94));
+}
+
+/* Your identity lives on the hand edge, like a seat placard. */
+.player-console {
+  min-height: 30px;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(122, 215, 255, 0.1);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.player-console .hud-resources { flex: 1 1 auto; }
+.player-console .end-turn { padding: 5px 12px; }
+
+.hand-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hand-head .deck-count { font-size: 9px; letter-spacing: 0.12em; }
+
+.hand-rail .hand {
+  gap: 6px;
+  padding-bottom: 2px;
+}
+
+.hand-rail .card {
+  min-width: 112px;
+  max-width: 138px;
+  padding: 5px 8px;
+  gap: 2px;
+  border-radius: 8px;
+  height: 84px;
+  overflow: hidden;
+}
+
+.hand-rail .card-tags {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding-right: 16px;
+}
+
+.hand-rail .card h3 {
+  font-size: 11.5px;
+  line-height: 1.2;
+  padding-right: 0;
+  /* Two lines fit 24 characters of a 60-Vessel name without hiding the cost. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hand-rail .card .cost { top: 5px; right: 5px; width: 18px; height: 18px; font-size: 10px; }
+.hand-rail .card-element { font-size: 8px; }
+.hand-rail .card-kind { font-size: 8px; margin-top: 0; }
+.hand-rail .card-role { font-size: 8.5px; }
+.hand-rail .card-stats { font-size: 8.5px; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 3px; }
+.hand-rail .card-effect {
+  font-size: 8.5px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hand-rail .card-flavor { display: none; }
+.hand-rail .card.vessel { background: linear-gradient(170deg, #1b2336, #0d1322); }
+
+/* --------------------------- message + log --------------------------- */
+
+/* Full-width instruction line: the table is one object, so the status sits on it. */
+.battle-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid rgba(122, 215, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(8, 12, 20, 0.88);
+}
+
+.battle-status .message {
+  flex: 1 1 auto;
+  margin: 0;
+  min-height: 0;
+  max-height: 30px;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.battle-status .message::before { padding: 1px 6px; margin-right: 8px; font-size: 7.5px; }
+
+#turn-bar-cancel:not([hidden]) { display: block; }
+
+.log-drawer {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(14, 19, 31, 0.7);
+  padding: 6px 10px;
+}
+
+.log-drawer summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.log-drawer summary::-webkit-details-marker { display: none; }
+.log-drawer summary::after { content: "▾"; color: var(--muted); font-size: 10px; }
+.log-drawer[open] summary::after { content: "▴"; }
+.log-hint { font-size: 9px; letter-spacing: 0.1em; color: #5f6b8c; text-transform: uppercase; }
+.log-head { display: flex; justify-content: flex-end; margin-top: 6px; }
+.log-drawer .log-list { max-height: 160px; overflow: auto; margin-top: 4px; }
+
+/* --------------------------- responsiveness --------------------------- */
+
+@media (max-width: 1180px) {
+  .arena-shell {
+    grid-template-columns: 136px minmax(0, var(--board-size)) 238px;
+    justify-content: center;
+  }
+  .arena-wing-left .legend,
+  .arena-wing-left .wing-objective,
+  .arena-wing-left .wing-sub { display: none; }
+}
+
+
+
+@media (max-width: 940px) {
+  .war-table { --board-size: 44vh; }
+  .arena-shell { grid-template-columns: minmax(0, 1fr); }
+  .arena-wing-left { display: none; }
+  .arena-core { width: min(100%, var(--board-size)); justify-self: center; }
+  .arena-wing {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+  .arena-wing-right .selected-card { flex: 1 1 220px; }
+  .arena-wing-right .turn-console { flex: 0 0 170px; }
+  .arena-wing-right .flux-console { flex: 0 0 auto; }
+  .arena-wing-right .button-stack { flex: 1 1 200px; margin-top: 0; }
+  .arena-wing-right .button-stack .button { flex: 1 1 auto; }
+  .arena-wing .legend { display: none; }
+  .opponent-field, .player-field { transform: none; }
+}
+
+@media (max-width: 760px) {
+  .war-table { --board-size: 46vh; padding: 7px 6px; }
+  .slot-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .row-tag { flex-direction: row; align-items: baseline; gap: 6px; padding-left: 4px; }
+  .slot-grid { gap: 4px; }
+  .zone-slot { padding: 2px 4px; min-height: 36px; gap: 3px; }
+  .zone-slot .slot-model { flex-basis: 24px; width: 24px; height: 28px; }
+  .zone-slot .slot-model .vox-model { --u-base: 2.2px; }
+  .action-grid .slot-model { flex-basis: 20px; width: 20px; height: 24px; }
+  .slot-stats { display: none; }
+  .slot-name { font-size: 9.5px; }
+  .slot-meta { font-size: 7.5px; }
+  .slot-tag { display: none; }
+  .slot-empty { font-size: 8px; letter-spacing: 0.04em; }
+  .slot-empty .socket { display: none; }
+  .field-hud { flex-wrap: wrap; gap: 4px 8px; padding: 4px 7px; }
+  .hud-vitality { flex: 1 1 100%; max-width: none; order: 5; }
+  .hud-resources { justify-content: flex-start; }
+  .hud-status { margin-left: auto; }
+  .end-turn { min-width: 78px; padding: 6px 10px; }
+  .nexus-target { max-width: none; }
+  .hand-rail .card { min-width: 104px; max-width: 118px; }
+  .log-hint { display: none; }
+}
+
+@media (max-height: 860px) and (min-width: 941px) {
+  .hand-rail .card { height: 80px; }
+  .field-hud { min-height: 36px; }
+  .zone-slot { min-height: 36px; }
+  .action-grid .zone-slot { min-height: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-slot.is-ready { animation: none; }
+}

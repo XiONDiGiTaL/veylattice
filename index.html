@@ -9,6 +9,7 @@
 <title>Veylattice | Tactical Elemental Card Battler</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d16'/%3E%3Cpath d='M16 4l4 8 8 4-8 4-4 8-4-8-8-4 8-4z' fill='%237ad7ff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./battlefield.css">
 </head>
 <body>
 <header class="topbar">
@@ -22,6 +23,7 @@
     <button id="tab-battle" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-battle" disabled>Battle</button>
     <button id="tab-guide" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-guide">How to Play</button>
     <button id="tab-roster" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-roster">Roster</button>
+    <button id="tab-library" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-library">Cards</button>
     <button id="tab-profile" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-profile">Settings</button>
   </nav>
 
@@ -44,7 +46,7 @@
         <p class="eyebrow">TACTICAL ELEMENTAL CARD BATTLER</p>
         <h1 class="menu-title">Command the Lattice.</h1>
         <p class="menu-lede">
-          Deploy elemental Vessels onto a 7×7 battlefield, spend Flux on Actions and Relics,
+          Deploy elemental Vessels onto a 5×5 battlefield, spend Flux on Actions and Relics,
           and break the enemy Nexus before yours falls. Every move is validated by one
           deterministic rules engine — the AI plays through exactly the same gate you do.
         </p>
@@ -69,7 +71,11 @@
           </button>
           <button id="menu-roster" class="menu-link" type="button">
             <strong>Vessel Roster</strong>
-            <span>Inspect all 18 handcrafted voxel models</span>
+            <span>Inspect all 65 voxel models, stats and keywords</span>
+          </button>
+          <button id="menu-library" class="menu-link" type="button">
+            <strong>Card Library</strong>
+            <span>All 107 printed card faces, at full size</span>
           </button>
           <button id="menu-settings" class="menu-link" type="button">
             <strong>Profile &amp; Settings</strong>
@@ -80,8 +86,9 @@
         <div class="menu-unavailable">
           <p class="eyebrow">NOT IN THIS BUILD</p>
           <p class="muted small">
-            Deck Builder · Collection · Shop · Online lobby. These are specified milestones,
-            not working features, so they are not offered as buttons.
+            Deck Builder · Shop · Online lobby. These are specified milestones, not working
+            features, so they are not offered as buttons. The Card Library is browse-only:
+            it shows the shipped faces, it does not yet let you build a deck from them.
           </p>
         </div>
       </div>
@@ -118,11 +125,11 @@
       </li>
       <li>
         <h3>Where you summon</h3>
-        <p>Your three home rows are your deployment zone, tinted on the board. Select a Vessel card and every legal tile lights up. You may summon one Vessel per turn and hold at most four.</p>
+        <p>Your two home rows are your deployment zone, tinted on the board. Select a Vessel card and every legal tile lights up; summoned Vessels take the four front-row zones above your hand. You may summon one Vessel per turn and hold at most four.</p>
       </li>
       <li>
         <h3>Actions and Relics</h3>
-        <p>Actions resolve an effect once and go to the discard pile. Relics are persistent and occupy one of your two back-row slots, where they keep buffing your side.</p>
+        <p>Actions resolve an effect once and go to the discard pile. Relics are persistent and occupy one of your four back-row zones, where they keep buffing your side. Click the next free socket to set one.</p>
       </li>
       <li>
         <h3>Movement and combat</h3>
@@ -152,12 +159,14 @@
   <section id="view-roster" class="view" role="tabpanel" aria-labelledby="tab-roster" hidden>
     <div class="guide-head">
       <div>
-        <p class="eyebrow">THE 18 OFFICIAL VESSELS</p>
-        <h2>Every model is built from its own voxels</h2>
+        <p class="eyebrow">THE 65 OFFICIAL VESSELS</p>
+        <h2>Five elements, sixty-five silhouettes</h2>
         <p class="muted">
-          These are the same models the battlefield renders — not separate illustrations.
-          Shared material palettes per element, individually authored silhouettes.
-          Drag a model, or focus it and press the arrow keys, to inspect it from any angle.
+          These are the same voxel models the battlefield renders. Each Vessel has its own
+          proportions, gear and palette accent; shared material palettes keep the elements
+          coherent. The scene behind each model is that Vessel's card illustration without the
+          painted figure — one definition drives the diorama stage and the card art. Drag a
+          model, or focus it and press the arrow keys, to inspect it from any angle.
         </p>
       </div>
       <button id="roster-menu" class="button secondary" type="button">Back to menu</button>
@@ -165,108 +174,169 @@
     <div id="roster-grid" class="roster-grid"></div>
   </section>
 
-  <!-- ============================ BATTLE ============================ -->
-  <section id="view-battle" class="view" role="tabpanel" aria-labelledby="tab-battle" hidden>
-    <section class="status-strip" aria-label="Match status">
-      <div class="player-stat">
-        <span class="label">YOU · NEXUS</span>
-        <strong id="player-vitality">30</strong>
-      </div>
-      <div class="center-stat">
-        <span class="label">TURN <span id="turn-number">1</span></span>
-        <span id="turn-owner" class="turn-owner">Your turn</span>
-        <span id="timer" class="timer" role="timer" aria-live="off">2:00</span>
-      </div>
-      <div class="player-stat align-right">
-        <span class="label">OPPONENT NEXUS</span>
-        <strong id="enemy-vitality">30</strong>
-      </div>
-    </section>
-
-    <section class="opponent-card" aria-label="Opponent">
-      <img id="opponent-avatar" class="avatar" alt="" width="48" height="48">
-      <div class="opponent-text">
-        <p class="eyebrow">AI OPPONENT</p>
-        <h2 id="opponent-name">The Vanguard</h2>
-        <p id="opponent-style" class="muted">Standard difficulty · aggressive pressure</p>
-      </div>
-      <div class="opponent-side">
-        <span id="opponent-difficulty" class="pill">STANDARD</span>
-        <span id="opponent-status" class="thinking" aria-live="polite">Waiting</span>
-      </div>
-    </section>
-
-    <div class="game-layout">
-      <aside class="side-panel">
-        <div class="panel-heading">
-          <h2>Flux</h2>
-          <span id="flux-count">1 / 1</span>
-        </div>
-        <div id="flux-track" class="flux-track" aria-label="Flux available"></div>
-        <p class="muted small">Refills at the start of your turn and grows by one, up to ten.</p>
-
-        <div class="divider"></div>
-        <h3>Selection</h3>
-        <div id="selected-card" class="selected-card empty">Select a card or a Vessel.</div>
-
-        <div class="button-stack">
-          <button id="play-card-btn" class="button primary full" type="button" disabled>Play selected card</button>
-          <button id="mulligan-btn" class="button secondary full" type="button" disabled>Mulligan selected card (1 Flux)</button>
-          <button id="end-turn-btn" class="button primary full" type="button">End Turn</button>
-          <button id="cancel-btn" class="button secondary full" type="button" disabled>Cancel selection</button>
-        </div>
-
-        <div class="divider"></div>
-        <dl class="counters">
-          <div><dt>Deck</dt><dd id="deck-count">30</dd></div>
-          <div><dt>Discard</dt><dd id="discard-count">0</dd></div>
-          <div><dt>Vessels</dt><dd id="unit-count">0 / 4</dd></div>
-          <div><dt>Relics</dt><dd id="relic-count">0 / 2</dd></div>
-        </dl>
-      </aside>
-
-      <section class="board-section" aria-label="Battlefield">
-        <button id="enemy-nexus" class="nexus enemy" type="button">
-          <span class="nexus-label">OPPONENT NEXUS</span>
-          <span class="nexus-hint">Strike from the enemy home row when it controls no Vessels</span>
-        </button>
-        <p class="arena-caption">
-          <span class="arena-name" id="arena-name">The Verdant Sanctum</span>
-          <em>Miniature arena · terrain is decorative · deployment zones are tinted</em>
+  <!-- ============================ CARD LIBRARY ============================ -->
+  <section id="view-library" class="view" role="tabpanel" aria-labelledby="tab-library" hidden>
+    <div class="guide-head">
+      <div>
+        <p class="eyebrow">THE PRINTED SET &middot; 107 CARDS</p>
+        <h2>The card face is the rulebook</h2>
+        <p class="muted">
+          These are the finished designs, one file per card, generated from the same card data
+          the engine plays and the same voxel models the battlefield renders. The top-right
+          medallion is always Flux cost; Attack and Guard are the printed combat values. Select
+          any face to open it at full size.
         </p>
-        <div class="board-wrap">
-          <div class="board-gutter" aria-hidden="true">
-            <span class="gutter-label enemy" style="top:0;height:42.8%">OPPONENT</span>
-            <span class="gutter-label neutral" style="top:42.8%;height:14.3%">CONTESTED</span>
-            <span class="gutter-label friendly" style="top:57.1%;height:42.9%">YOUR ZONE</span>
+      </div>
+      <button id="library-menu" class="button secondary" type="button">Back to menu</button>
+    </div>
+    <div class="library-filters" role="group" aria-label="Filter the card library">
+      <div id="library-categories" class="chip-row"></div>
+      <div id="library-elements" class="chip-row"></div>
+    </div>
+    <p id="library-count" class="muted small" role="status"></p>
+    <div id="library-grid" class="library-grid"></div>
+  </section>
+
+  <!-- ============================ BATTLE ============================ -->
+  <section id="view-battle" class="view battle-view" role="tabpanel" aria-labelledby="tab-battle" hidden>
+    <div class="war-table">
+      <!-- ------------------------- opponent field ------------------------- -->
+      <section class="battle-field opponent-field" aria-label="Opponent field">
+        <header class="field-hud">
+          <img id="opponent-avatar" class="avatar avatar-sm" alt="" width="32" height="32">
+          <div class="hud-identity">
+            <span class="hud-label">OPPONENT · AI</span>
+            <strong id="opponent-name">The Vanguard</strong>
           </div>
-          <div class="board-stage">
-            <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
-            <span class="board-post tl" aria-hidden="true"></span>
-            <span class="board-post tr" aria-hidden="true"></span>
-            <span class="board-post bl" aria-hidden="true"></span>
-            <span class="board-post br" aria-hidden="true"></span>
+          <button id="enemy-nexus" class="hud-vitality enemy nexus-target" type="button" title="Strike the opponent Nexus from their home row when they control no Vessels">
+            <span class="hud-label">NEXUS VITALITY <b id="enemy-vitality">30</b></span>
+            <span class="vitality-track" role="img" aria-label="Opponent Nexus vitality">
+              <i id="enemy-vitality-bar"></i>
+            </span>
+          </button>
+          <div class="hud-resources">
+            <span class="hud-chip">FLUX <b id="enemy-flux">0</b></span>
+            <span class="hud-chip">HAND <b id="enemy-hand">5</b></span>
+            <span class="hud-chip">VESSELS <b id="enemy-unit-count">0</b></span>
           </div>
+          <div class="hud-status">
+            <span id="opponent-difficulty" class="pill">STANDARD</span>
+            <span id="opponent-status" class="thinking" aria-live="polite">Waiting</span>
+          </div>
+        </header>
+
+        <div class="slot-row">
+          <p class="row-tag"><span>BACK ROW</span><em>Set · Activate</em></p>
+          <div id="enemy-action-slots" class="slot-grid action-grid" role="group" aria-label="Opponent back-row Action zones"></div>
         </div>
-        <button id="player-nexus" class="nexus friendly" type="button">
-          <span class="nexus-label">YOUR NEXUS</span>
-          <span class="nexus-hint">Defended by your Vessels</span>
-        </button>
-        <div class="legend">
-          <span><i class="legend-dot friendly"></i>Your Vessels</span>
-          <span><i class="legend-dot enemy"></i>Opponent Vessels</span>
-          <span><i class="legend-dot legal"></i>Legal summon</span>
-          <span><i class="legend-dot move"></i>Legal move</span>
-          <span><i class="legend-dot attack"></i>Legal attack</span>
-          <span><i class="legend-dot target"></i>Action target</span>
-          <span><i class="legend-dot unready"></i>Your Vessel, not ready yet</span>
+        <div class="slot-row">
+          <p class="row-tag"><span>FRONT ROW</span><em>Summoned Vessels</em></p>
+          <div id="enemy-vessel-slots" class="slot-grid vessel-grid" role="group" aria-label="Opponent front-row Vessel zones"></div>
         </div>
       </section>
-    </div>
 
-    <div class="turn-bar">
-      <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
-      <button id="turn-bar-cancel" class="button secondary small" type="button" hidden>Cancel</button>
+      <!-- ---------------------------- arena ---------------------------- -->
+      <section class="arena-shell" aria-label="Tactical battlefield">
+        <aside class="arena-wing arena-wing-left">
+          <p class="wing-kicker">THE BATTLEFIELD</p>
+          <h2 id="arena-name" class="arena-name">The Verdant Sanctum</h2>
+          <p class="wing-sub"><span id="grid-label">5 × 5 grid · 25 tiles</span><br>Terrain is decorative</p>
+          <p class="wing-objective">
+            <strong>Object</strong> Break the enemy Nexus. Once it controls no Vessels,
+            march onto its home row and strike.
+          </p>
+          <ul class="legend" aria-label="Board key">
+            <li><i class="legend-dot friendly"></i>Your Vessels</li>
+            <li><i class="legend-dot enemy"></i>Opponent Vessels</li>
+            <li><i class="legend-dot legal"></i>Legal summon</li>
+            <li><i class="legend-dot move"></i>Legal move</li>
+            <li><i class="legend-dot attack"></i>Legal attack</li>
+            <li><i class="legend-dot target"></i>Action target</li>
+            <li><i class="legend-dot unready"></i>Not ready yet</li>
+          </ul>
+        </aside>
+
+        <div class="arena-core">
+          <div class="board-wrap">
+            <div class="board-stage">
+              <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+              <span class="board-post tl" aria-hidden="true"></span>
+              <span class="board-post tr" aria-hidden="true"></span>
+              <span class="board-post bl" aria-hidden="true"></span>
+              <span class="board-post br" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="arena-wing arena-wing-right">
+          <p class="wing-kicker">COMMAND</p>
+          <div class="turn-console">
+            <span class="hud-label">TURN <b id="turn-number">1</b></span>
+            <strong id="turn-owner" class="turn-owner">Your turn</strong>
+            <span id="timer" class="timer" role="timer" aria-live="off">2:00</span>
+          </div>
+
+          <div id="selected-card" class="selected-card empty">Select a card or a Vessel.</div>
+
+          <div class="flux-console">
+            <span class="hud-label">FLUX <b id="flux-count">1 / 1</b></span>
+            <div id="flux-track" class="flux-track" aria-label="Flux available"></div>
+          </div>
+
+          <div class="button-stack">
+            <button id="play-card-btn" class="button primary full" type="button" disabled>Play selected card</button>
+            <button id="mulligan-btn" class="button secondary full" type="button" disabled>Mulligan selected card (1 Flux)</button>
+            <button id="cancel-btn" class="button secondary full" type="button" disabled>Cancel selection</button>
+          </div>
+        </aside>
+      </section>
+
+      <div class="battle-status">
+        <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
+        <button id="turn-bar-cancel" class="button secondary small" type="button" hidden>Cancel</button>
+      </div>
+
+      <!-- ------------------------- player field ------------------------- -->
+      <section class="battle-field player-field" aria-label="Your field">
+        <div class="slot-row">
+          <p class="row-tag"><span>FRONT ROW</span><em>Summoned Vessels</em></p>
+          <div id="player-vessel-slots" class="slot-grid vessel-grid" role="group" aria-label="Your front-row Vessel zones"></div>
+        </div>
+        <div class="slot-row">
+          <p class="row-tag"><span>BACK ROW</span><em>Set · Activate</em></p>
+          <div id="player-action-slots" class="slot-grid action-grid" role="group" aria-label="Your back-row Action zones"></div>
+        </div>
+      </section>
+
+      <!-- ------------------ player console and hand ------------------ -->
+      <section class="hand-rail" aria-label="Your hand">
+        <header class="field-hud player-console">
+          <img id="player-avatar" class="avatar avatar-sm" alt="" width="32" height="32">
+          <div class="hud-identity">
+            <span class="hud-label">YOU</span>
+            <strong id="player-name">Wanderer</strong>
+          </div>
+          <div id="player-nexus" class="hud-vitality friendly nexus-target passive" title="Your Nexus: the opponent must break it to win">
+            <span class="hud-label">NEXUS VITALITY <b id="player-vitality">30</b></span>
+            <span class="vitality-track" role="img" aria-label="Your Nexus vitality">
+              <i id="player-vitality-bar"></i>
+            </span>
+          </div>
+          <div class="hud-resources">
+            <span class="hud-chip">DECK <b id="deck-count">30</b></span>
+            <span class="hud-chip">DISCARD <b id="discard-count">0</b></span>
+            <span class="hud-chip">VESSELS <b id="unit-count">0 / 4</b></span>
+            <span class="hud-chip">RELICS <b id="relic-count">0 / 4</b></span>
+          </div>
+          <button id="end-turn-btn" class="button primary end-turn" type="button">End Turn</button>
+        </header>
+
+        <div class="hand-head">
+          <p class="hud-label">YOUR HAND · <b id="hand-count">5</b> CARDS</p>
+          <span class="deck-count">DECK <strong id="deck-count-hand">30</strong></span>
+        </div>
+        <div id="hand" class="hand" aria-label="Cards in hand"></div>
+      </section>
     </div>
 
     <section id="tutorial-panel" class="tutorial-panel" aria-live="polite" hidden>
@@ -280,38 +350,16 @@
       </div>
     </section>
 
-    <section class="back-row" aria-label="Back row">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">BACK ROW</p>
-          <h2>Relic slots <span id="back-row-count" class="muted small">0 / 2</span></h2>
-        </div>
-        <p class="muted small">Persistent cards. Set from your hand; they keep buffing your side.</p>
-      </div>
-      <div id="back-row" class="back-row-slots"></div>
-    </section>
-
-    <section class="hand-section">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">YOUR HAND</p>
-          <h2>Cards in hand <span id="hand-count">5</span></h2>
-        </div>
-        <div class="deck-count">Deck <strong id="deck-count-hand">30</strong></div>
-      </div>
-      <div id="hand" class="hand" aria-label="Cards in hand"></div>
-    </section>
-
-    <section class="log-section">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">MATCH LOG</p>
-          <h2>Recent events</h2>
-        </div>
+    <details class="log-drawer">
+      <summary>
+        <span class="hud-label">MATCH LOG · <b id="log-count">0</b> EVENTS</span>
+        <span class="log-hint">Open the last 40 events</span>
+      </summary>
+      <div class="log-head">
         <button id="log-clear" class="button secondary small" type="button">Clear</button>
       </div>
       <ol id="log-list" class="log-list" aria-live="off"></ol>
-    </section>
+    </details>
 
     <footer>
       <span>VEY LATTICE · ACTIONS · RELICS · TACTICAL AI</span>
@@ -465,6 +513,19 @@
   </div>
 </div>
 
-<script type="module" src="./src/main.js"></script>
+<div id="card-modal" class="card-modal" hidden role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
+    <div class="card-modal-backdrop" data-close="true"></div>
+    <div class="card-modal-body">
+      <button id="card-modal-close" class="card-modal-close" type="button" aria-label="Close card">×</button>
+      <img id="card-modal-image" class="card-modal-image" alt="" />
+      <div class="card-modal-meta">
+        <h2 id="card-modal-title"></h2>
+        <p id="card-modal-facts" class="muted small"></p>
+        <a id="card-modal-file" class="button secondary small" href="#" target="_blank" rel="noreferrer">Open the card file</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

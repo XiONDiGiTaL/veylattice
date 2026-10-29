@@ -11,9 +11,11 @@ import {
   CARD_CATEGORIES,
   DECK_RULES,
   EFFECT_KINDS,
+  EFFECT_TARGETING,
   MAX_FLUX,
   RARITIES,
   SUBTYPES,
+  VESSEL_KEYWORDS,
 } from "./constants.js";
 import { ELEMENTS } from "./elemental-rules.js";
 
@@ -62,6 +64,29 @@ function validateEffect(card, where, scope, errors) {
     if (attack === 0 && guard === 0) {
       errors.push(`${where}: buff must change attack or guard.`);
     }
+  }
+  // The targeting mode is part of the effect's contract: an enemy-only effect
+  // printed as "none" would be unplayable, and a friendly buff printed as
+  // "anyUnit" would let the engine accept a cast the rules never described.
+  const required = EFFECT_TARGETING[effect.kind];
+  if (scope === "action" && required && card.targeting !== required) {
+    errors.push(`${where}: effect "${effect.kind}" requires targeting "${required}".`);
+  }
+}
+
+/** Vessel abilities are keyword ids from a closed list, never free text. */
+function validateAbilities(card, where, errors) {
+  if (!Array.isArray(card.abilities)) return;
+  const seen = new Set();
+  for (const ability of card.abilities) {
+    if (typeof ability !== "string" || !VESSEL_KEYWORDS[ability]) {
+      errors.push(`${where}: unknown Vessel keyword "${String(ability)}".`);
+      continue;
+    }
+    if (seen.has(ability)) {
+      errors.push(`${where}: duplicate Vessel keyword "${ability}".`);
+    }
+    seen.add(ability);
   }
 }
 
@@ -115,6 +140,7 @@ export function validateCatalog(cards) {
     }
 
     if (card.category === "vessel") {
+      validateAbilities(card, where, errors);
       if (!isIntegerInRange(card.attack, 1, 10)) {
         errors.push(`${where}: vessel attack must be an integer between 1 and 10.`);
       }
@@ -198,17 +224,56 @@ export function relicIdsFrom(catalog) {
   return catalog.cards.filter((c) => c.category === "relic").map((c) => c.id);
 }
 
+function shuffleCopy(items, rng) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+/** Round-robin one element at a time so a large pool still shows its variety. */
+function spreadByElement(cards, limit) {
+  const elements = ["wood", "fire", "earth", "metal", "water"];
+  const byElement = elements.map((element) => cards.filter((card) => card.element === element));
+  const picked = [];
+  for (let round = 0; picked.length < limit; round += 1) {
+    let added = false;
+    for (const list of byElement) {
+      if (round < list.length && picked.length < limit) {
+        picked.push(list[round].id);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return picked.slice(0, limit);
+}
+
 /**
- * Build the deterministic practice deck from the whole shipped pool:
- * one copy of every Vessel, two of every Action, one of every Relic.
+ * Build the deterministic practice deck: 20 Vessels spread across the five
+ * elements, two copies each of eight Actions, and four Relics — exactly 40
+ * cards, inside the canonical 20-40 range, above the ten-Vessel and five-Action
+ * minimums, and never above the three-copy limit.
  *
- * That is 18 + 16 + 4 = 38 cards for the current set, inside 20-40, with the
- * canonical five-Action minimum satisfied and no card above the three-copy
- * limit. There is deliberately no weaker rule profile for this deck.
+ * The deck is deliberately curated rather than "every card in the set": the
+ * pool is now far larger than a legal deck, so a practice deck has to choose.
+ * There is no weaker rule profile for it.
  */
-export function buildPracticeDeck(catalog) {
-  const deck = [...vesselIdsFrom(catalog), ...relicIdsFrom(catalog)];
-  for (const id of actionIdsFrom(catalog)) deck.push(id, id);
+export function buildPracticeDeck(catalog, options = {}) {
+  // The UI passes a seeded RNG so each practice match samples a different 20
+  // Vessels from the 60-card pool. Tests call it without one and get the same
+  // deterministic deck every time.
+  const pool = typeof options.rng === "function" ? shuffleCopy(catalog.cards, options.rng) : catalog.cards;
+  const vessels = pool.filter((card) => card.category === "vessel");
+  const actions = pool.filter((card) => card.category === "action");
+  const relics = pool.filter((card) => card.category === "relic");
+
+  const deck = spreadByElement(vessels, 20);
+  const actionIds = spreadByElement(actions, 8);
+  for (const id of actionIds) deck.push(id, id);
+  deck.push(...spreadByElement(relics, 4));
   return deck;
 }
 

@@ -5,8 +5,9 @@
  */
 
 import { box, both, pair } from "./_parts.js";
+import { beast, construct, drake, humanoid } from "./blueprints.js";
 
-export const FIRE_VESSELS = [
+const FIRE_CORE = [
   {
     id: "ashen_crownblade",
     element: "fire",
@@ -186,4 +187,27 @@ export const FIRE_VESSELS = [
       box("base", 1.35, 0.15, -0.8, 0.6, 0.32, 0.6, "stone", "stone", { ry: -22 }),
     ],
   },
+];
+
+export const FIRE_VESSELS = [
+  ...FIRE_CORE,
+  humanoid({ id: "emberwright_adept", element: "fire", head: "circlet", weapon: "sword", offhand: "tome", cape: "none", crest: "none", robe: "split", height: 0.99, bulk: 0.97, accent: "ember", tone: "cloth" }),
+  humanoid({ id: "cinder_warden", element: "fire", head: "helm", weapon: "hammer", offhand: "shield", cape: "none", crest: "spikes", stance: "wide", pauldrons: 1.35, hunch: 0.18, height: 1.06, bulk: 1.16, accent: "ember", tone: "dark" }),
+  humanoid({ id: "slagborn_pyromancer", element: "fire", head: "hood", weapon: "staff", offhand: "orb", cape: "long", crest: "none", stance: "stilt", hunch: 0.12, height: 1.0, bulk: 0.95, accent: "ember", tone: "cloth" }),
+  beast({ id: "glass_horn_charger", element: "fire", build: "lean", posture: "rear", horn: "ram", tail: "whip", height: 1.02, bulk: 1.02, scale: 1.15, accent: "crystal", tone: "dark" }),
+  humanoid({ id: "ash_veil_assassin", element: "fire", head: "mask", weapon: "daggers", offhand: "none", cape: "short", crest: "none", stance: "bent", hunch: 0.3, tail: true, height: 0.96, bulk: 0.88, accent: "ember", tone: "dark" }),
+  humanoid({ id: "furnace_abbot", element: "fire", head: "circlet", weapon: "staff", offhand: "brazier", cape: "long", crest: "spikes", robe: true, height: 1.02, bulk: 1.12, accent: "ember", tone: "cloth" }),
+  humanoid({ id: "obsidian_lancer", element: "fire", head: "helm", weapon: "spear", offhand: "shield", cape: "short", crest: "horns", stance: "stilt", pauldrons: 1.2, height: 1.16, bulk: 0.94, accent: "ember", tone: "base" }),
+  construct({ id: "kiln_tyrant", element: "fire", frame: "quad", crest: "chimney", height: 1.06, bulk: 1.18, accent: "ember", tone: "stone" }),
+  drake({ id: "pyre_sovereign", element: "fire", wings: "broad", horns: "crown", height: 1.1, bulk: 1.1, accent: "ember", tone: "base", wingTone: "ember" }),
+  // A wiry, pale watch-keeper with a swept copper fringe, a long coat and the
+  // brazier carried out in front of her, away from the axe arm.
+  humanoid({
+    id: "cinderwatch_knight", element: "fire", human: true, head: "human",
+    hair: "swept", beard: "none", pose: "carry", garment: "coat",
+    headW: 0.94, headH: 0.98, jaw: 0.94, nose: 0.95, ears: 0.95,
+    palette: { skin: "#e0ac8a", skinShade: "#bd8563", hair: "#b8542a", eye: "#d98a4a" },
+    frame: 0.94, sleeves: "short", weapon: "axe", offhand: "brazier",
+    cape: "short", stance: "narrow", height: 1.0, bulk: 0.96, accent: "ember", tone: "cloth", bracer: true,
+  }),
 ];

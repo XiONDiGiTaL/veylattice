@@ -56,6 +56,7 @@ test("the observation never contains opponent hand or deck contents", () => {
     "relicEffectKinds",
     "unitCount",
     "vitality",
+    "ward",
   ]);
   assert.equal(observation.foe.handCount, 2);
   assert.equal(observation.foe.deckCount, 1);
@@ -175,6 +176,27 @@ test("an AI-versus-AI match only ever submits accepted commands", () => {
   assert.equal(rejections, 0, "no AI command was rejected by the engine");
   assert.equal(state.phase, "over", `match ended honestly after ${steps} decisions`);
   assert.ok(maxUnits <= 8, "both seats stay inside the four-Vessel cap");
+});
+
+test("a spent Vessel is never offered as a move-then-attack plan", () => {
+  // Regression: `attacksFromCell` reasons about geometry only, so a unit that
+  // had already attacked could still be proposed for move+attack on the
+  // standard difficulty, and the engine rejected the second command.
+  let state = place(baseMatch(), 0, "vessel_ashen_crownblade", 2, 3).state;
+  state = place(state, 1, "vessel_mireglass_stalker", 2, 2).state;
+  const attacker = Object.values(state.units).find((u) => u.owner === 0);
+  attacker.hasAttacked = true;
+
+  const plans = buildCandidates(state, 0, { difficulty: "standard" });
+  const spent = plans.filter((plan) =>
+    plan.commands.some((command) => command.type === "attack" && command.unitId === attacker.id),
+  );
+  assert.deepEqual(spent, [], "no attack plan may come from a unit that already attacked");
+  for (const plan of plans) {
+    for (const command of plan.commands) {
+      assert.equal(applyCommand(state, command, { now: START + 1000 }).ok, true, `${plan.kind} was rejected`);
+    }
+  }
 });
 
 /* ---------------------------------------------------------------- *
