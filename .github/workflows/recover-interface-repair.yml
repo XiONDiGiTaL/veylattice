@@ -1,0 +1,50 @@
+name: Recover interface repair
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/recover-interface-repair.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: interface-repair-main
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install workflow parser
+        run: python -m pip install PyYAML==6.0.2
+      - name: Repair workflow escaping and execute approved steps
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          import yaml
+          path = Path('.github/workflows/interface-repair.yml')
+          original = path.read_text()
+          fixed = original.replace(chr(39) + chr(10) + chr(39), 'chr(10)')
+          workflow = yaml.safe_load(fixed)
+          steps = workflow['jobs']['repair']['steps']
+          for step in steps:
+              if step.get('shell') == 'python':
+                  compile(step['run'], step['name'], 'exec')
+          path.write_text(fixed)
+          for step in steps:
+              if 'run' not in step:
+                  continue
+              print(step['name'], flush=True)
+              if step['name'] == 'Commit passing repair to main':
+                  subprocess.run(['git', 'add', str(path)], check=True)
+              if step.get('shell') == 'python':
+                  exec(compile(step['run'], step['name'], 'exec'), {'__name__': '__main__'})
+              else:
+                  subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']], check=True)
