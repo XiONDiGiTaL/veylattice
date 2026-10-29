@@ -1,0 +1,149 @@
+name: Guarded interface repair
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/interface-repair.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: interface-repair-main
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Baseline tests
+        run: npm run check
+      - name: Apply guarded partial repair
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          report = Path('docs/MENU_PLAYABILITY_REPAIR.md')
+          if report.exists():
+              raise SystemExit('Repair already present; refusing to overwrite it.')
+          base = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+          def replace_once(text, old, new):
+              if text.count(old) != 1:
+                  raise RuntimeError('Unexpected source baseline: ' + old[:90])
+              return text.replace(old, new)
+          arena_path = Path('src/render/arena3d.js')
+          arena = arena_path.read_text()
+          old = '''  function tintCell(x, y, color) {
+              const mesh = tileMeshes.get(`${x},${y}`);
+              if (mesh) mesh.material.color.set(color);
+            }'''
+          new = '''  function tintCell(x, y, color, label) {
+              const mesh = tileMeshes.get(`${x},${y}`);
+              if (!mesh) return;
+              mesh.material.color.set(color);
+              const top = mesh.position.y + mesh.geometry.parameters.height / 2 + 0.025;
+              const pos = cellToWorld(x, y);
+              const target = new THREE.Group();
+              target.userData.cell = { x, y };
+              const size = TILE - 0.12;
+              const border = 0.045;
+              for (const [dx,dz,w,d] of [[0,-size/2,size,border],[0,size/2,size,border],[-size/2,0,border,size],[size/2,0,border,size]]) {
+                const edge = new THREE.Mesh(new THREE.BoxGeometry(w,0.018,d),new THREE.MeshBasicMaterial({color}));
+                edge.position.set(dx,0,dz);
+                target.add(edge);
+              }
+              const inset = new THREE.Mesh(new THREE.PlaneGeometry(size-0.08,size-0.08),new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.22,depthWrite:false,side:THREE.DoubleSide}));
+              inset.rotation.x = -Math.PI/2;
+              inset.position.y = -0.003;
+              target.add(inset);
+              const glyph = textSprite(THREE,label,{fg:'#ffffff',bg:'#101a25',size:30});
+              glyph.scale.set(0.8,0.28,1);
+              glyph.position.y = 0.25;
+              target.add(glyph);
+              target.position.set(pos.x,top,pos.z);
+              dynamic.add(target);
+            }'''
+          arena = replace_once(arena,old,new)
+          for collection,color,label in [('legalMoves','#6fbf7a','MOVE'),('legalAttacks','#e05a4a','ATTACK'),('legalSummons','#7fc8e8','SUMMON')]:
+              arena = replace_once(arena,f'for (const [x, y] of {collection}) tintCell(x, y, "{color}");',f'for (const [x, y] of {collection}) tintCell(x, y, "{color}", "{label}");')
+          arena = replace_once(arena,'if (selected) tintCell(selected.x, selected.y, "#ffd166");','if (selected) tintCell(selected.x, selected.y, "#ffd166", "SELECTED");')
+          index = Path('index.html')
+          html = replace_once(index.read_text(),'<div class="vl-menu-backdrop" aria-hidden="true">','<div class="vl-menu-backdrop" aria-hidden="true"><img class="vl-sanctuary" src="./assets/menu-sanctuary.svg" alt="" fetchpriority="high">')
+          html = replace_once(html,'XionDigital Arcade · Tactical Card Battler','The five elements await')
+          html = replace_once(html,'Bind the five elements. Command your Vessels. Break the enemy Nexus.','Bind the elements. Command the Lattice.')
+          html = replace_once(html,'<span class="vl-btn-sub">Solo duel · Practice · Guided · Online room</span>','')
+          css_path = Path('ui.css')
+          css = css_path.read_text()
+          start = css.index('/* ------------------------------ main menu ------------------------------ */')
+          end = css.index('/* ------------------------------ lobby ------------------------------ */')
+          if end <= start:
+              raise RuntimeError('Unexpected CSS boundaries')
+          menu = '''/* ------------------------------ main menu ------------------------------ */
+          .vl-menu{position:relative;isolation:isolate;min-height:100dvh;margin-inline:calc(-1 * clamp(12px,4vw,48px));padding:100px clamp(24px,6vw,100px) 24px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background:var(--vl-bg-0)}
+          .vl-menu-backdrop{position:absolute;inset:0;z-index:-1;pointer-events:none}.vl-sanctuary{width:100%;height:100%;object-fit:cover;object-position:65% center}.vl-menu-backdrop::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,7,12,.96),rgba(6,7,12,.8) 32%,rgba(6,7,12,.1) 75%)}
+          .vl-menu-aura,.vl-menu-lattice,.vl-motes,.vl-menu-stage{display:none!important}.vl-menu-inner{display:block;width:100%;max-width:1440px;margin:auto}.vl-menu-copy{display:flex;flex-direction:column;align-items:flex-start;gap:20px;width:min(100%,580px)}
+          .vl-wordmark{display:flex;align-items:center;gap:16px}.vl-emblem{width:54px;flex:none;overflow:visible}.vl-emblem-ring,.vl-emblem-star{fill:none;stroke:var(--vl-gold);stroke-width:1.5}.vl-emblem .e-wood{fill:var(--vl-wood)}.vl-emblem .e-fire{fill:var(--vl-fire)}.vl-emblem .e-earth{fill:var(--vl-earth)}.vl-emblem .e-metal{fill:var(--vl-metal)}.vl-emblem .e-water{fill:var(--vl-water)}
+          .vl-title{margin:0;font:600 clamp(36px,5.4vw,78px)/1.1 var(--vl-font-display);letter-spacing:.045em;text-transform:uppercase;color:var(--vl-text)}.vl-title span{color:var(--vl-gold-hi)}.vl-tagline{margin:0;color:var(--vl-text-2);font-size:16px;line-height:1.5}.vl-menu-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}.vl-menu .vl-btn--xl{min-height:64px;min-width:260px;border-radius:3px}.vl-menu .vl-btn-label{font:700 25px/1.2 var(--vl-font-display);letter-spacing:.18em;text-transform:uppercase}.vl-menu-context{margin:0;color:var(--vl-text-2);font-size:13px}.vl-menu-context:empty{display:none}
+          .vl-menu-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row;grid-template-rows:none;gap:2px 24px;width:min(100%,450px);padding-top:14px;border-top:1px solid var(--vl-line-strong)}.vl-nav-group,.vl-nav-hint{display:none}.vl-nav-item{min-height:44px;border:0;border-left:2px solid transparent;background:transparent;padding:10px 8px;text-align:left;color:var(--vl-text);cursor:pointer;font:600 14px/1.4 var(--vl-font-ui)}.vl-nav-item:hover,.vl-nav-item:focus-visible{border-left-color:var(--vl-gold);color:var(--vl-gold-hi);background:var(--vl-surface)}.vl-nav-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.vl-menu-foot{width:min(100%,650px);margin:24px 0 0;color:var(--vl-text-3);font-size:12px;line-height:1.5}
+          @media(max-width:640px){body[data-view=menu] .vl-menu{padding:92px 24px 24px;justify-content:flex-start}body[data-view=menu] .vl-menu-inner{margin:48px 0 auto}body[data-view=menu] .vl-menu-copy{gap:16px}body[data-view=menu] .vl-title{font-size:clamp(28px,8vw,48px)}body[data-view=menu] .vl-emblem{width:36px}body[data-view=menu] .vl-sanctuary{object-position:70% center;opacity:.55}body[data-view=menu] .vl-menu-cta{width:100%}body[data-view=menu] .vl-menu .vl-btn--xl{width:100%;min-width:0}body[data-view=menu] .vl-menu-nav{grid-template-columns:1fr 1fr;grid-auto-flow:row;grid-template-rows:none}}
+          
+          '''
+          directive = '\n\n## UI-004 / PLAY-001 — owner correction, 2026-10-29\nWork directly on main. The owner reports confusing gameplay and missing summon highlights. Earlier test passes do not establish live playability. Replace the product-hero/card-fan composition with an original world-led menu, compact working navigation and one Play action. Legal destinations need explicit above-terrain markers, not colour alone. Preserve rules, card IDs, profiles, audio, deck validation and real room state. This supersedes the old card-fan composition only. Full browser summoning, movement, attacks, Actions, Relics, a complete match and responsive navigation are required before DONE.\n'.replace('\n','
+')
+          for p in ['AI_INSTRUCTIONS.md','docs/UI_DESIGN_SYSTEM.md']:
+              path = Path(p)
+              path.write_text(path.read_text()+directive)
+          arena_path.write_text(arena)
+          index.write_text(html)
+          css_path.write_text(css[:start]+menu+css[end:])
+          Path('assets').mkdir(exist_ok=True)
+          Path('assets/menu-sanctuary.svg').write_text('''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000"><defs><linearGradient id="s" x2="0" y2="1"><stop stop-color="#0b1722"/><stop offset="1" stop-color="#283d40"/></linearGradient></defs><path fill="url(#s)" d="M0 0h1600v1000H0z"/><path fill="#17292e" d="M0 580 200 360 390 530 570 300 770 500 950 330 1200 480 1420 270 1600 460v540H0z"/><path fill="#102126" d="m0 670 220-110 180 110 210-180 260 170 210-100 260 110 260-130v460H0z"/><g fill="#34484a" stroke="#60716a" stroke-width="3"><path d="M850 760V330h80v80h-30v350zM1240 760V300h80v460h-50V390h-30zM900 330v-65h360v65zM960 760V450h40v310zM1170 760V440h40v320z"/><path d="m820 760 270-115 300 115-300 145z"/></g><path fill="#b5e6dd" d="m1090 385 35 85-35 115-35-115z"/><path fill="#0a1518" d="m0 830 330-60 300 105 250-45 250 115 470-100v155H0z"/><g fill="#a89a70" opacity=".65"><path d="m1020 800 60-22 70 22-66 24zM965 850l115-30 120 35-110 40zM900 925l185-40 190 45-180 55z"/></g></svg>''')
+          Path('tests/interface-repair.test.js').write_text('''import test from 'node:test';
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const source=readFileSync(new URL('../src/render/arena3d.js',import.meta.url),'utf8');
+          test('legal targets have labels and terrain-relative geometry',()=>{for(const label of ['SUMMON','MOVE','ATTACK','SELECTED'])assert.ok(source.includes(label));assert.ok(source.includes('mesh.geometry.parameters.height / 2 + 0.025'));assert.ok(source.includes('target.userData.cell = { x, y }'));});
+          test('menu background resolves under Pages subpath',()=>assert.ok(readFileSync(new URL('../index.html',import.meta.url),'utf8').includes('./assets/menu-sanctuary.svg')));
+          ''')
+          text = f'''# UI-004 / PLAY-001: partial repair
+          Base: {base}. Target: main.
+          Diagnosis: 3D legal destinations used colour alone; fixed-height markers can be buried by raised terrain. Menu used a decorative card fan rather than the world.
+          Implemented: above-terrain labelled SUMMON/MOVE/ATTACK/SELECTED markers retaining cell picking; original static sanctuary composition and compact existing navigation. Rules and state integrations unchanged.
+          Automated checks: PENDING.
+          NOT VERIFIED: browser rendering, actual summon data flow, phone layout, full match, live deployment, real-Supabase lobby. Existing Play dialog and lobby are preserved, not redesigned.
+          Next: trace card selection through legalSummons in main.js; browser-test placement/movement/combat/Actions/Relics; complete progressive mode setup and duel-table lobby.
+          '''
+          report.write_text(text)
+          changelog = Path('CHANGELOG.md')
+          changelog.write_text(replace_once(changelog.read_text(),'## Unreleased','## Unreleased\n\n### 2026-10-29 — UI-004 / PLAY-001 partial repair\n\n'.replace('\n','
+')+text))
+          for p,entry in [('TODO.md','UI-004 / PLAY-001 | IN_PROGRESS | P0 main-branch menu/playability repair. Browser/full-match acceptance outstanding; not DONE.'),('AI_HANDOFF.md',text)]:
+              path=Path(p)
+              path.write_text(path.read_text()+'\n\n'.replace('\n','
+')+entry)
+      - name: Stamp and verify
+        run: |
+          npm run stamp
+          node --check src/render/arena3d.js
+          npm test
+          npm run check
+      - name: Record actual automated verification
+        shell: python
+        run: |
+          from pathlib import Path
+          for p in ['docs/MENU_PLAYABILITY_REPAIR.md','CHANGELOG.md','AI_HANDOFF.md']:
+              path=Path(p)
+              path.write_text(path.read_text().replace('Automated checks: PENDING.','Automated checks: baseline npm run check, npm run stamp, arena syntax check, npm test and final npm run check passed in this GitHub Actions run. Browser tests were NOT run.'))
+      - name: Commit passing repair to main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add AI_INSTRUCTIONS.md AI_HANDOFF.md CHANGELOG.md TODO.md docs/UI_DESIGN_SYSTEM.md docs/MENU_PLAYABILITY_REPAIR.md src/render/arena3d.js index.html ui.css tests/interface-repair.test.js assets/menu-sanctuary.svg
+          git diff --cached --check
+          git commit -m 'Improve legal-tile visibility and replace card-fan menu composition'
+          git push origin HEAD:main
