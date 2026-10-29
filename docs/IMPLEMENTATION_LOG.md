@@ -1049,3 +1049,105 @@ real user browser (autoplay-gated to the first gesture) still awaits the owner's
 **Push record:** local commit a398ba9 pushed via the GitHub Data API (plain `git push` cannot
 prompt for credentials in this shell) to remote ab35232e58b4b8b2fefa82018a56c1f1efb7dbf8
 (tree identical to local); local branch reset to origin/main, clean tree.
+
+## Session 2026-10-29 (afternoon) · Real-browser verification, lobby E2E, hand frames
+
+**Base revision:** `b488699` (origin/main, fetched fresh at session start; the tree was clean).
+**Environment:** Linux cloud sandbox, Node v22.23.4, Playwright Chromium, headless, WebGL via
+SwiftShader. Local static server at `http://127.0.0.1:8100/veylattice/` (the repo symlinked
+under a `/veylattice/` subpath). three@0.160.0 came from the npm registry and was served in
+place of the jsDelivr URL.
+**Network limits (observed, proxy status `connect_rejected` 403):** xiondigital.net,
+cdn.jsdelivr.net, unpkg.com and jjtfnduodxtulxvviasf.supabase.co were all unreachable.
+Consequences: no public-site check; Supabase REST was blocked in every run; the lobby ran over
+a test double.
+**Git:** `git push` was refused by the session's git proxy ("not in this session's authorized
+repository set"). `GH_TOKEN` was invalid, and no GitHub connector was available. The commit
+author was set per-repo to the existing identity
+`XiØN <53795273+XiONDiGiTaL@users.noreply.github.com>` (taken from the existing history),
+not the sandbox default.
+
+### Task 1: console + audio pass (tools/browser-checks/audio-console-pass.cjs, audio-two-matches.cjs)
+Observed console across menu, Decks, Shop, Lobby, Settings and a full Practice match (11 End
+Turns, Defeat after 133 s): **no page errors and no JS console errors**. The only console
+entries were two "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT" per profile RPC,
+caused by this harness blocking supabase.co. Media `ERR_ABORTED` network events on track
+switches are normal range-request cancellations, not console messages.
+Audio, from the media-element probe:
+- Before any gesture: `play()` was rejected with NotAllowedError, and the status read "Music
+  paused by the browser until your next click or keypress."
+- After the first click: Main Menu `playing`, currentTime advancing (2.43 s), status "Now
+  playing: menu.".
+- Decks → Planning; Shop → Shop; Lobby/Settings → Main Menu; match start → Battle.
+- At Defeat: Battle paused, Defeat played once to its end (11.04 s), with no replay after a
+  viewport resize.
+
+Defects found and fixed: second-match stinger missing; index.html track 404 (status
+mislabelled "blocked"); Defeat overlapping the menu theme. After the fixes, a two-match run
+shows Defeat once per match; Main Menu stops the sting and starts the menu theme; Play Again
+stops the sting and starts Battle; index.html entry plays the menu theme.
+**Not verified:** audible output (headless, no audio device); the Victory sting in a browser
+(the scripted matches end in Defeat; covered by unit tests); a draw.
+
+### Task 2: two-browser lobby (tools/browser-checks/lobby-e2e.cjs)
+Two isolated browser contexts (separate storage and profiles) were connected through
+`supabase-mock.js`. This test double models realtime-js semantics: async SUBSCRIBED, no
+replay, `self: false`, send-before-join delivered, and a presence state handed to joiners. It
+verifies the app protocol, **not Supabase**.
+
+First run: FAIL. The guest was never seated: the host replied before the guest's channel had
+joined. A -5 s guest clock: FAIL, because the guest's Ready button went dead after its deck
+edit was discarded as "older".
+
+Fixes are listed in CHANGELOG.md. Final runs:
+- Guest clock 0 s: 24/25 (no Vessel was affordable in 4 turns, so the summon check had
+  nothing to test).
+- -5 s: 25/25. +5 s: 25/25. -4 s, 6 turns: 29/29.
+- +3 s with an idle 120 s deadline: 31/31.
+
+Checks covered: create, join and seat on both clients; deck and ready on both; Start enabled
+only for the host; both clients in battle; state fingerprints identical after every summon and
+end turn (turn, both vitalities mirrored, every occupied cell, field occupancy); deadline auto
+pass identical on both. Forged commands, each rejected with the board unchanged: stale seq;
+no id; non-active seat; author not owning the seat; engine-illegal summon from the right
+author. Guest leave: the leaver's match was cleared (Battle tab disabled); the host saw "Your
+opponent left the room…", End Turn was disabled, and the room was `finished`. Host leave
+returned to Create/Join. No console errors in either context.
+
+### Tasks 4 and 6: hand frames, 3D fixes, performance (battle-layout.cjs, arena-perf.cjs, mobile-overflow.cjs)
+Screenshots at 1366×860 and 390×844 (DPR 2) showed three pre-existing defects, all now fixed:
+- The 3D board was rotated 90°.
+- The classic board rendered under the canvas.
+- The phone layout was 518 px wide.
+
+Hand cards now measure 104×146 (desktop) and 92×129 (phone), aspect 0.713 = 214/300. Six
+approved faces render per hand; the Relic shows the pending face.
+
+Performance (SwiftShader; relative only), shown as before → after:
+
+| Measure | Desktop | Phone profile |
+| --- | --- | --- |
+| Battle idle, draw calls/s | 710 → 0 | 488 → 0 |
+| Battle idle, page fps | 6.2 → 60 | 4.2 → 60 |
+| Menu after a match, draw calls/s | 777 → 0 | 666 → 0 |
+| Classic mode, draw calls/s | 296 → 0 | 222 → 0 |
+| Long-task total | 6.5 s → 2.2–2.4 s | 14.0 s → 4.7–6.2 s |
+
+The phone profile is 390×844, DPR 2, with 4× CPU throttling. Drag orbit still renders
+continuously, as intended.
+
+The classic board itself has 2,224 nodes, 2,199 of them transformed. It shows about 850 ms
+frames under software compositing. Recorded, not changed.
+
+### Tasks 3, 5, 7: proposals (no implementation, nothing applied)
+- `docs/proposals/SERVER_AUTHORITATIVE_MULTIPLAYER.md` with `supabase/drafts/0003_matches.DRAFT.sql`.
+- `docs/proposals/CLOUD_ECONOMY_SYNC.md` with `supabase/drafts/0004_economy.DRAFT.sql`.
+- `docs/RELIC_FRAME_REQUEST.md`.
+
+Both SQL drafts parse with the PostgreSQL parser (pglast 7). They were **not executed**
+against any database. The Supabase free-plan quotas quoted in the proposal were read from
+supabase.com on 2026-10-29.
+
+### Commands and results
+`npm test` → 179 pass, 0 fail. `npm run check` → 179 pass, 0 fail (baseline at session start:
+164/164).

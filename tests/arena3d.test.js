@@ -40,3 +40,28 @@ test("camera: desktop is elevated three-quarter, narrow screens go more top-down
   assert.ok(mobile.position[1] > desktop.position[1], "mobile camera is higher");
   assert.ok(mobile.position[2] < desktop.position[2], "mobile camera is closer to top-down");
 });
+
+test("camera preset at yaw 0 sits on the player's (seat 0, +z) side, not rotated onto the x axis", async () => {
+  const { cameraPosition, cameraForWidth: preset } = await import("../src/render/arena3d.js");
+  for (const width of [1200, 390]) {
+    const p = preset(width);
+    const [x, y, z] = cameraPosition(p, 0);
+    assert.ok(Math.abs(x - p.position[0]) < 1e-9, "x unchanged at yaw 0");
+    assert.ok(Math.abs(y - p.position[1]) < 1e-9);
+    assert.ok(Math.abs(z - p.position[2]) < 1e-9, "z unchanged at yaw 0");
+    assert.ok(z > 0, "camera on seat 0's near side");
+  }
+  const [x90, , z90] = cameraPosition(preset(1200), Math.PI / 2);
+  assert.ok(x90 > 0 && Math.abs(z90) < 1e-9, "yaw orbits around Y");
+});
+
+test("render loop draws only when visible and changed or animating", async () => {
+  const { arenaShouldDraw } = await import("../src/render/arena3d.js");
+  const base = { documentHidden: false, containerDisplayed: true, onScreen: true, dirty: false, animating: false };
+  assert.equal(arenaShouldDraw(base), false, "idle and unchanged: no draw");
+  assert.equal(arenaShouldDraw({ ...base, dirty: true }), true);
+  assert.equal(arenaShouldDraw({ ...base, animating: true }), true);
+  assert.equal(arenaShouldDraw({ ...base, dirty: true, containerDisplayed: false }), false, "hidden view (menu / classic grid)");
+  assert.equal(arenaShouldDraw({ ...base, dirty: true, onScreen: false }), false, "scrolled off-screen");
+  assert.equal(arenaShouldDraw({ ...base, animating: true, documentHidden: true }), false, "background tab");
+});

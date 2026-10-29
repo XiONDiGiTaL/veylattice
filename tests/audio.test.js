@@ -262,3 +262,94 @@ test("stop + dispose: no lingering role, status returns to idle", () => {
   assert.equal(manager.currentRole, null);
   assert.ok(created[0].pauseCalls >= 1);
 });
+
+test("track URLs: a document URL naming a file (index.html, query) resolves beside it", () => {
+  // Regression (2026-10-29 browser pass): /veylattice/index.html produced
+  // .../index.html/music/... (404) because a trailing slash was forced.
+  assert.equal(
+    resolveTrackUrl("https://xiondigital.net/veylattice/index.html", "menu.mp3"),
+    "https://xiondigital.net/veylattice/music/menu.mp3",
+  );
+  assert.equal(
+    resolveTrackUrl("https://xiondigital.net/veylattice/?room=ABC234", "menu.mp3"),
+    "https://xiondigital.net/veylattice/music/menu.mp3",
+  );
+  assert.equal(
+    resolveTrackUrl("http://127.0.0.1:8100/veylattice/index.html#battle", "Veylattice_ Battle.mp3"),
+    "http://127.0.0.1:8100/veylattice/music/Veylattice_%20Battle.mp3",
+  );
+  // The directory form without a slash keeps the earlier fix.
+  assert.equal(resolveTrackUrl("https://xiondigital.net/veylattice", "menu.mp3"), "https://xiondigital.net/veylattice/music/menu.mp3");
+});
+
+test("a file that cannot play (NotSupportedError) reports error, not blocked, and is not retried", async () => {
+  const els = [];
+  const m = createAudioManager({
+    manifest: suppliedManifest(),
+    baseUrl: "https://xiondigital.net/veylattice/",
+    fadeMs: 0,
+    createAudio: () => {
+      const element = new FakeAudio();
+      element.play = function play() {
+        this.playCalls += 1;
+        const error = new Error("no supported source");
+        error.name = "NotSupportedError";
+        return Promise.reject(error);
+      };
+      els.push(element);
+      return element;
+    },
+  });
+  m.playBackground("menu");
+  await tick();
+  assert.equal(m.status, "error");
+  assert.equal(m.pendingRole, null);
+  m.unlock();
+  await tick();
+  assert.equal(els[0].playCalls, 1, "a broken file is not retried on the next gesture");
+});
+
+test("an AbortError from rapid navigation is not reported as blocked", async () => {
+  const m = createAudioManager({
+    manifest: suppliedManifest(),
+    baseUrl: "https://xiondigital.net/veylattice/",
+    fadeMs: 0,
+    createAudio: () => {
+      const element = new FakeAudio();
+      element.play = function play() {
+        this.playCalls += 1;
+        const error = new Error("interrupted by a new load request");
+        error.name = "AbortError";
+        return Promise.reject(error);
+      };
+      return element;
+    },
+  });
+  m.playBackground("menu");
+  await tick();
+  assert.equal(m.status, "playing");
+});
+
+test("each match key gets its own stinger; a stinger never touches background state", async () => {
+  const { manager, created } = managerWith(suppliedManifest());
+  manager.playBackground("battle");
+  manager.stopBackground();
+  assert.equal(manager.playStinger("defeat", 1), "playing");
+  assert.equal(manager.playStinger("defeat", 1), "already-played");
+  assert.equal(manager.playStinger("victory", 2), "playing", "the next match's key plays its cue");
+  assert.equal(manager.currentRole, null, "stinger playback leaves the background role unset");
+  await tick();
+  assert.equal(created.length, 2, "one background + one reused stinger element");
+});
+
+test("starting background music ends a still-sounding result stinger", () => {
+  const { manager, created } = managerWith(suppliedManifest());
+  manager.playBackground("battle");
+  manager.stopBackground();
+  manager.playStinger("defeat", 7);
+  const stinger = created[1];
+  stinger.paused = false;
+  const pausesBefore = stinger.pauseCalls;
+  manager.playBackground("menu");
+  assert.ok(stinger.pauseCalls > pausesBefore, "stinger paused when the menu theme starts");
+});

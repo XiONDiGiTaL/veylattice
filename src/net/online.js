@@ -33,17 +33,32 @@ export async function getOnlineClient() {
 }
 
 /**
- * Join a room channel. Handlers: onRoom(room, fromId), onCommand(envelope),
- * onPresence(playerIds[]). Returns { sendRoom, sendCommand, leave }.
+ * Join a room channel and resolve only once it is SUBSCRIBED. Handlers:
+ * onRoom(room, fromId), onCommand(envelope), onJoin(player),
+ * onPresence(playerIds[]), onStatus(status) for a later drop.
+ * Returns { sendRoom, sendCommand, sendJoin, leave }.
  */
-export async function joinRoomChannel(code, playerId, handlers = {}) {
+export async function joinRoomChannel(code, playerId, handlers = {}, { subscribeTimeoutMs = 10000 } = {}) {
   const client = await getOnlineClient();
+  // Per-sender ordering without clocks: every outgoing room broadcast carries
+  // (session, rev); receivers drop anything not newer than the last seen rev
+  // from that sender session. A reloaded page starts a fresh session.
+  const session = Math.floor(Math.random() * 0xffffffff).toString(36);
+  let rev = 0;
+  const lastRev = new Map();
+  const fresh = (payload) => {
+    if (typeof payload?.rev !== "number" || typeof payload?.session !== "string") return true;
+    const key = `${payload.from}:${payload.session}`;
+    if ((lastRev.get(key) ?? -1) >= payload.rev) return false;
+    lastRev.set(key, payload.rev);
+    return true;
+  };
   const channel = client.channel(`veylattice-room-${code}`, {
     config: { broadcast: { self: false }, presence: { key: playerId } },
   });
   channel
     .on("broadcast", { event: "room" }, ({ payload }) => {
-      if (payload?.room && payload?.from !== playerId) handlers.onRoom?.(payload.room, payload.from);
+      if (payload?.room && payload?.from !== playerId && fresh(payload)) handlers.onRoom?.(payload.room, payload.from);
     })
     .on("broadcast", { event: "command" }, ({ payload }) => {
       if (payload?.envelope && payload?.from !== playerId) handlers.onCommand?.(payload.envelope);
@@ -55,12 +70,47 @@ export async function joinRoomChannel(code, playerId, handlers = {}) {
       const state = channel.presenceState();
       handlers.onPresence?.(Object.keys(state));
     });
-  await channel.subscribe(async (status) => {
-    if (status === "SUBSCRIBED") await channel.track({ playerId, at: Date.now() });
+  // `subscribe()` returns the channel synchronously; the join completes later
+  // via the status callback. Broadcast has no replay, so a client must not
+  // send (e.g. a join request whose reply it needs) until it is actually
+  // SUBSCRIBED — otherwise the reply can arrive before it is listening and is
+  // lost (reproduced 2026-10-29 in the two-browser lobby run: the guest sat on
+  // "Joining…" forever). Resolve on SUBSCRIBED; reject on error/timeout.
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      channel.unsubscribe?.().catch?.(() => {});
+      reject(new Error("Timed out joining the room channel."));
+    }, subscribeTimeoutMs);
+    channel.subscribe(async (status, error) => {
+      if (status === "SUBSCRIBED") {
+        try {
+          await channel.track({ playerId, at: Date.now() });
+        } catch {
+          /* presence is advisory; broadcast still works */
+        }
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve();
+        }
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(new Error(`Room channel ${status.toLowerCase().replace("_", " ")}${error?.message ? `: ${error.message}` : ""}.`));
+        } else {
+          handlers.onStatus?.(status);
+        }
+      }
+    });
   });
   return {
     async sendRoom(room) {
-      await channel.send({ type: "broadcast", event: "room", payload: { room, from: playerId } });
+      rev += 1;
+      await channel.send({ type: "broadcast", event: "room", payload: { room, from: playerId, session, rev } });
     },
     async sendCommand(envelope) {
       await channel.send({ type: "broadcast", event: "command", payload: { envelope, from: playerId } });

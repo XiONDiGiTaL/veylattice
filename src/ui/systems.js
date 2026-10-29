@@ -49,6 +49,7 @@ import {
   isRoomCode,
   joinRoom,
   leaveRoom,
+  mergeRemoteRoom,
   setReady,
   setSeatDeck,
   startMatch,
@@ -365,15 +366,16 @@ export function mountSystems(ctx) {
   function broadcastRoom() {
     if (state.channel && state.room) state.channel.sendRoom(state.room).catch(() => {});
   }
-  function adoptRoom(next) {
+  function adoptRoom(next, fromId) {
     if (!next || next.code !== state.room?.code) return;
-    if (state.room && next.updatedAt < state.room.updatedAt) return;
-    state.room = next;
-    let mine = next.seats.find((s) => s.playerId === profile().id);
-    if (!mine && next.status === "waiting") {
-      // Guest fallback: seat ourselves in a room the host broadcast
-      // before our join message was processed, then broadcast it back.
-      const seated = joinRoom(next, profile());
+    const wasLive = ctx.isOnline();
+    const merged = mergeRemoteRoom(state.room, next, { myId: profile().id, fromId });
+    state.room = merged.room;
+    let mine = state.room.seats?.find((s) => s.playerId === profile().id);
+    if (!mine && state.room.status === "waiting" && Array.isArray(state.room.seats) && state.room.seats.length) {
+      // Guest fallback: seat ourselves in a room the host broadcast before
+      // our join message was processed, then broadcast it back.
+      const seated = joinRoom(state.room, profile());
       if (!seated.error) {
         state.room = seated.room;
         mine = seated.room.seats.find((s) => s.playerId === profile().id);
@@ -381,9 +383,12 @@ export function mountSystems(ctx) {
       }
     }
     if (mine) state.mySeat = mine.seat;
+    if (wasLive && (merged.event === "left" || state.room.status === "finished" || state.room.status === "closed")) {
+      ctx.abandonOnlineMatch?.("Your opponent left the room. The online match has ended with no result (online preview matches record nothing). Leave the room to return to the lobby.");
+    }
     renderLobby();
-    if (next.status === "in_match" && next.matchSeed !== null && !ctx.isOnline()) {
-      startOnlineFromRoom(next);
+    if (state.room.status === "in_match" && state.room.matchSeed !== null && !wasLive) {
+      startOnlineFromRoom(state.room);
     }
   }
   function startOnlineFromRoom(room) {
@@ -410,7 +415,7 @@ export function mountSystems(ctx) {
   async function ensureChannel(code) {
     if (state.channel) return state.channel;
     const channel = await joinRoomChannel(code, profile().id, {
-      onRoom: (room) => adoptRoom(room),
+      onRoom: (room, fromId) => adoptRoom(room, fromId),
       onCommand: (envelope) => ctx.applyRemoteCommand(envelope),
       onJoin: async (player) => {
         // Host answers a join request with the current room state so the
@@ -424,7 +429,21 @@ export function mountSystems(ctx) {
           }
         }
       },
-      onPresence: () => renderLobby(),
+      onPresence: (ids) => {
+        state.presence = ids;
+        if (ctx.isOnline() && state.room && state.mySeat !== null && state.mySeat !== undefined) {
+          const foe = state.room.seats?.[state.mySeat === 0 ? 1 : 0]?.playerId;
+          if (foe && !ids.includes(foe)) ctx.onlineNotice?.("Opponent connection lost. Reconnection is not supported in this preview: if they do not return, leave the room.");
+        }
+        // Broadcast has no replay: whenever the member set changes, the host
+        // re-sends the room so a late or reconnecting peer converges.
+        if (state.room && state.mySeat === 0) broadcastRoom();
+        renderLobby();
+      },
+      onStatus: (status) => {
+        state.lobbyMessage = `Room connection ${status.toLowerCase().replace("_", " ")} — leave and rejoin the room.`;
+        renderLobby();
+      },
     });
     state.channel = channel;
     return channel;
@@ -459,7 +478,9 @@ export function mountSystems(ctx) {
           if (!isRoomCode(code)) { state.lobbyMessage = "Enter a 6-character room code."; renderLobby(); return; }
           try {
             const channel = await ensureChannel(code);
-            state.room = { code, status: "waiting", seats: [], updatedAt: Date.now() };
+            // Placeholder until the host's room arrives. updatedAt 0 so the
+            // first real room is always adopted, whatever the two clocks say.
+            state.room = { code, status: "waiting", seats: [], updatedAt: 0 };
             await channel.sendJoin?.({ id: profile().id, displayName: profile().displayName }).catch(() => {});
             // Fallback: the host broadcasts room state on join; if nothing
             // arrives, the joiner is told to check the code and retry.
@@ -470,7 +491,7 @@ export function mountSystems(ctx) {
           renderLobby();
         } }),
       ]));
-      host.append(el("p", { class: "muted small", text: "Two players, one room: the host creates it, the guest joins by code, both pick a legal owned deck, both ready up, and the host starts. Deck lists are shared at match start so both clients build the same match; hands are shuffled locally from the shared seed and never broadcast." }));
+      host.append(el("p", { class: "muted small", text: "Two players, one room: the host creates it, the guest joins by code, both pick a legal owned deck, both ready up, and the host starts. Deck lists are shared at match start so both clients build the same match; hands are shuffled locally from the shared seed and never broadcast — but a modified client could reconstruct them from that seed, so treat online hands as unhidden in this preview. Reconnection is not supported: reloading the page leaves the match." }));
       return;
     }
 

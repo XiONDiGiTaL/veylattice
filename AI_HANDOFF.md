@@ -26,6 +26,61 @@
   (`npm run check` adds syntax checks).
 
 
+## Latest session — 2026-10-29 (afternoon) · Browser verification, lobby E2E, hand frames
+
+**Start here.** The base was `b488699`. This session's work is one **local commit on top of
+b488699 that was NOT pushed**. The session's git proxy refused the repository ("not in this
+session's authorized repository set"), `GH_TOKEN` was invalid, and no GitHub connector was
+present. Unless the owner pushed it afterwards, **remote main is still b488699 and the live
+site still runs ab35232's code**, which includes every defect listed below. Before you build
+on anything: `git fetch`, then confirm whether that commit, or the patch the owner received,
+is on origin.
+
+What this session verified (headless Chromium via Playwright, local `/veylattice/` subpath
+server; scripts in `tools/browser-checks/`, which list their own limits):
+- Console: no page errors and no JS console errors across menu, Decks, Shop, Lobby, Settings
+  and a full Practice match. The only console errors came from this harness blocking
+  supabase.co.
+- Soundtrack: the role per view is correct; the browser blocks autoplay until the first click,
+  then plays; Battle plays on match start; exactly one Defeat sting per match. **Audible output
+  is still unconfirmed** (headless). The Victory sting is unit-tested only.
+- Lobby: the two-context E2E over a Supabase Realtime **test double** passes after fixes
+  (25–31 checks per run, guest clock skew ±5 s, forged commands, the 120 s deadline,
+  leave/cleanup). It has **not** been run against real Supabase or with two signed-in players.
+  The status stays a **peer-validated preview**.
+
+Fixed (see CHANGELOG.md for the full list): stingers missing after the first match;
+index.html track 404; a broken file mislabelled "blocked"; the sting overlapping the menu
+theme; a guest never seated (subscribe race); clock-skew loss of guest edits (now an
+ownership merge plus per-sender revs); mid-match leave handling; AI takeover of a leaver's
+match; guest HUD seat inversion; local timeout racing remote commands; the 3D camera rotated
+90°; the classic board drawn under the canvas; the WebGL loop drawing while hidden or idle; a
+518 px phone layout. The battle hand now uses the approved frames.
+
+Proposals awaiting owner approval (**nothing applied, nothing deployed**):
+- `docs/proposals/SERVER_AUTHORITATIVE_MULTIPLAYER.md` (+ `supabase/drafts/0003_matches.DRAFT.sql`)
+- `docs/proposals/CLOUD_ECONOMY_SYNC.md` (+ `supabase/drafts/0004_economy.DRAFT.sql`)
+- `docs/RELIC_FRAME_REQUEST.md` (the asset spec; no frame was made)
+
+Tests: `npm test` 179/179, `npm run check` 179/179.
+
+Known limits and new findings:
+- Online hands are seed-derivable; the lobby text now says so.
+- There is no reconnection.
+- The guest plays from the far side (TODO MP-002).
+- The classic CSS-3D board is slow under software compositing (TODO ARENA-3D).
+- `supabase-js@2` is imported unpinned from jsDelivr (a floating major). Consider pinning an
+  exact version.
+
+Next three executable tasks:
+1. Get this commit onto origin/main. Then, on the live site in a real browser: hard-refresh,
+   listen for menu/battle/stinger audio, open devtools, and confirm the 3D board orientation
+   and hand frames.
+2. Run `tools/browser-checks/lobby-e2e.cjs` logic by hand against real Supabase with two
+   devices (or two browser profiles). Watch for the subscribe/seat fix and the leave notice.
+3. Owner decisions on the two proposals (identity choice, import cap). After that, the
+   approved migration work.
+
 ## Latest session — 2026-10-29 · Full 3D battlefield + Deck Builder + Shop + Online Lobby preview
 
 **Working tree (uncommitted at handoff-write time):** new `src/render/arena3d.js`,

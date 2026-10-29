@@ -107,3 +107,25 @@ export function buildApprovedCard(card, { artUri = "", effectText = "", base = "
   root.append(text);
   return root;
 }
+
+/**
+ * Battle-hand card face (migrated 2026-10-29 from the legacy vector face).
+ * Same approved frame, aperture geometry and canonical DOM text as the Deck
+ * Builder / Shop / Collection / discard viewer; the hand adds only state:
+ * an unaffordable cost flag and a `hand-face` hook so the rail can hide the
+ * rules line, which is unreadable at hand size and is shown in full by the
+ * command-panel inspector and the double-click card viewer. Relics keep the
+ * flagged neutral "RELIC FRAME PENDING" face.
+ */
+export function buildHandCardFace(card, { artUri = "", effectText = "", base = "./", affordable = true } = {}) {
+  const face = buildApprovedCard(card, { artUri, effectText, base });
+  face.classList.add("hand-face");
+  // The parent button carries the accessible name; the face is decorative.
+  face.removeAttribute("role");
+  face.setAttribute("aria-hidden", "true");
+  if (!affordable) {
+    const cost = face.querySelector(".approved-cost");
+    if (cost) cost.classList.add("unaffordable");
+  }
+  return face;
+}

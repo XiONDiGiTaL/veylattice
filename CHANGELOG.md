@@ -4,6 +4,49 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-29 - Real-browser verification pass: audio, lobby E2E, hand frames, 3D fixes
+
+Verified in headless Chromium (Playwright) against a local `/veylattice/` subpath server.
+Scripts are in `tools/browser-checks/`. **Not** verified on the public site, because this
+session's sandbox could not reach xiondigital.net, cdn.jsdelivr.net or supabase.co
+(egress 403). Push was also blocked (see AI_HANDOFF.md).
+
+Fixed (each found by an actual browser run, each with a regression test where the logic is
+testable without a DOM):
+- Audio: no victory/defeat stinger after the first practice match. `newMatch` never advanced
+  the match key.
+- Audio: `/veylattice/index.html` resolved tracks to `index.html/music/…` (404).
+- Audio: a missing or unsupported file was reported as "paused by the browser" and retried on
+  every gesture.
+- Audio: an `AbortError` from rapid navigation was misreported as blocked.
+- Audio: the Defeat sting played over the menu theme.
+- Lobby: a guest who joined was never seated. The channel join resolved before SUBSCRIBED, so
+  the host's reply was lost.
+- Lobby: guest deck/ready edits were discarded when the guest's clock ran behind. Wall-clock
+  ordering was replaced by a seat-ownership merge (`mergeRemoteRoom`) plus per-sender
+  revisions.
+- Lobby: the host is now told when the opponent leaves, and the board freezes.
+- Lobby: a leaver's leftover match could be re-seated against the local AI.
+- Lobby: the waiting client no longer times the opponent out locally. The active client
+  broadcasts its own timeout; remote commands are never re-timed (`remoteCommandNow`).
+- Lobby: the online guest saw its own field and log labels as the opponent's.
+- 3D arena: the camera sat on the +x axis, so the board rendered rotated 90°.
+- 3D arena: the classic CSS board also rendered under the canvas.
+- 3D arena: the scene drew every frame while hidden or idle. Rendering is now on demand.
+- Mobile: the tab bar widened a 390 px phone layout to 518 px.
+
+Added:
+- The battle hand now uses the approved frames (`buildHandCardFace`).
+- `docs/RELIC_FRAME_REQUEST.md`: the asset spec only. No frame was made.
+- `docs/proposals/SERVER_AUTHORITATIVE_MULTIPLAYER.md` and `docs/proposals/CLOUD_ECONOMY_SYNC.md`,
+  with draft SQL in `supabase/drafts/`. Both are **proposals only, not applied**.
+
+The lobby text and `lobby.js` header now state honestly that hands are seed-derivable and
+that reconnection is unsupported.
+
+Tests: `npm test` 179/179, `npm run check` 179/179 (was 164/164).
+
+
 ### 2026-10-29 - Live verification of ab35232
 
 Public-site check (no sign-in, no purchase): new build confirmed live — Decks/Shop/Lobby

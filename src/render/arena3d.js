@@ -73,6 +73,27 @@ export function cameraForWidth(width) {
   return { position: [0, 8.5, 10.5], lookAt: [0, 0, 0.4], mobile: false };
 }
 
+/**
+ * Camera position for a preset orbited by `yaw` radians around the Y axis.
+ * yaw 0 reproduces the preset exactly, so seat 0's field (positive z) is
+ * the near side. The earlier inline version used atan2(z, x) with a
+ * sin/cos pairing that put the camera on the +x axis at yaw 0 — the board
+ * rendered rotated 90 degrees with both fields at the sides (found
+ * 2026-10-29 in a real-browser screenshot).
+ */
+export function cameraPosition(preset, yaw = 0) {
+  const [px, py, pz] = preset.position;
+  const radius = Math.hypot(px, pz);
+  const angle = Math.atan2(px, pz) + yaw;
+  return [Math.sin(angle) * radius, py, Math.cos(angle) * radius];
+}
+
+/** Pure draw gate for the render loop (unit-tested). */
+export function arenaShouldDraw({ documentHidden, containerDisplayed, onScreen, dirty, animating }) {
+  if (documentHidden || !containerDisplayed || !onScreen) return false;
+  return Boolean(dirty || animating);
+}
+
 function canvasTexture(draw, width = 256, height = 128) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -242,13 +263,29 @@ export async function mountArena(container, callbacks = {}) {
   let raf = 0;
   let disposed = false;
 
+  // On-demand rendering (2026-10-29, from measured numbers: the arena kept
+  // issuing ~110 draw calls per frame while the battle view was hidden on
+  // the menu, in classic-grid mode, and when scrolled off-screen on phones).
+  // A frame is drawn only when the canvas is actually visible AND either
+  // something changed (dirty) or a bob animation is running.
+  let dirty = true;
+  let onScreen = true;
+  let motion = true;
+  const markDirty = () => { dirty = true; };
+  let visibilityObserver = null;
+  if (typeof IntersectionObserver === "function") {
+    visibilityObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) onScreen = entry.isIntersecting;
+      if (onScreen) markDirty();
+    });
+    visibilityObserver.observe(container);
+  }
+
   function applyCamera() {
+    markDirty();
     const preset = cameraForWidth(container.clientWidth || 900);
     mode = preset;
-    const [px, py, pz] = preset.position;
-    const radius = Math.hypot(px, pz);
-    const angle = Math.atan2(pz, px) + yaw;
-    camera.position.set(Math.sin(angle) * radius, py, Math.cos(angle) * radius);
+    camera.position.set(...cameraPosition(preset, yaw));
     camera.lookAt(...preset.lookAt);
   }
 
@@ -336,6 +373,8 @@ export async function mountArena(container, callbacks = {}) {
    *   actions: [def|null x4], discardCount, discardTop }.
    */
   function render(view, { reducedMotion = false } = {}) {
+    markDirty();
+    motion = !reducedMotion;
     resetTiles();
     clearDynamic();
     if (!view) return;
@@ -433,17 +472,25 @@ export async function mountArena(container, callbacks = {}) {
       label.position.set(layoutForSeat.discard.x, 1.0, layoutForSeat.discard.z);
       dynamic.add(label);
     }
-    void reducedMotion;
   }
 
   function animate(time) {
     if (disposed) return;
     raf = requestAnimationFrame(animate);
-    if (!document.hidden) {
+    const shouldDraw = arenaShouldDraw({
+      documentHidden: document.hidden,
+      containerDisplayed: container.isConnected && container.offsetParent !== null,
+      onScreen,
+      dirty,
+      animating: motion && vesselAnims.length > 0,
+    });
+    if (!shouldDraw) return;
+    if (motion) {
       for (const anim of vesselAnims) {
         anim.group.position.y = anim.baseY + Math.sin(time / 700 + anim.phase) * 0.03;
       }
     }
+    dirty = false;
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(animate);
@@ -454,6 +501,7 @@ export async function mountArena(container, callbacks = {}) {
     dispose() {
       disposed = true;
       cancelAnimationFrame(raf);
+      visibilityObserver?.disconnect();
       window.removeEventListener("resize", resize);
       clearDynamic();
       renderer.dispose();

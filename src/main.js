@@ -66,9 +66,9 @@ import {
 import { fieldState } from "./ui/fields.js";
 import { sanitizeEconomy } from "./game/economy.js";
 import { validateDeckWithOwnership } from "./game/decks.js";
-import { recordRemoteCommand, validateRemoteCommand } from "./game/lobby.js";
+import { recordRemoteCommand, remoteCommandNow, validateRemoteCommand } from "./game/lobby.js";
 import { mountSystems } from "./ui/systems.js";
-import { buildApprovedCard } from "./render/approved-frame.js";
+import { buildApprovedCard, buildHandCardFace } from "./render/approved-frame.js";
 import { createAudioManager, viewMusicRole } from "./audio/soundtrack.js";
 
 const GUIDE_SEEN_KEY = "veylattice.guide.seen.v1";
@@ -213,6 +213,7 @@ function humanCanAct() {
     Boolean(ui.match) &&
     !isOver(ui.match) &&
     ui.match.active === mySeat() &&
+    !ui.online?.abandoned &&
     !ui.aiBusy &&
     ui.view === "battle"
   );
@@ -342,7 +343,7 @@ function logEvents(events, actor) {
         entries.push(`${who} struck the Nexus for ${event.damage}. Vitality now ${event.vitality}.`);
         break;
       case "fatigue":
-        entries.push(`${seatLabel(event.seat)}'s empty deck dealt ${event.amount} fatigue damage.`);
+        entries.push(`${seatPossessive(event.seat)} empty deck dealt ${event.amount} fatigue damage.`);
         break;
       case "mulligan":
         entries.push(`${who} used a mulligan (1 Flux).`);
@@ -371,18 +372,18 @@ function logEvents(events, actor) {
         );
         break;
       case "relicMend":
-        entries.push(`${seatLabel(event.seat)}'s Relic restored ${event.healed} Guard at the start of the turn.`);
+        entries.push(`${seatPossessive(event.seat)} Relic restored ${event.healed} Guard at the start of the turn.`);
         break;
       case "turnStart":
         entries.push(
-          `Round ${event.turn} — ${event.seat === HUMAN_SEAT ? "your" : "opponent's"} turn begins ` +
+          `Round ${event.turn} — ${event.seat === mySeat() ? "your" : "opponent's"} turn begins ` +
             `with ${event.maxFlux} maximum Flux.`,
         );
         break;
       case "turnEnd":
         entries.push(
           event.reason === "timeout"
-            ? `${seatLabel(event.seat)}'s turn deadline passed; the turn was passed automatically.`
+            ? `${seatPossessive(event.seat)} turn deadline passed; the turn was passed automatically.`
             : `${seatLabel(event.seat)} ended the turn.`,
         );
         break;
@@ -398,7 +399,12 @@ function logEvents(events, actor) {
 }
 
 function seatLabel(seat) {
-  return seat === HUMAN_SEAT ? "You" : "Opponent";
+  // mySeat(), not HUMAN_SEAT: an online guest plays seat 1.
+  return seat === mySeat() ? "You" : "Opponent";
+}
+
+function seatPossessive(seat) {
+  return seat === mySeat() ? "Your" : "Opponent's";
 }
 
 function cardName(cardId) {
@@ -423,6 +429,10 @@ function currentArchetype() {
 
 function newMatch(options = {}) {
   ui.aiGeneration += 1;
+  // Every match gets its own stinger key. Without this, every practice match
+  // after the first shared key 0 and its victory/defeat cue was suppressed as
+  // "already played" (found 2026-10-29 in a real-browser two-match pass).
+  ui.audioMatchKey += 1;
   ui.aiBusy = false;
   ui.recorded = false;
   ui.online = null;
@@ -534,13 +544,15 @@ function applyRemoteCommand(envelope) {
   ui.online.remoteApplying = true;
   let result;
   try {
-    result = applyCommand(ui.match, envelope.command, { now: Date.now() });
+    // Never re-time a peer command on arrival (see remoteCommandNow): the
+    // sender's client owns its own turn deadline and broadcasts the timeout.
+    result = applyCommand(ui.match, envelope.command, { now: remoteCommandNow(ui.match, envelope.command) });
   } finally {
     ui.online.remoteApplying = false;
   }
   if (result.state !== ui.match) ui.match = result.state;
   if (!result.ok) {
-    pushLog(`Online state diverged — opponent command rejected (${result.code}): ${result.message}. Leave the room and rejoin to resync.`);
+    pushLog(`Online state diverged — opponent command rejected (${result.code}): ${String(result.message).replace(/\.$/, "")}. Leave the room and rejoin to resync.`);
     render();
     return;
   }
@@ -552,8 +564,35 @@ function applyRemoteCommand(envelope) {
 }
 
 function endOnlineMatch() {
-  if (ui.online?.channel) ui.online.channel.leave().catch(() => {});
+  if (!ui.online) return;
+  // The systems module owns and closes the room channel. Clearing the match
+  // matters: with ui.online gone, a leftover online match would otherwise be
+  // re-seated as seat 0 vs the local AI (found 2026-10-29 reviewing leave).
+  const wasOnlineMatch = Boolean(ui.match);
   ui.online = null;
+  if (wasOnlineMatch) {
+    ui.match = null;
+    ui.selectedCard = null;
+    ui.selectedUnit = null;
+    $("#result-overlay").hidden = true;
+    if (ui.view === "battle") showView("lobby");
+    renderMenuState();
+  }
+}
+
+/** The opponent left mid-match: freeze the board (no AI takeover, no
+ *  further commands) and say so. Nothing is recorded for online matches. */
+function abandonOnlineMatch(reason) {
+  if (!ui.online || ui.online.abandoned) return;
+  ui.online = { ...ui.online, abandoned: true, channel: null };
+  setMessage(reason);
+  pushLog(reason);
+  render();
+}
+
+function onlineNotice(text) {
+  if (!ui.online) return;
+  setMessage(text);
 }
 
 function dispatch(command) {
@@ -1061,7 +1100,7 @@ async function playEvents(events, before) {
         break;
       }
       case "nexusHit": {
-        const nexus = event.seat === HUMAN_SEAT ? $("#enemy-nexus") : $("#player-nexus");
+        const nexus = event.seat === mySeat() ? $("#enemy-nexus") : $("#player-nexus");
         pulse($("#board"), "fx-shake", 460);
         pulse(nexus, "fx-nexus-hit", 560);
         floatText(nexus, `-${event.damage}`, "nexus");
@@ -1230,9 +1269,14 @@ function renderHand() {
     const affordable = player.flux > 0 && player.flux >= def.cost;
     const button = el("button", {
       type: "button",
-      class: `card ${def.element} ${kind}${ui.selectedCard === card.instanceId ? " selected" : ""}`,
+      class: `card hand-card ${def.element} ${kind}${ui.selectedCard === card.instanceId ? " selected" : ""}${affordable ? "" : " is-unaffordable"}`,
       disabled: interactive ? undefined : "disabled",
       title: `${def.name} — double-click for the printed card`,
+      "aria-label": `${def.name}, ${def.cost} Flux${affordable ? "" : " (not enough Flux)"}, ${categoryLabel(def)}${
+        kind === "vessel"
+          ? `, Attack ${def.attack ?? "—"}, Guard ${def.guard ?? "—"}, movement ${def.movement ?? "—"}, range ${def.range ?? "—"}`
+          : `: ${effectSummary(def)}`
+      }`,
       ondblclick: (event) => {
         event.preventDefault();
         openCardViewer(def);
@@ -1257,42 +1301,17 @@ function renderHand() {
         render();
       },
     });
-    // Full-bleed card art behind the text: generated from the same voxel model
-    // the battlefield renders, so the card and the unit cannot disagree.
+    // Approved-frame face (same renderer as Deck Builder, Shop, Collection and
+    // the discard viewer): 214:300 frame, art inside the manifest aperture,
+    // canonical name/cost/stats/text as DOM nodes. Relics use the flagged
+    // neutral "RELIC FRAME PENDING" face — never a Vessel frame.
     button.append(
-      el("img", {
-        class: "card-art",
-        src: illustrationDataUri(def),
-        alt: "",
-        "aria-hidden": "true",
-        loading: "lazy",
-        decoding: "async",
+      buildHandCardFace(def, {
+        artUri: illustrationDataUri(def),
+        effectText: effectSummary(def),
+        affordable,
       }),
     );
-    button.append(
-      el("span", { class: "cost" + (affordable ? "" : " unaffordable"), text: String(def.cost) }),
-      el("span", { class: "card-tags" }, [
-        el("span", { class: "card-element", text: ELEMENT_LABELS[def.element] ?? def.element }),
-        el("span", { class: "card-kind", text: categoryLabel(def) }),
-      ]),
-      el("h3", { text: def.name }),
-    );
-    if (kind === "vessel") {
-      button.append(
-        el("p", { class: "card-role", text: def.role ?? "Vessel" }),
-        el("div", { class: "card-stats" }, [
-          el("span", { text: `ATK ${def.attack ?? "—"}` }),
-          el("span", { text: `GD ${def.guard ?? "—"}` }),
-          el("span", { text: `MV ${def.movement ?? "—"}` }),
-          el("span", { text: `RG ${def.range ?? "—"}` }),
-        ]),
-      );
-    } else {
-      button.append(el("p", { class: "card-effect", text: effectSummary(def) }));
-    }
-    // Keywords stay in the inspector and roster: the hand rail is 84 px tall and
-    // an extra line there clips the stats on larger Vessels.
-    button.append(el("p", { class: "card-flavor", text: def.flavorText ?? "" }));
     hand.append(button);
   }
   $("#hand-count").textContent = String(player.hand.length);
@@ -1439,7 +1458,7 @@ function emptyZone(label) {
  * is for instead of being decorative holes.
  */
 function vesselZone(seat, index, unit) {
-  const mine = seat === HUMAN_SEAT;
+  const mine = seat === mySeat();
   const field = fieldState(ui.match, seat);
   const classes = ["zone-slot", `zone-vessel-${index}`];
   const card = mine ? selectedCardEntry() : null;
@@ -1489,7 +1508,7 @@ function vesselZone(seat, index, unit) {
 
 /** One back-row Action zone: a set Relic, or the next free socket. */
 function actionZone(seat, index, relic) {
-  const mine = seat === HUMAN_SEAT;
+  const mine = seat === mySeat();
   const field = fieldState(ui.match, seat);
   const nextFree = field.relics.findIndex((entry) => !entry);
   const classes = ["zone-slot", `zone-action-${index}`];
@@ -1534,7 +1553,7 @@ function actionZone(seat, index, relic) {
  */
 function renderFields() {
   if (!ui.match) return;
-  for (const [seat, prefix] of [[AI_SEAT, "enemy"], [HUMAN_SEAT, "player"]]) {
+  for (const [seat, prefix] of [[foeSeat(), "enemy"], [mySeat(), "player"]]) {
     const field = fieldState(ui.match, seat);
     const vesselHost = $(`#${prefix}-vessel-slots`);
     const actionHost = $(`#${prefix}-action-slots`);
@@ -1565,7 +1584,7 @@ function onVesselSlotClick(seat, index) {
     }
     return;
   }
-  if (seat !== HUMAN_SEAT) {
+  if (seat !== mySeat()) {
     setMessage(
       `${unit.name} — ${ELEMENT_LABELS[unit.element]} ${unit.subtype ?? "Vessel"}, Attack ${unit.attack}, ` +
         `Guard ${Math.max(0, unit.guard)}/${unit.maxGuard}, movement ${unit.movement}, range ${unit.range}.`,
@@ -1586,7 +1605,7 @@ function onActionSlotClick(seat, index) {
   const match = ui.match;
   if (!match) return;
   const relic = fieldState(match, seat).relics[index];
-  if (seat !== HUMAN_SEAT) {
+  if (seat !== mySeat()) {
     if (!relic) {
       setMessage(`Opponent back-row zone ${index + 1} is empty.`);
       return;
@@ -1607,7 +1626,7 @@ function onActionSlotClick(seat, index) {
     return;
   }
   if (entry.category === "relic") {
-    const nextFree = fieldState(match, HUMAN_SEAT).relics.findIndex((existing) => !existing);
+    const nextFree = fieldState(match, mySeat()).relics.findIndex((existing) => !existing);
     if (nextFree !== index) {
       setMessage(`Relics fill the back row from the left — zone ${nextFree + 1} is the next free socket.`);
       return;
@@ -1928,7 +1947,7 @@ function renderPrompt() {
   let state = "idle";
   if (!ui.match) state = "idle";
   else if (ui.match.phase === "over") state = "over";
-  else if (ui.match.active !== HUMAN_SEAT || ui.aiBusy) state = "waiting";
+  else if (ui.match.active !== mySeat() || ui.aiBusy) state = "waiting";
   else if (entry?.category === "vessel") state = "deploy";
   else if (entry?.category === "action" && entry.targeting !== "none") state = "target";
   else if (ui.selectedUnit) state = "command";
@@ -2632,6 +2651,17 @@ function bind() {
     renderTimer();
     if (isOver(ui.match) || ui.match.deadlineAt === null || ui.aiBusy) return;
     if (Date.now() < ui.match.deadlineAt) return;
+    if (ui.online) {
+      // Online: only the active seat's client times its own turn out, and it
+      // sends the timeout as a sequenced command so both engines pass the
+      // turn at the same point in the command stream. The waiting client
+      // never times the opponent out locally (that raced with in-flight
+      // commands and could desync the two engines).
+      if (ui.online.abandoned || ui.match.active !== mySeat()) return;
+      dispatch({ type: "timeout" });
+      if (isOver(ui.match)) onMatchEnd();
+      return;
+    }
     const result = applyCommand(ui.match, { type: "timeout" }, { now: Date.now() });
     if (result.state !== ui.match) ui.match = result.state;
     logEvents(result.events, "Deadline");
@@ -2689,6 +2719,8 @@ async function boot() {
     applyRemoteCommand,
     isOnline: () => Boolean(ui.online),
     endOnlineMatch,
+    abandonOnlineMatch,
+    onlineNotice,
   });
   ui.systems.seedStarterIfNeeded();
   initAudio();

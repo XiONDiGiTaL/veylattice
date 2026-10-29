@@ -103,3 +103,77 @@ test("a full online-style exchange stays in sync when both sides validate", () =
   room = recordRemoteCommand(room, env);
   assert.equal(room.lastSeq, 0);
 });
+
+/* ---- clock-free convergence (2026-10-29 two-browser run regressions) ---- */
+import { mergeRemoteRoom, remoteCommandNow } from "../src/game/lobby.js";
+
+function seatedRoom() {
+  const host = { id: "host-1", displayName: "Host" };
+  const guest = { id: "guest-1", displayName: "Guest" };
+  const room = createRoom({ code: "ABC234", host, now: Date.now() });
+  return { room: joinRoom(room, guest).room, host, guest };
+}
+
+test("merge: a guest's deck/ready edit is kept by the host even when the guest's clock is behind", () => {
+  const { room } = seatedRoom();
+  const hostCopy = structuredClone(room);
+  hostCopy.updatedAt = Date.now() + 60_000; // host clock far ahead
+  let guestCopy = setSeatDeck(room, "guest-1", "deck-g").room;
+  guestCopy = setReady(guestCopy, "guest-1", true).room;
+  guestCopy.updatedAt = Date.now() - 60_000; // guest clock far behind
+  const merged = mergeRemoteRoom(hostCopy, guestCopy, { myId: "host-1", fromId: "guest-1" });
+  const seat = merged.room.seats[1];
+  assert.equal(seat.deckId, "deck-g");
+  assert.equal(seat.ready, true);
+});
+
+test("merge: a host broadcast never rolls back the receiver's own seat", () => {
+  const { room } = seatedRoom();
+  const guestCopy = setReady(setSeatDeck(room, "guest-1", "deck-g").room, "guest-1", true).room;
+  // Host's broadcast predates the guest's edit (still shows the guest unready, no deck).
+  const hostBroadcast = setSeatDeck(room, "host-1", "deck-h").room;
+  const merged = mergeRemoteRoom(guestCopy, hostBroadcast, { myId: "guest-1", fromId: "host-1" });
+  assert.equal(merged.room.seats[0].deckId, "deck-h", "host seat taken from the host");
+  assert.equal(merged.room.seats[1].deckId, "deck-g", "own seat kept");
+  assert.equal(merged.room.seats[1].ready, true);
+});
+
+test("merge: a guest cannot edit the host's seat or the room status", () => {
+  const { room } = seatedRoom();
+  const forged = structuredClone(room);
+  forged.seats[0].deckId = "evil";
+  forged.seats[0].ready = true;
+  forged.status = "in_match";
+  forged.matchSeed = 1;
+  const merged = mergeRemoteRoom(room, forged, { myId: "host-1", fromId: "guest-1" });
+  assert.equal(merged.room.seats[0].deckId, null);
+  assert.notEqual(merged.room.status, "in_match");
+  assert.equal(merged.room.matchSeed, null);
+});
+
+test("merge: guest vacating its seat is reported as left; mid-match it finishes the room", () => {
+  const { room } = seatedRoom();
+  let live = setReady(setSeatDeck(room, "host-1", "h").room, "host-1", true).room;
+  live = setReady(setSeatDeck(live, "guest-1", "g").room, "guest-1", true).room;
+  live = startMatch(live, 42).room;
+  const guestLeft = leaveRoom(live, "guest-1");
+  const merged = mergeRemoteRoom(live, guestLeft, { myId: "host-1", fromId: "guest-1" });
+  assert.equal(merged.event, "left");
+  assert.equal(merged.room.status, "finished");
+});
+
+test("merge: first view of a room adopts the host broadcast wholesale; wrong code ignored", () => {
+  const { room } = seatedRoom();
+  const placeholder = { code: "ABC234", status: "waiting", seats: [], updatedAt: 0 };
+  assert.deepEqual(mergeRemoteRoom(placeholder, room, { myId: "guest-1", fromId: "host-1" }).room.seats, room.seats);
+  const other = { ...structuredClone(room), code: "ZZZ999" };
+  assert.equal(mergeRemoteRoom(room, other, { myId: "guest-1", fromId: "host-1" }).room, room);
+});
+
+test("remote commands are never re-timed on arrival; remote timeouts are accepted", () => {
+  const state = { deadlineAt: 10_000 };
+  assert.equal(remoteCommandNow(state, { type: "endTurn" }, 12_000), 9_999, "late arrival stays inside the deadline");
+  assert.equal(remoteCommandNow(state, { type: "endTurn" }, 5_000), 5_000);
+  assert.equal(remoteCommandNow(state, { type: "timeout" }, 5_000), 10_000, "early-clock receiver still accepts the timeout");
+  assert.equal(remoteCommandNow({ deadlineAt: null }, { type: "endTurn" }, 7), 7);
+});

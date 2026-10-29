@@ -912,3 +912,41 @@ button.zone-slot:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .zone-slot.is-ready { animation: none; }
 }
+
+/* ------------- battle hand: approved frames (2026-10-29 migration) -------------
+   The hand rail now shows each card on its approved 214:300 frame. The
+   width drives the height through aspect-ratio, so the frame is never
+   stretched. The rules line is hidden at this size (it would render at ~6 px);
+   the inspector and the double-click viewer show the full canonical text. */
+.hand-rail .card.hand-card {
+  --hand-card-w: 104px;
+  flex: 0 0 var(--hand-card-w);
+  width: var(--hand-card-w);
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  aspect-ratio: 214 / 300;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  overflow: visible;
+  display: block;
+}
+.hand-rail .card.hand-card::after { content: none; }
+.hand-rail .card.hand-card > .approved-card { width: 100%; height: 100%; border-radius: 7px; }
+.hand-rail .card.hand-card .approved-text { display: none; }
+.hand-rail .card.hand-card .approved-name { font-size: 10cqw; }
+.hand-rail .card.hand-card .approved-mid { font-size: 8.5cqw; }
+.hand-rail .card.hand-card .approved-cost.unaffordable { color: #ff8a96; }
+.hand-rail .card.hand-card.selected > .approved-card { outline: 2px solid var(--accent-2, #b58bff); outline-offset: 2px; }
+.hand-rail .card.hand-card:hover:not(:disabled) > .approved-card { outline: 2px solid var(--accent, #7ad7ff); outline-offset: 2px; }
+.hand-rail .card.hand-card:focus-visible > .approved-card { outline: 3px solid var(--accent, #7ad7ff); outline-offset: 2px; }
+.hand-rail .card.hand-card:disabled { opacity: 0.6; }
+.hand-rail .hand { padding: 4px 4px 6px; }
+@media (max-width: 640px) {
+  .hand-rail .card.hand-card { --hand-card-w: 92px; }
+}
+@media (max-height: 860px) and (min-width: 941px) {
+  .hand-rail .card.hand-card { height: auto; }
+}

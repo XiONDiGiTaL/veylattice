@@ -126,7 +126,23 @@ export function resolveTrackUrl(baseUrl, file) {
   if (!base) return `music/${file}`;
   // Treat the base as a directory: without the trailing slash, URL resolution
   // would treat the last segment (e.g. "veylattice") as a file and drop it.
-  const dirBase = base.endsWith("/") ? base : `${base}/`;
+  // ...but a document URL such as ".../veylattice/index.html" (or one with a
+  // query/hash) names a file: resolve against it normally, exactly as the
+  // browser resolves "./src/..." for the rest of the page. Forcing a slash
+  // there produced ".../index.html/music/..." (404) — found 2026-10-29 in a
+  // real-browser pass loading /veylattice/index.html.
+  let dirBase = base;
+  try {
+    const parsed = new URL(base);
+    const lastSegment = parsed.pathname.split("/").pop();
+    const namesFile = lastSegment.includes(".") || parsed.search !== "" || parsed.hash !== "";
+    if (!namesFile && !parsed.pathname.endsWith("/")) {
+      parsed.pathname = `${parsed.pathname}/`;
+    }
+    dirBase = parsed.href;
+  } catch {
+    dirBase = base.endsWith("/") ? base : `${base}/`;
+  }
   try {
     return new URL(`music/${file}`, dirBase).href;
   } catch {
@@ -284,6 +300,7 @@ export function createAudioManager(options = {}) {
       }
       return currentStatus;
     }
+    silenceStinger();
     element.loop = entry.loop !== false;
     element.volume = effectiveMusicVolume();
     if (element.src !== url) {
@@ -320,10 +337,24 @@ export function createAudioManager(options = {}) {
         () => {
           backgroundStarted = true;
         },
-        () => {
+        (error) => {
+          const name = error?.name;
+          if (name === "AbortError") {
+            // play() interrupted by a newer src/pause (rapid navigation): a
+            // newer attempt owns the element now; do not flag it blocked.
+            return;
+          }
+          backgroundStarted = false;
+          if (name === "NotSupportedError" || element.error) {
+            // The file itself failed (404, decode, unsupported). Retrying on
+            // the next gesture cannot help; report the error honestly
+            // instead of claiming the browser blocked playback.
+            pendingRole = null;
+            setStatus("error");
+            return;
+          }
           // Autoplay blocked (or another transient refusal): keep the pending
           // role so the next genuine gesture retries it; never show "playing".
-          backgroundStarted = false;
           pendingRole = currentRole;
           setStatus("blocked");
         },
@@ -334,6 +365,31 @@ export function createAudioManager(options = {}) {
     }
     setStatus("playing");
     return "playing";
+  }
+
+  /** Stinger playback: never touches the background role/started flags. */
+  function playStingerElement(element) {
+    let result;
+    try {
+      result = element.play();
+    } catch {
+      setStatus("error");
+      return "error";
+    }
+    if (result && typeof result.catch === "function") {
+      result.catch((error) => {
+        if (error?.name === "AbortError") return;
+        setStatus(error?.name === "NotSupportedError" || element.error ? "error" : "blocked");
+      });
+    }
+    setStatus("playing");
+    return "playing";
+  }
+
+  /** A background track is about to start: end any result stinger first so
+   *  two cues never overlap (seen 2026-10-29: Defeat over the menu theme). */
+  function silenceStinger() {
+    if (stinger && !stinger.paused && !stinger.ended) stopElement(stinger);
   }
 
   function fadeOutThen(action) {
@@ -518,7 +574,7 @@ export function createAudioManager(options = {}) {
         /* ignore */
       }
       stinger.src = resolveTrackUrl(baseUrl, entry.file);
-      return tryPlay(stinger);
+      return playStingerElement(stinger);
     },
 
     /** A genuine user gesture: retry any playback the browser blocked. */

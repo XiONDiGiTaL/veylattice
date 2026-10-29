@@ -2767,3 +2767,17 @@ body.card-modal-open { overflow: hidden; }
   .sys-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   .arena-3d { min-height: 240px; }
 }
+
+/* 2026-10-29 fix: `.arena-core .board-wrap { display: block }` beat the UA
+   [hidden] rule, so in 3D mode the classic board rendered underneath the
+   canvas as a second battlefield. The toggle sets `hidden`; honour it. */
+.board-wrap[hidden],
+.arena-3d[hidden] { display: none !important; }
+
+/* 2026-10-29 mobile fix: nine tabs in one non-wrapping pill measured 518 px
+   on a 390 px phone, widening the whole layout viewport (horizontal page
+   scroll, zoomed-out page). Wrap the tabs instead. */
+@media (max-width: 640px) {
+  .tabs { flex-wrap: wrap; justify-content: center; gap: 4px; border-radius: 16px; max-width: 100%; min-width: 0; }
+  .tab { white-space: nowrap; padding: 7px 10px; }
+}

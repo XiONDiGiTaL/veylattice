@@ -41,8 +41,13 @@ The overlays are now used by the actual card pipeline:
 `src/render/approved-frame.js` composites the approved overlay over the
 card illustration (manifest art aperture, 214x300, never stretched) for
 the Card Library, Deck Builder, Shop, Collection, discard viewer and
-enlarged card viewer. Battle-hand mini cards still use the vector face
-until a full hand migration is tested; that is a staged migration, not
-a second frame authority. Relics remain explicitly pending: no approved
+enlarged card viewer. UPDATE 2026-10-29 (later session): the battle hand
+is migrated too (`buildHandCardFace` in approved-frame.js, 214:300 via CSS
+aspect-ratio, measured 0.713 in the browser at desktop 104 px and phone 92 px
+widths). The hand hides only the rules line, which would render at ~6 px;
+the inspector and the double-click viewer show the full canonical text,
+per "Long text requires an accessible enlarged/details view". The legacy
+vector hand face is no longer rendered. Relics remain explicitly pending: no approved
 dedicated Relic frame exists, so Relics use a functional neutral
-presentation with a "Relic frame pending" flag (see TODO.md).
+presentation with a "Relic frame pending" flag (see TODO.md and
+docs/RELIC_FRAME_REQUEST.md for the exact asset specification).

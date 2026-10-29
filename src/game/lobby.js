@@ -12,9 +12,15 @@
  *
  * Room lifecycle: waiting -> ready (both seats ready) -> in_match ->
  * finished/closed. A configuration or deck change clears readiness.
- * Rooms expire after ROOM_TTL_MS without activity; the transport layer
- * also drops a seat on disconnect, and the match ends (no AI takeover
- * for ranked-style play, because there is no ranked online play here).
+ * Rooms expire after ROOM_TTL_MS without activity. A player who LEAVES
+ * vacates the seat and, mid-match, the room becomes "finished": the other
+ * client freezes the board with a notice (no AI takeover, nothing
+ * recorded). A silent DISCONNECT (closed tab, lost network) only produces
+ * a presence notice: reconnection is NOT supported in this preview, and
+ * RECONNECT_GRACE_MS is reserved for the server-authoritative design
+ * (docs/proposals/SERVER_AUTHORITATIVE_MULTIPLAYER.md). Hand privacy is
+ * limited: both clients shuffle from the shared seed with both deck
+ * lists, so a modified client can reconstruct the opponent's draw order.
  */
 
 export const MAX_SEATS = 2;
@@ -158,4 +164,103 @@ export function recordRemoteCommand(room, envelope) {
   next.seenCommandIds = [...(next.seenCommandIds ?? []), envelope.commandId].slice(-500);
   next.updatedAt = Date.now();
   return next;
+}
+
+/* ------------------------------------------------------------------ *
+ * Clock-free room convergence (added 2026-10-29 after the two-browser run)
+ *
+ * Rooms used to be ordered by `updatedAt`, a wall-clock stamp written by
+ * whichever client edited last. Two machines' clocks differ, so a guest
+ * whose clock ran behind had its deck/ready edits discarded by the host as
+ * "older" and then overwritten (reproduced with a -5 s guest clock: the
+ * guest's Ready button went dead). Ownership replaces time:
+ *
+ * - The host (seat 0) is authoritative for room-level state: seat
+ *   assignment, status transitions into in_match/finished/closed, and the
+ *   match seed.
+ * - Each seated player is authoritative for its OWN seat's fields
+ *   (deck id, deck list, readiness, display name). Nobody can edit another
+ *   player's seat, and a broadcast never rolls back the receiver's seat.
+ * - Message order per sender is enforced by the transport's per-sender
+ *   revision counter (src/net/online.js), not by timestamps.
+ * ------------------------------------------------------------------ */
+
+const OWN_SEAT_FIELDS = ["deckId", "deckCards", "ready", "displayName"];
+const TERMINAL_OR_LIVE = new Set(["in_match", "finished", "closed"]);
+
+function copyOwnFields(target, source) {
+  for (const key of OWN_SEAT_FIELDS) {
+    if (source && Object.prototype.hasOwnProperty.call(source, key)) target[key] = structuredClone(source[key]);
+    else delete target[key];
+  }
+}
+
+function recomputeStatus(room) {
+  if (TERMINAL_OR_LIVE.has(room.status)) return room;
+  room.status = room.seats.every((s) => s.playerId && s.ready) ? "ready" : "waiting";
+  return room;
+}
+
+/**
+ * Merge a room broadcast into the local copy. Returns { room, event } where
+ * event is null, "left" (the sender vacated its seat), or "seated" (a guest
+ * was newly seated by this merge).
+ */
+export function mergeRemoteRoom(local, remote, { myId, fromId }) {
+  if (!remote || typeof remote !== "object" || !Array.isArray(remote.seats) || remote.seats.length !== MAX_SEATS) {
+    return { room: local, event: null };
+  }
+  if (local?.code && remote.code !== local.code) return { room: local, event: null };
+  const localSeated = Array.isArray(local?.seats) && local.seats.length === MAX_SEATS;
+  const hostId = localSeated ? local.seats[0].playerId : remote.seats[0].playerId;
+
+  if (!localSeated || fromId === hostId) {
+    // Host broadcast (or our first view of the room): adopt it, except our
+    // own seat, which only we may change — unless the match has started,
+    // when the host's frozen copy is what both engines were built from.
+    const next = structuredClone(remote);
+    if (localSeated && next.status !== "in_match") {
+      const mineLocal = local.seats.find((s) => s.playerId === myId);
+      const mineNext = next.seats.find((s) => s.playerId === myId);
+      if (mineLocal && mineNext) copyOwnFields(mineNext, mineLocal);
+    }
+    return { room: recomputeStatus(next), event: null };
+  }
+
+  // Guest broadcast: accept only the sender's own seat.
+  let next = structuredClone(local);
+  const theirs = remote.seats.find((s) => s.playerId === fromId);
+  let seated = next.seats.find((s) => s.playerId === fromId);
+  if (!theirs) {
+    if (!seated) return { room: local, event: null };
+    return { room: leaveRoom(next, fromId), event: "left" };
+  }
+  let event = null;
+  if (!seated) {
+    if (next.status !== "waiting" && next.status !== "ready") return { room: local, event: null };
+    const joined = joinRoom(next, { id: fromId, displayName: theirs.displayName });
+    if (joined.error) return { room: local, event: null };
+    next = joined.room;
+    seated = next.seats.find((s) => s.playerId === fromId);
+    event = "seated";
+  }
+  if (next.status !== "in_match") copyOwnFields(seated, theirs);
+  seated.connected = true;
+  next.updatedAt = Date.now();
+  return { room: recomputeStatus(next), event };
+}
+
+/**
+ * The receiving engine's clock for a peer command. The active seat's client
+ * owns its turn deadline and broadcasts the timeout itself, so a remote
+ * command is never re-timed on arrival: an ordinary command is applied just
+ * inside the deadline (so latency or clock skew cannot turn it into a
+ * rejected late command and desync the clients), and a remote timeout is
+ * applied at or after it (so the receiver's engine accepts it).
+ */
+export function remoteCommandNow(state, command, now = Date.now()) {
+  const deadline = state?.deadlineAt;
+  if (typeof deadline !== "number") return now;
+  if (command?.type === "timeout") return Math.max(now, deadline);
+  return Math.min(now, deadline - 1);
 }
