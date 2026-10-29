@@ -209,6 +209,13 @@ Evidence: tests/audio.test.js (15 tests) + updated profile expectation; `npm tes
 Update 2026-10-29: the six tracks arrived mid-session via origin commit f51cec5 ("music") and are now wired into SOUNDTRACK (ffprobe-verified MP3, decode-clean; stingers 12.4 s / 11.0 s, backgrounds 138–174 s). No music was generated as a substitute. Remaining: audible playback confirmation in live browser verification (autoplay-gated).
 Browser pass 2026-10-29 (headless Chromium, tools/browser-checks): blocked before gesture → plays after first click; Planning on Decks, Shop on Shop, Main Menu on menu/Lobby/Settings, Battle on match start, exactly one Defeat sting, battle stopped, no replay on resize. Defects found and fixed: (1) second and later practice matches played NO stinger (match key only advanced for online matches); (2) /veylattice/index.html resolved tracks to index.html/music/… (404); (3) a 404/unsupported file was reported as "paused by the browser" and retried forever; (4) the Defeat sting kept playing over the menu theme. Not verified: audible output (no speakers in headless), a Victory sting in the browser (the scripted matches end in defeat; covered by unit tests), loop seamlessness.
 
+### STABILITY-001 | DONE (live confirmation pending) | Dead tabs after deploy; slow-cloud boot
+Owner-reported on the live site: Cards, the Shop and other links stopped working. Root causes reproduced locally (the live site was unreachable from the sandbox):
+- Stale cached ES modules mixing with new ones fail to link, so nothing binds. Fixed with content-hash import-map stamping (`npm run stamp`, enforced by tests/assets.test.js) plus a boot guard with reload.
+- Boot blocked up to ~16 s on Supabase before mounting Decks/Shop/Lobby. Fixed with a local-first boot and background sync.
+
+Remaining: confirm on the live site in a real browser after the push (hard-refresh once, then a normal reload after the next deploy).
+
 ### MOBILE-001 | DONE | Phone viewport horizontal overflow
 Found 2026-10-29: at 390×844 the nine-tab nav measured 518 px and widened the whole layout viewport (sideways scroll / zoomed-out page). Tabs now wrap at ≤640 px; measured scrollWidth 390 on menu and battle (tools/browser-checks/mobile-overflow.cjs). Not checked on a physical phone.
 

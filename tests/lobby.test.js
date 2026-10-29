@@ -177,3 +177,11 @@ test("remote commands are never re-timed on arrival; remote timeouts are accepte
   assert.equal(remoteCommandNow(state, { type: "timeout" }, 5_000), 10_000, "early-clock receiver still accepts the timeout");
   assert.equal(remoteCommandNow({ deadlineAt: null }, { type: "endTurn" }, 7), 7);
 });
+
+test("the Supabase client is pinned to an exact version (no floating major)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../src/net/online.js", import.meta.url), "utf8");
+  const match = source.match(/@supabase\/supabase-js@([^/"]+)\/\+esm/);
+  assert.ok(match, "CDN import present");
+  assert.match(match[1], /^\d+\.\d+\.\d+$/);
+});

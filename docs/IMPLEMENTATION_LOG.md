@@ -1151,3 +1151,51 @@ supabase.com on 2026-10-29.
 ### Commands and results
 `npm test` → 179 pass, 0 fail. `npm run check` → 179 pass, 0 fail (baseline at session start:
 164/164).
+
+## Session 2026-10-29 (evening) · STABILITY-001 — "links not working" on the live site
+
+**Base:** origin/main `7b9709e`. The owner had applied the earlier patch; its tree is identical
+to the local `31a52e8`. **Report:** on https://xiondigital.net/veylattice/, Cards, the Shop and
+other links stopped working.
+**Access:** xiondigital.net and supabase.co were unreachable from the sandbox (403), and the git
+push was refused (repo not in the session's authorized set). WebFetch of the live `lobby.js`
+returned the new code (`mergeRemoteRoom` and `remoteCommandNow` both present), so the deploy
+itself had landed.
+
+### Investigation (all actually run)
+- A fresh local load of `7b9709e` under `/veylattice/`: every tab and menu link works at 1366 px
+  and 390 px, with no console errors. The Battle tab is disabled until a match exists, which is
+  intended.
+- **Mixed-cache simulation:** new `index.html`/`systems.js`/`main.js` with `b488699`'s
+  `lobby.js` and `approved-frame.js` gave `SyntaxError: The requested module '../game/lobby.js'
+  does not provide an export named 'mergeRemoteRoom'`. View stuck at null; the Shop click did
+  nothing. Old `main.js` with new others, and new `main.js` with old `systems.js`, both worked:
+  only importers of removed or added names break. This matches the report, but it is an
+  inference: the owner's browser was not observed.
+- **Hanging Supabase:** the Shop/Decks/Lobby roots had 0 children at 5–7 s after load and were
+  populated only after the RPC timeouts.
+
+### Changes
+`tools/stamp-assets.mjs` and `npm run stamp` (an import map with content-hash versions for 33
+modules, plus versioned entry and CSS); `tests/assets.test.js` (5 tests); an inline boot guard
+in `index.html` plus `window.__vlBoot.ok` in `src/main.js`; a local-first boot
+(`syncProfileInBackground`); `@supabase/supabase-js@2.118.0` pinned, after checking the
+2.118.0 realtime-js status strings and its pre-join REST fallback; a pin test; new
+`tools/browser-checks` scripts (all-tabs, button-sweep, stale-cache-boot-guard,
+cloud-sync-boot); docs in TECHNICAL_ARCHITECTURE.md, AI_INSTRUCTIONS.md (deploy hygiene),
+TODO STABILITY-001 and CHANGELOG.
+
+### Results after the fix
+- **Stale cache:** stale bodies at unversioned URLs are bypassed (33 `?v=` requests); Shop
+  works and boot reports ok. A stale body forced on a versioned URL shows the boot-guard bar;
+  "Reload with fresh files" reloads with `fresh=` and boots cleanly.
+- **Hanging cloud:** Shop/Decks/Lobby are populated at 2.6–3.3 s, and the chip later reads
+  "Cloud unavailable — saved on this device".
+- **Slow newer cloud row:** the name "CloudName" and the stats were adopted, and a pack bought
+  during the sync was kept (0 Shards, stored).
+- **Button sweep:** 8 views, 92 safe buttons clicked, no JS errors.
+- **Lobby E2E (-3 s, 4 turns):** 24/25; the one miss was no affordable Vessel to summon.
+- **Two-match audio:** unchanged from the previous session.
+- `npm test` 185/185; `npm run check` 185/185.
+
+**Not verified:** the live site itself after this change, in any real browser.

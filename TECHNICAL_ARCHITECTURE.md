@@ -81,6 +81,7 @@ UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules 
 | Hosting | GitHub Pages project site: repo `main`, path `/`, `.nojekyll` committed. Repository must be public on the free plan. |
 | Custom domain | `xiondigital.net` is already the account's Pages custom domain (user site `xiondigital.github.io`), so project repos appear as subpaths. No DNS or custom-domain change was made for Veylattice. |
 | Path case | Pages paths follow the repository name, so the repo was renamed to lowercase `veylattice` for `/veylattice/`. |
+| Cache busting (2026-10-29) | Still no bundler. `npm run stamp` (`tools/stamp-assets.mjs`) writes an import map into `index.html` mapping every `src/**/*.js` module to `?v=<content hash>`, and versions the entry script and both stylesheets. `tests/assets.test.js` fails when the stamp is stale, so **run `npm run stamp` after any change to `src/` or the CSS, before committing.** A classic inline boot guard in `index.html` shows a "Reload with fresh files" bar if the module graph fails to link. |
 | Database | Separate Supabase project `jjtfnduodxtulxvviasf`, region us-east-2. Sohbet (`ezwxppiuxbyzmmheckce`) untouched. |
 | Secrets | Only the publishable/anon key is in the bundle (`src/net/config.js`). `service_role` is absent from the repo and browser. |
 | Offline | `CLOUD_ENABLED = false` or any network failure degrades to a clearly labelled local profile; no feature blocks on sync. |

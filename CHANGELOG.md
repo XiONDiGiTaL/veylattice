@@ -4,6 +4,41 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-29 - STABILITY-001: dead tabs after deploy (stale module cache), slow-cloud boot
+
+Owner report: on the live site, links such as Cards and the Shop "are not working at all
+anymore". I could not open the live site from this sandbox (egress 403). A fetch of the live
+`src/game/lobby.js` confirmed the 7b9709e code is deployed. A fresh local load of exactly
+7b9709e worked, so I reproduced the two failure modes that fit the report:
+
+1. **Stale cached modules after a deploy (most likely cause).** Pages caches JS for hours, and
+   the app's native ES modules used unversioned relative imports. When a browser mixed the new
+   `systems.js` with a cached pre-deploy `lobby.js`, the graph failed to link:
+   `SyntaxError: The requested module '../game/lobby.js' does not provide an export named
+   'mergeRemoteRoom'`. Then nothing was bound, and every tab, the Shop and Cards stopped
+   responding. Reproduced locally. Fixes:
+   - `tools/stamp-assets.mjs` (`npm run stamp`) writes an import map that versions every module
+     by content hash, and versions the entry script and the CSS.
+   - `tests/assets.test.js` fails on a stale stamp.
+   - A classic boot guard shows "Reload with fresh files" if the graph still fails to link.
+   - Verified: with old bodies cached at the unversioned URLs, the page loads new modules (33
+     versioned requests) and works. With a stale body forced onto a versioned URL, the bar
+     appears and one click recovers.
+2. **Slow or unreachable cloud.** Boot awaited up to two 8 s Supabase calls before mounting
+   Decks, Shop and Lobby, so those views were empty for about 16 s. Boot is now local-first:
+   the UI binds at once and the cloud sync merges later (name, avatar, settings and stats
+   only; the local economy and any purchase made meanwhile are kept). Verified with a hanging
+   Supabase route (views populated at 2.6 s) and a slow newer cloud row (name and stats
+   adopted, a mid-sync pack purchase kept).
+
+Also: `@supabase/supabase-js` is pinned to `2.118.0` (it was the floating `@2`).
+
+Checks: every tab and menu link at desktop and phone widths; a click sweep of the safe buttons
+in all views with no JS errors; Shop → Collection/Singles/Buy pack and persistence after
+reload; Deck Builder actions listed; lobby E2E 24/25 (no Vessel was affordable in 4 turns);
+two-match audio pass unchanged. `npm test` 185/185, `npm run check` 185/185.
+
+
 ### 2026-10-29 - Real-browser verification pass: audio, lobby E2E, hand frames, 3D fixes
 
 Verified in headless Chromium (Playwright) against a local `/veylattice/` subpath server.

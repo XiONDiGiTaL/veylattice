@@ -22,7 +22,13 @@ let clientPromise = null;
 export async function getOnlineClient() {
   if (!clientPromise) {
     clientPromise = (async () => {
-      const mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+      // Pinned exact version (was the floating "@2", so any new 2.x release
+      // changed the lobby's transport without a deploy). 2.118.0's
+      // realtime-js was checked 2026-10-29: subscribe() status strings
+      // SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED, and send() before
+      // the join falls back to REST with a deprecation warning, which
+      // joinRoomChannel avoids by waiting for SUBSCRIBED.
+      const mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm");
       return mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     })().catch((error) => {
       clientPromise = null;

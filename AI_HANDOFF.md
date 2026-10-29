@@ -26,7 +26,32 @@
   (`npm run check` adds syntax checks).
 
 
-## Latest session — 2026-10-29 (afternoon) · Browser verification, lobby E2E, hand frames
+## Latest session — 2026-10-29 (evening) · STABILITY-001: dead tabs after deploy
+
+Origin is `7b9709e`: the owner applied the earlier patch, and its tree is identical to local
+`31a52e8`. The owner reported the live site's tabs and links dead (Cards, Shop, …). This session
+couldn't open xiondigital.net (egress 403). The live `src/game/lobby.js` was fetched and is the
+new code.
+
+Reproduced locally, then fixed:
+- **Stale module cache:** mixed old and new modules fail to link and nothing binds. Fixed with
+  the import-map stamp from `npm run stamp`, which **must be run after any `src/` or CSS
+  change** (tests enforce it), plus a boot guard.
+- **Cloud-blocked boot:** the UI now binds before the Supabase sync.
+- supabase-js is pinned to 2.118.0.
+
+Push status: see the CHANGELOG/IMPLEMENTATION_LOG entry for this change. The git proxy refused
+this repo again, so the change was handed to the owner as a patch.
+
+Tests: 185/185. Live confirmation is still pending.
+
+Next three tasks:
+1. Push this change, then open the live site once with a hard refresh. After that, normal
+   reloads must work across future deploys. Confirm the tabs, Cards, Shop and audio.
+2. Two-device lobby check against real Supabase.
+3. Owner decisions on the two proposals.
+
+, lobby E2E, hand frames
 
 **Start here.** The base was `b488699`. This session's work is one **local commit on top of
 b488699 that was NOT pushed**. The session's git proxy refused the repository ("not in this

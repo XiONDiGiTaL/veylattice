@@ -65,6 +65,12 @@ touch audio; draws play neither sting; menu music resumes only on return
 to the menu. A future screen registers its music by adding ONE manifest
 role and ONE `viewMusicRole` mapping — no new playback code.
 
+Deploy hygiene (2026-10-29): after changing anything under `src/` or either
+stylesheet, run `npm run stamp` and commit the updated `index.html`. The live
+site is native ES modules behind GitHub Pages caching; an unstamped deploy
+can mix old and new modules in a returning browser, fail to link, and leave
+every tab dead. `npm test` enforces the stamp.
+
 ASSET STATUS (verified 2026-10-29): at session start the repo contained
 NO music files; during the session commit f51cec5 ("music") landed on
 origin/main supplying all six tracks, and the manifest now names them

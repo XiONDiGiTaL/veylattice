@@ -14,6 +14,10 @@ E2E_TIMEOUT=1 node tools/browser-checks/lobby-e2e.cjs 3000 6   # + an idle 120 s
 node tools/browser-checks/arena-perf.cjs              # draw calls / frame intervals, desktop vs phone
 node tools/browser-checks/battle-layout.cjs after     # hand/board geometry + full-page screenshots
 node tools/browser-checks/mobile-overflow.cjs         # elements wider than a 390 px viewport
+node tools/browser-checks/all-tabs.cjs                # every tab and menu link, desktop + phone
+node tools/browser-checks/button-sweep.cjs            # click every safe button per view, collect JS errors
+node tools/browser-checks/stale-cache-boot-guard.cjs  # old cached modules vs new HTML; boot-guard banner
+node tools/browser-checks/cloud-sync-boot.cjs         # hanging / slow Supabase: tabs usable at once, sync merges later
 ```
 
 What these checks can and cannot prove:

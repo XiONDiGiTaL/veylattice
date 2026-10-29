@@ -43,6 +43,7 @@ import {
   createProfile,
   fileToAvatar,
   initialiseProfile,
+  loadLocalProfile,
   persistProfile,
   recordMatchResult,
   resetLocalProfile,
@@ -2700,11 +2701,20 @@ async function boot() {
     setMessage(
       "Could not load card data. Serve this folder over HTTP (for example: python -m http.server 8000).",
     );
+    // The UI is bound and this message is visible; the boot guard must not
+    // add a second, misleading "cached file" banner.
+    if (typeof window !== "undefined" && window.__vlBoot) window.__vlBoot.ok = true;
     return;
   }
 
-  const initial = await initialiseProfile();
-  ui.profile = initial.profile;
+  // Local-first boot (2026-10-29): the UI binds from the device profile right
+  // away and the cloud sync runs in the background. Previously boot awaited
+  // the cloud round trips (up to two 8 s RPC timeouts) before mounting Decks,
+  // Shop and Lobby, so on a slow or unreachable cloud those tabs opened empty
+  // for ~16 s and looked broken (reproduced with a hanging Supabase route).
+  // loadLocalProfile() stores a newly created profile itself, so the
+  // background sync below reads the same identity.
+  ui.profile = loadLocalProfile();
   ui.systems = mountSystems({
     getCatalog: () => ui.catalog,
     getProfile: () => ui.profile,
@@ -2724,7 +2734,8 @@ async function boot() {
   });
   ui.systems.seedStarterIfNeeded();
   initAudio();
-  ui.sync = initial.sync;
+  ui.sync = { state: "saving", message: "Connecting to cloud…" };
+  renderSync();
   renderChip();
   renderProfileForm();
   renderAccount();
@@ -2745,6 +2756,43 @@ async function boot() {
   $("#board")?.setAttribute("data-arena", ARENA.id);
   // First visit: open the rules page rather than dropping straight into a match.
   showView(tutorialSeen() ? "menu" : "guide");
+  if (typeof window !== "undefined" && window.__vlBoot) window.__vlBoot.ok = true;
+  syncProfileInBackground();
+}
+
+/** Fields the cloud profile/account rows actually carry. The economy (decks,
+ *  collection, Shards) is local-only and is never taken from a sync result. */
+const CLOUD_PROFILE_FIELDS = ["displayName", "avatar", "settings", "stats", "accountId", "updatedAt"];
+
+async function syncProfileInBackground() {
+  let initial;
+  try {
+    initial = await initialiseProfile();
+  } catch (error) {
+    ui.sync = { state: "offline", message: "Offline — saved on this device only" };
+    renderSync();
+    return;
+  }
+  const restored = initial.sync?.state === "synced" && initial.profile?.id === ui.profile?.id;
+  if (restored) {
+    const next = { ...ui.profile };
+    for (const key of CLOUD_PROFILE_FIELDS) {
+      if (initial.profile[key] !== undefined) next[key] = initial.profile[key];
+    }
+    // Anything bought or edited while the sync was in flight stays.
+    next.economy = ui.profile.economy;
+    ui.profile = next;
+    ui.audio?.applySettings(ui.profile.settings?.audio);
+    renderChip();
+    renderProfileForm();
+    renderAccount();
+    renderMenuState();
+    if (ui.view === "decks" || ui.view === "shop" || ui.view === "lobby") ui.systems?.render(ui.view);
+    // initialiseProfile wrote its own snapshot locally; write the merged one.
+    scheduleSave();
+  }
+  ui.sync = initial.sync;
+  renderSync();
 }
 
 boot();
