@@ -77,6 +77,15 @@ decode-clean; stingers 12.4/11.0 s, backgrounds 138–174 s). The earlier "no fi
 superseded — do NOT repeat it. Audible browser playback still awaits live verification.
 Final suite at handoff time: 164/164 (`npm test` and `npm run check`).
 
+Live verification 2026-10-29 (10:11–10:27 EDT, public site, no sign-in/purchase): NEW build
+confirmed live — Decks/Shop/Lobby tabs, Starter Lattice 40 cards (20V/16A/4R) LEGAL+ACTIVE,
+Shop 300 Lattice Shards with Buy pack button (not clicked), lobby peer-preview disclaimer,
+Audio controls (mute + 100/80/80 sliders, "Now playing: menu."), 3D canvas + 5×5/25-tile board
+in a Practice match, hand-card selection behaving. NOT verified: console output (devtools
+would not open — zero console errors NOT claimed) and audible music (page reports playing,
+no audible confirmation from the remote browser). Remote main: ab35232 (pushed via GitHub
+Data API; plain git push cannot prompt in this shell).
+
 Next three executable tasks: (1) two-browser lobby E2E verification; (2) server-authoritative
 migration proposal for owner approval (Edge Functions + tables); (3) battle-hand approved-frame
 migration + dedicated Relic frame request, and mobile WebGL performance measurement.

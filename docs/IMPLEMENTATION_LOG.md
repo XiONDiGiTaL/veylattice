@@ -1023,3 +1023,29 @@ space-in-filename URL case was added), and all docs that previously said "absent
 updated in the same change set. Final: `npm test` 164/164.
 **Not verified:** audible playback in a real browser (autoplay-gated; live verification
 pending); loop seamlessness of the background tracks (no loop-point metadata supplied).
+
+## Session 2026-10-29 · Live verification of ab35232 at xiondigital.net/veylattice/
+
+**Method:** live-browser check of the public site (10:11–10:27 EDT), no sign-in, no purchase,
+no spending (Shop Buy button present, not clicked). **Verdict: the live site serves the NEW
+build, not a stale cached one** — all new-build markers present on first load.
+**Observed:** menu tabs Menu / Battle (disabled until a match starts) / How to Play / Roster /
+Cards / Decks / Shop / Lobby / Settings, heading "Command the Lattice."; Decks tab lists
+"Starter Lattice" as 40 cards · 20 Vessels · 16 Actions · 4 Relics, LEGAL and ACTIVE; Shop tab
+shows "Balance: 300 Lattice Shards" with a "Buy pack — 300 Shards" button and the 5 Common +
+1 Rare-or-better pack note; Lobby tab shows the peer-validated-preview status text with its
+NOT-server-authoritative disclaimer plus Create/Join room controls; Profile/Settings AUDIO
+section shows an unchecked "Mute all sound" box, MASTER 100 / MUSIC 80 / SFX 80 sliders, and
+the status line "Now playing: menu."; a Practice match with the Starter Lattice deck rendered
+a 3D canvas ("3D tactical battlefield. Click a tile to act.", Classic-grid toggle present),
+board labelled "5 × 5 grid · 25 tiles" (A1–E5), turn 1 "Your turn", Flux 1/1, hand 6, deck 34;
+clicking "Quarry Verdict" (Earth Action, 3 Flux) selected it and showed the target banner and
+a disabled "Choose a target on the board" button with "No legal target right now."
+**NOT verified (stated, not assumed):** console output — the browser view would not open a
+developer console, so zero console errors is NOT claimed; no visible page error, error banner,
+or broken rendering was observed. Audible music was NOT confirmed — the page reports "Now
+playing: menu." but the remote browser produced no identifiable audio; music playback in a
+real user browser (autoplay-gated to the first gesture) still awaits the owner's own listen.
+**Push record:** local commit a398ba9 pushed via the GitHub Data API (plain `git push` cannot
+prompt for credentials in this shell) to remote ab35232e58b4b8b2fefa82018a56c1f1efb7dbf8
+(tree identical to local); local branch reset to origin/main, clean tree.

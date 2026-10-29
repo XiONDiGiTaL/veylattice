@@ -4,6 +4,15 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-29 - Live verification of ab35232
+
+Public-site check (no sign-in, no purchase): new build confirmed live — Decks/Shop/Lobby
+tabs, Starter Lattice LEGAL+ACTIVE (40 cards), Shop 300 Lattice Shards, lobby
+peer-preview disclaimer, Audio controls with "Now playing: menu.", 3D canvas and 5×5/25-tile
+board in a Practice match. Not verified: console output (devtools would not open) and
+audible music (page reports playing; no audible confirmation from the remote browser).
+
+
 ### 2026-10-29 - AUDIO-001 (update) - Supplied tracks arrived and are wired
 
 **Correction to the AUDIO-001 entry below:** its "no music files" status
