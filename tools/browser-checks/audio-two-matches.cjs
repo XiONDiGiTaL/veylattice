@@ -28,11 +28,11 @@ const playing = async (p) => (await mediaState(p)).elements.filter((e) => !e.pau
     await page.goto(BASE, { waitUntil: "networkidle" });
     await page.mouse.click(5, 5); await sleep(1000);
     await page.click("#tab-menu"); await sleep(800);
-    await page.click("#menu-practice"); await sleep(3000);
+    await page.click("#menu-play"); await sleep(400); await page.click("#menu-practice"); await sleep(3000);
     out.r1 = await playOut(page); await sleep(1500);
     await page.click("#result-menu"); await sleep(2000);
     out.afterResultMenu = await playing(page);
-    await page.click("#menu-practice"); await sleep(3000);
+    await page.click("#menu-play"); await sleep(400); await page.click("#menu-practice"); await sleep(3000);
     out.secondBattle = await playing(page);
     out.r2 = await playOut(page); await sleep(1500);
     out.atResult2 = await playing(page);

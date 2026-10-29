@@ -30,8 +30,10 @@ cross-device recovery code, animated voxel combat, and automated tests all ship 
 
 | Playable now | Not built yet |
 |---|---|
-| Main menu, How to Play, guided first match — no auto-launch into a game | Deck builder, shop, packs, ownership |
-| 5×5 board (25 tiles) with tinted deployment zones and one contested row | Online lobbies and server-authoritative matches |
+| Main menu with a Play dialog (Solo Duel, Quick Practice, Guided, Online Room) — no auto-launch | Server-authoritative online matches, rewards, rank |
+| Deck Builder, Shop, packs, Singles, collection (local profile) | Cloud sync of decks / collection / Shards |
+| Online Room — peer-validated **preview** (no rewards) | Local hot-seat (replaced by AI) |
+| 5×5 board (25 tiles) with tinted deployment zones and one contested row | — |
 | Integrated war table: 4 Vessel + 4 Action/Relic zones per seat, built into the arena | — |
 | Persistent Guard, simultaneous retaliation, lethal trades | Lore Bonds, arenas, Forge, Codex |
 | Five-element counter-cycle (advantage ×1.5, resistance ×0.5) | Ranked ladder and seasonal rewards |
@@ -116,9 +118,21 @@ face and compares it byte for byte, so a data edit cannot leave a card printing 
 
 </div>
 
-The app no longer drops you into a match. The menu offers **Practice match**, **Guided first match**,
-and — only while a game is genuinely in progress — **Return to match**. Deck Builder, Collection, Shop
-and Online are listed as *not in this build* rather than shown as buttons that do nothing.
+The app never drops you into a match. The menu (redesigned 2026-10-29, see
+[docs/UI_DESIGN_SYSTEM.md](docs/UI_DESIGN_SYSTEM.md)) has one **Play** action that opens a mode dialog:
+**Solo Duel** (your active deck vs the AI, with opponent strength and style, refused with the reason
+if the deck is illegal or not owned), **Quick Practice**, **Guided First Match** and **Online Room**
+(badged *Preview*). Below it: Deck Builder, Collection, Shop, Card Library (browse only), Vessel Roster
+and How to Play — every entry opens a working screen. **Return to match** appears only while a game is
+genuinely in progress. Audio and settings live in the top-right utility corner.
+
+<div align="center">
+
+<img src="screenshots/menu-play-dialog.png" alt="Play dialog" width="720">
+<img src="screenshots/lobby-room.png" alt="Online room with two seats" width="720">
+<img src="screenshots/menu-mobile.png" alt="Main menu on a phone" width="240">
+
+</div>
 
 On a first visit the **How to Play** page opens by itself: eight short steps covering the objective,
 what a Vessel is, where you may summon, Actions and Relics, movement and combat, Flux, ending a turn,

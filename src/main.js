@@ -69,6 +69,7 @@ import { sanitizeEconomy } from "./game/economy.js";
 import { validateDeckWithOwnership } from "./game/decks.js";
 import { recordRemoteCommand, remoteCommandNow, validateRemoteCommand } from "./game/lobby.js";
 import { mountSystems } from "./ui/systems.js";
+import { mountMenu } from "./ui/menu.js";
 import { buildApprovedCard, buildHandCardFace } from "./render/approved-frame.js";
 import { createAudioManager, viewMusicRole } from "./audio/soundtrack.js";
 
@@ -471,6 +472,18 @@ function newMatch(options = {}) {
 /* --------------------------- online matches --------------------------- */
 
 /* --------------------------- soundtrack --------------------------- */
+
+/** Utility-corner music toggle: mirrors profile.settings.audio.muted. */
+function renderAudioToggle() {
+  const button = $("#audio-toggle");
+  if (!button) return;
+  const muted = ui.profile?.settings?.audio?.muted === true;
+  button.setAttribute("aria-pressed", String(muted));
+  const label = muted ? "Unmute music" : "Mute music";
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  button.classList.toggle("is-muted", muted);
+}
 
 function renderAudioStatus() {
   const node = $("#audio-status");
@@ -1660,13 +1673,13 @@ function renderMenuState() {
   if (!ui.match) {
     const econ = sanitizeEconomy(ui.profile?.economy);
     const active = econ.decks.find((d) => d.id === econ.activeDeckId);
-    context.textContent = active
-      ? `No match in progress. Active deck: ${active.name}. Practice is free, unranked, and needs no account.`
-      : "No match in progress. Practice is free, unranked, and needs no account.";
+    context.textContent = active ? `Active deck · ${active.name}` : "";
   } else if (isOver(ui.match)) {
-    context.textContent = `Last match finished — ${ui.match.result?.winnerSeat === mySeat() ? "victory" : "defeat"}. Starting again records a new result.`;
+    const winner = ui.match.result?.winnerSeat;
+    const outcome = winner === null || winner === undefined ? "draw" : winner === mySeat() ? "victory" : "defeat";
+    context.textContent = `Last match · ${outcome}`;
   } else {
-    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === mySeat() ? "your move" : "opponent acting"}.`;
+    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === mySeat() ? "your move" : "opponent acting"}`;
   }
 }
 
@@ -2317,6 +2330,8 @@ function renderAccount() {
 function updateSettings(patch) {
   ui.profile = { ...ui.profile, settings: { ...ui.profile.settings, ...patch } };
   ui.audio?.applySettings(ui.profile.settings.audio);
+  ui.menu?.applyMotionPreference();
+  renderAudioToggle();
   renderProfileForm();
   scheduleSave();
   render();
@@ -2371,27 +2386,25 @@ function bind() {
   $("#profile-chip").addEventListener("click", () => showView("profile"));
   $("#brand-home").addEventListener("click", () => showView("menu"));
 
-  $("#menu-practice").addEventListener("click", () => newMatch());
-  $("#menu-tutorial").addEventListener("click", () => newMatch({ guided: true }));
-  $("#menu-continue").addEventListener("click", () => showView("battle"));
-  $("#menu-guide").addEventListener("click", () => showView("guide"));
-  $("#menu-roster").addEventListener("click", () => showView("roster"));
-  $("#menu-settings").addEventListener("click", () => showView("profile"));
+  // Play, Solo Duel, Practice, Guided and Online live in src/ui/menu.js
+  // (mounted in boot once the catalog and profile exist).
+  $("#menu-continue")?.addEventListener("click", () => showView("battle"));
+  $("#menu-guide")?.addEventListener("click", () => showView("guide"));
+  $("#menu-roster")?.addEventListener("click", () => showView("roster"));
+  $("#menu-settings")?.addEventListener("click", () => showView("profile"));
+  $("#settings-shortcut")?.addEventListener("click", () => showView("profile"));
+  $("#audio-toggle")?.addEventListener("click", () => {
+    const current = ui.profile?.settings?.audio ?? {};
+    updateSettings({ audio: { ...current, muted: current.muted !== true } });
+  });
   $("#guide-start").addEventListener("click", () => newMatch({ guided: true }));
   $("#guide-back").addEventListener("click", () => showView("menu"));
   $("#roster-menu").addEventListener("click", () => showView("menu"));
-  $("#menu-library").addEventListener("click", () => showView("library"));
+  $("#menu-library")?.addEventListener("click", () => showView("library"));
+  $("#library-to-decks")?.addEventListener("click", () => showView("decks"));
   $("#menu-decks")?.addEventListener("click", () => showView("decks"));
   $("#menu-shop")?.addEventListener("click", () => showView("shop"));
   $("#menu-lobby")?.addEventListener("click", () => showView("lobby"));
-  $("#menu-practice-deck")?.addEventListener("click", () => {
-    const econ = sanitizeEconomy(ui.profile?.economy);
-    const active = econ.decks.find((d) => d.id === econ.activeDeckId);
-    if (!active) { setMessage("No deck selected. Open Deck Builder to build one, or play Practice for a free prebuilt deck."); return; }
-    const check = validateDeckWithOwnership(active.cardIds, ui.catalog, econ.collection);
-    if (!check.ok) { setMessage(`Active deck "${active.name}" is not legal or not fully owned: ${check.errors.join(" ")}`); return; }
-    newMatch({ humanDeck: active.cardIds });
-  });
   $("#arena-toggle")?.addEventListener("click", () => {
     ui.arenaMode = ui.arenaMode === "3d" ? "classic" : "3d";
     const btn = $("#arena-toggle");
@@ -2726,6 +2739,7 @@ async function boot() {
     },
     startPracticeWithDeck: (cardIds) => newMatch({ humanDeck: cardIds }),
     startOnlineMatch,
+    showView: (view) => showView(view),
     applyRemoteCommand,
     isOnline: () => Boolean(ui.online),
     endOnlineMatch,
@@ -2733,7 +2747,23 @@ async function boot() {
     onlineNotice,
   });
   ui.systems.seedStarterIfNeeded();
+  ui.menu = mountMenu({
+    getProfile: () => ui.profile,
+    getCatalog: () => ui.catalog,
+    newMatch: (options) => newMatch(options),
+    showView: (view) => showView(view),
+    openShopTab: (tab) => {
+      ui.systems?.setShopTab?.(tab);
+      showView("shop");
+    },
+    updateSettings: (patch) => updateSettings(patch),
+    difficulties: AI_DIFFICULTIES,
+    archetypes: AI_ARCHETYPES,
+    resolveDifficulty,
+    resolveArchetype,
+  });
   initAudio();
+  renderAudioToggle();
   ui.sync = { state: "saving", message: "Connecting to cloud…" };
   renderSync();
   renderChip();
@@ -2783,6 +2813,8 @@ async function syncProfileInBackground() {
     next.economy = ui.profile.economy;
     ui.profile = next;
     ui.audio?.applySettings(ui.profile.settings?.audio);
+    ui.menu?.applyMotionPreference();
+    renderAudioToggle();
     renderChip();
     renderProfileForm();
     renderAccount();

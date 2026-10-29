@@ -44,7 +44,7 @@ const entry = process.argv[2] || BASE;
   // Practice match, then end turns until the match ends.
   mark("practice match");
   await go("#tab-menu", "menu");
-  await page.click("#menu-practice");
+  await page.click("#menu-play"); await sleep(400); await page.click("#menu-practice");
   await sleep(4000);
   report.battle = await page.evaluate(() => ({
     canvas: !!document.querySelector("#view-battle canvas"),

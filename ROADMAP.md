@@ -23,5 +23,8 @@ Three-match promotion series, monthly reset, persistent emblems, rank reward/odd
 ## M7: World systems and unique 3D production — 3D ARENA implemented (2026-10-29); world systems still planned
 Symmetric arena data/hazards, official Lore Bonds, Codex and restricted Forge; bespoke 18-unit blockouts and production models, elemental/rarity frames and responsive HUD. The 3D battlefield itself is implemented (Three.js primary, CSS-3D fallback, integrated card fields and discard piles). Gate: silhouette/readability review, mobile performance measurement, reduced-motion behavior and original asset provenance.
 
+## UI-002: Premium main menu, Play dialog and lobby — IMPLEMENTED (2026-10-29)
+Canonical design: docs/UI_DESIGN_SYSTEM.md. The Decks/Shop/Library/Settings layouts and the battle HUD inherit the tokens only; their deeper redesign is planned (UI-003).
+
 ## Every milestone report
 State implemented versus specified features, exact files changed, commands/tests actually run, migration/deployment requirements and known limitations. Do not report the whole game finished after a documentation change.

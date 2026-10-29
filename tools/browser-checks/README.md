@@ -18,6 +18,9 @@ node tools/browser-checks/all-tabs.cjs                # every tab and menu link,
 node tools/browser-checks/button-sweep.cjs            # click every safe button per view, collect JS errors
 node tools/browser-checks/stale-cache-boot-guard.cjs  # old cached modules vs new HTML; boot-guard banner
 node tools/browser-checks/cloud-sync-boot.cjs         # hanging / slow Supabase: tabs usable at once, sync merges later
+node tools/browser-checks/menu-acceptance.cjs         # UI_DESIGN_SYSTEM §10: menu, Play dialog, keyboard, reduced motion, phone
+node tools/browser-checks/menu-screenshots.cjs final menu,play,lobby   # desktop / tablet / phone screenshots
+node tools/browser-checks/lobby-screenshots.cjs       # lobby states across two contexts (test double)
 ```
 
 What these checks can and cannot prove:

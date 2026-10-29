@@ -209,6 +209,27 @@ Evidence: tests/audio.test.js (15 tests) + updated profile expectation; `npm tes
 Update 2026-10-29: the six tracks arrived mid-session via origin commit f51cec5 ("music") and are now wired into SOUNDTRACK (ffprobe-verified MP3, decode-clean; stingers 12.4 s / 11.0 s, backgrounds 138–174 s). No music was generated as a substitute. Remaining: audible playback confirmation in live browser verification (autoplay-gated).
 Browser pass 2026-10-29 (headless Chromium, tools/browser-checks): blocked before gesture → plays after first click; Planning on Decks, Shop on Shop, Main Menu on menu/Lobby/Settings, Battle on match start, exactly one Defeat sting, battle stopped, no replay on resize. Defects found and fixed: (1) second and later practice matches played NO stinger (match key only advanced for online matches); (2) /veylattice/index.html resolved tracks to index.html/music/… (404); (3) a 404/unsupported file was reported as "paused by the browser" and retried forever; (4) the Defeat sting kept playing over the menu theme. Not verified: audible output (no speakers in headless), a Victory sting in the browser (the scripted matches end in defeat; covered by unit tests), loop seamlessness.
 
+### UI-002 | DONE | Premium main menu, Play dialog, lobby and design system
+Paths: docs/UI_DESIGN_SYSTEM.md (canonical), ui.css, fonts/, index.html, src/ui/menu.js, src/ui/systems.js (lobby), src/main.js, src/game/lobby.js (deckName own-seat field), src/audio/soundtrack.js (unmute fix), tools/stamp-assets.mjs, tests/menu.test.js.
+Acceptance met (headless Chromium, tools/browser-checks/menu-acceptance.cjs 27/27):
+- The menu is the entry point; no match on load.
+- Play opens the dialog. Keyboard: Enter opens, focus moves in, background inert, Esc closes, focus returns to Play.
+- All 7 destinations and the settings shortcut open working screens.
+- The Card Library is labelled browse-only.
+- Solo Duel refuses an illegal or unowned deck with the reason.
+- Quick Practice starts a match; Return to match shows only while a match is live.
+- The difficulty selector writes the profile setting.
+- The audio toggle mutes and unmutes through the existing manager.
+- Reduced motion works through both prefers-reduced-motion and the setting.
+- At 390×844 Play is visible without scrolling, there is no horizontal overflow, and targets are ≥44px.
+- No console errors.
+
+Other checks: lobby E2E 29/29 on the new markup (test double); all tabs and links; a button sweep with no errors; two-match audio unchanged; menu idle 0 WebGL draws at 59–60 fps.
+Not done: verified on the live site or real devices; the reference video was not inspectable.
+
+### UI-003 | TODO | Deeper redesign of Decks, Shop, Library, Settings and the battle HUD
+They currently inherit tokens, type and buttons only. Rebuild their layouts on the `.vl-*` components per docs/UI_DESIGN_SYSTEM.md §4.4, with the same acceptance style.
+
 ### STABILITY-001 | DONE (live confirmation pending) | Dead tabs after deploy; slow-cloud boot
 Owner-reported on the live site: Cards, the Shop and other links stopped working. Root causes reproduced locally (the live site was unreachable from the sandbox):
 - Stale cached ES modules mixing with new ones fail to link, so nothing binds. Fixed with content-hash import-map stamping (`npm run stamp`, enforced by tests/assets.test.js) plus a boot guard with reload.

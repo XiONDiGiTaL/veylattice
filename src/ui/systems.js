@@ -104,6 +104,9 @@ export function mountSystems(ctx) {
     channel: null,
     mySeat: null,
     transportError: null,
+    connection: "offline", // offline | connecting | connected | error
+    joining: false,
+    lastAction: null, // retry target after a transport failure
   };
 
   const catalog = () => ctx.getCatalog();
@@ -382,7 +385,10 @@ export function mountSystems(ctx) {
         broadcastRoom();
       }
     }
-    if (mine) state.mySeat = mine.seat;
+    if (mine) {
+      state.mySeat = mine.seat;
+      state.joining = false;
+    }
     if (wasLive && (merged.event === "left" || state.room.status === "finished" || state.room.status === "closed")) {
       ctx.abandonOnlineMatch?.("Your opponent left the room. The online match has ended with no result (online preview matches record nothing). Leave the room to return to the lobby.");
     }
@@ -414,7 +420,11 @@ export function mountSystems(ctx) {
 
   async function ensureChannel(code) {
     if (state.channel) return state.channel;
-    const channel = await joinRoomChannel(code, profile().id, {
+    state.connection = "connecting";
+    renderLobby();
+    let channel;
+    try {
+      channel = await joinRoomChannel(code, profile().id, {
       onRoom: (room, fromId) => adoptRoom(room, fromId),
       onCommand: (envelope) => ctx.applyRemoteCommand(envelope),
       onJoin: async (player) => {
@@ -431,6 +441,8 @@ export function mountSystems(ctx) {
       },
       onPresence: (ids) => {
         state.presence = ids;
+        // Only someone we have actually seen present can be reported as lost.
+        state.seenPresent = new Set([...(state.seenPresent ?? []), ...ids]);
         if (ctx.isOnline() && state.room && state.mySeat !== null && state.mySeat !== undefined) {
           const foe = state.room.seats?.[state.mySeat === 0 ? 1 : 0]?.playerId;
           if (foe && !ids.includes(foe)) ctx.onlineNotice?.("Opponent connection lost. Reconnection is not supported in this preview: if they do not return, leave the room.");
@@ -441,118 +453,332 @@ export function mountSystems(ctx) {
         renderLobby();
       },
       onStatus: (status) => {
+        state.connection = "error";
         state.lobbyMessage = `Room connection ${status.toLowerCase().replace("_", " ")} — leave and rejoin the room.`;
         renderLobby();
       },
     });
+    } catch (error) {
+      state.connection = "error";
+      throw error;
+    }
+    state.connection = "connected";
     state.channel = channel;
     return channel;
+  }
+
+  /* Lobby presentation — docs/UI_DESIGN_SYSTEM.md §4.3. Every value shown
+     comes from state.room (src/game/lobby.js) or the local decks; nothing is
+     simulated. Legality and start permission are re-checked by lobby.js. */
+  const CONNECTION_BADGE = {
+    offline: ["vl-badge--muted", "Not connected"],
+    connecting: ["vl-badge--info", "Connecting…"],
+    connected: ["vl-badge--ok", "Connected"],
+    error: ["vl-badge--danger", "Connection error"],
+  };
+
+  function deckStatusFor(cardIds, name, { owned = true } = {}) {
+    if (!Array.isArray(cardIds)) return { deck: null, ok: false, counts: null, reason: "No deck selected yet." };
+    const check = owned
+      ? validateDeckWithOwnership(cardIds, catalog(), economy().collection)
+      : validateDeck(cardIds, catalog());
+    return {
+      deck: { name: name || "Selected deck", cardIds },
+      ok: check.ok,
+      counts: check.counts,
+      reason: check.ok ? "" : check.errors[0] ?? "Deck is not legal.",
+    };
+  }
+
+  function deckBlock(status, emptyText) {
+    const wrap = el("div", { class: `vl-deck${status.ok ? " is-legal" : " is-illegal"}` });
+    if (!status.deck) {
+      wrap.append(el("p", { class: "vl-deck-empty", text: emptyText ?? status.reason }));
+      return wrap;
+    }
+    wrap.append(el("div", { class: "vl-deck-row" }, [
+      el("span", { class: "vl-deck-name", text: status.deck.name }),
+      el("span", { class: `vl-badge ${status.ok ? "vl-badge--ok" : "vl-badge--danger"}`, text: status.ok ? "Legal" : "Not legal" }),
+    ]));
+    if (status.counts) {
+      const c = status.counts;
+      wrap.append(el("p", { class: "vl-deck-meta", text: `${c.total} cards · ${c.vessels} Vessels · ${c.actions} Actions · ${c.relics} Relics` }));
+    }
+    if (!status.ok && status.reason) wrap.append(el("p", { class: "vl-deck-error", text: status.reason }));
+    return wrap;
+  }
+
+  function lobbyLimits() {
+    return el("details", { class: "vl-details" }, [
+      el("summary", { text: "What this preview does — and does not — do" }),
+      el("ul", {}, [
+        el("li", { text: "Every remote command is re-validated by your own engine (seat, sequence, command id, legality); illegal commands are rejected." }),
+        el("li", { text: "It is NOT server-authoritative multiplayer: no Edge Functions are deployed, so online matches grant no rewards, rank or currency." }),
+        el("li", { text: "Hands are never broadcast, but both clients shuffle from a shared seed, so a modified client could reconstruct them." }),
+        el("li", { text: "Reconnection is not supported: reloading the page leaves the match." }),
+      ]),
+    ]);
+  }
+
+  async function runLobbyAction(action) {
+    state.lastAction = action;
+    state.transportError = null;
+    try {
+      await action();
+    } catch (error) {
+      state.transportError = String(error?.message ?? error);
+      state.joining = false;
+    }
+    renderLobby();
+  }
+
+  function createRoomAction() {
+    return runLobbyAction(async () => {
+      state.room = createRoom({ host: profile() });
+      state.mySeat = 0;
+      try {
+        await ensureChannel(state.room.code);
+      } catch (error) {
+        state.room = null;
+        state.mySeat = null;
+        throw error;
+      }
+      await state.channel.sendRoom(state.room).catch(() => {});
+      state.lobbyMessage = "Room created. Share the code with your opponent.";
+    });
+  }
+
+  function joinRoomAction(code) {
+    return runLobbyAction(async () => {
+      state.joining = true;
+      // Placeholder until the host's room arrives (shown as the joining
+      // state immediately). updatedAt 0 so the first real room is always
+      // adopted, whatever the two clocks say.
+      state.room = { code, status: "waiting", seats: [], updatedAt: 0 };
+      let channel;
+      try {
+        channel = await ensureChannel(code);
+      } catch (error) {
+        state.room = null;
+        throw error;
+      }
+      await channel.sendJoin?.({ id: profile().id, displayName: profile().displayName }).catch(() => {});
+      state.lobbyMessage = "";
+    });
+  }
+
+  function seatPanel(room, seat) {
+    const isMine = seat.playerId === profile().id;
+    const empty = !seat.playerId;
+    const node = el("article", { class: `vl-seat vl-seat--${seat.seat}${seat.ready ? " is-ready" : ""}${empty ? " is-empty" : ""}`, "aria-label": `Seat ${seat.seat + 1}` });
+    if (empty) {
+      node.append(
+        el("div", { class: "vl-seat-head" }, [
+          el("span", { class: "vl-seat-emblem", text: "?" }),
+          el("div", {}, [el("p", { class: "vl-seat-name", text: "Open seat" }), el("p", { class: "vl-muted", text: "Waiting for an opponent — share the room code." })]),
+        ]),
+      );
+      return node;
+    }
+    const name = seat.displayName || "Player";
+    node.append(el("div", { class: "vl-seat-head" }, [
+      el("span", { class: "vl-seat-emblem", text: name.trim().charAt(0).toUpperCase() || "?" }),
+      el("div", {}, [
+        el("p", { class: "vl-seat-name", text: name }),
+        el("div", { class: "vl-seat-tags" }, [
+          isMine ? el("span", { class: "vl-badge vl-badge--info", text: "You" }) : null,
+          seat.seat === 0 ? el("span", { class: "vl-badge vl-badge--muted", text: "Host" }) : null,
+          !isMine && state.seenPresent?.has(seat.playerId) && !(state.presence ?? []).includes(seat.playerId)
+            ? el("span", { class: "vl-badge vl-badge--warn", text: "Connection lost" })
+            : null,
+        ]),
+      ]),
+    ]));
+    // Deck: mine is validated with ownership; the opponent's list is
+    // validated against the rules (ownership is theirs to prove).
+    const deckList = isMine ? decks().find((d) => d.id === seat.deckId) : null;
+    const status = isMine
+      ? (deckList ? deckStatusFor(deckList.cardIds, deckList.name) : deckStatusFor(null))
+      : deckStatusFor(seat.deckCards, seat.deckName || "Opponent's deck", { owned: false });
+    node.append(deckBlock(status, isMine ? "Select a deck below." : "No deck selected yet."));
+    node.append(el("span", { class: `vl-ready${seat.ready ? " is-ready" : ""}`, text: seat.ready ? "Ready" : "Not ready" }));
+
+    if (isMine && room.status !== "in_match" && room.status !== "finished") {
+      const options = decks().map((d) => ({ deck: d, check: deckValidation(d) }));
+      const select = el("select", { class: "vl-select", "aria-label": "Your deck for this room", onchange: (e) => {
+        const deck = decks().find((d) => d.id === e.target.value);
+        if (!deck) return;
+        const result = setSeatDeck(state.room, profile().id, deck.id);
+        if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
+        state.room = { ...result.room, seats: result.room.seats.map((s) => s.playerId === profile().id ? { ...s, deckCards: deck.cardIds, deckName: deck.name } : s) };
+        broadcastRoom();
+        renderLobby();
+      } }, [
+        el("option", { value: "", text: "Select a deck…" }),
+        ...options.map(({ deck, check }) => el("option", { value: deck.id, selected: seat.deckId === deck.id ? "selected" : undefined, text: `${deck.name}${check.ok ? "" : " (not legal)"}` })),
+      ]);
+      const deckOk = Boolean(deckList) && status.ok;
+      const readyBtn = el("button", {
+        type: "button",
+        class: `vl-btn ${seat.ready ? "vl-btn--secondary" : "vl-btn--primary"}`,
+        text: seat.ready ? "Unready" : "Ready up",
+        disabled: !seat.ready && !deckOk ? "disabled" : undefined,
+        title: !seat.ready && !deckOk ? "Select a legal, owned deck first" : undefined,
+        onclick: () => {
+          const result = setReady(state.room, profile().id, !seat.ready);
+          if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
+          state.room = result.room;
+          broadcastRoom();
+          renderLobby();
+        },
+      });
+      node.append(el("div", { class: "vl-mode-actions" }, [select, readyBtn]));
+    }
+    return node;
+  }
+
+  function startBlocker(room) {
+    if (state.mySeat !== 0) return "Only the host can start the match.";
+    if (!room.seats.every((s) => s.playerId)) return "Waiting for an opponent to join.";
+    if (!room.seats.every((s) => s.deckId)) return "Both players must select a deck.";
+    if (!room.seats.every((s) => s.ready)) return "Both players must be ready.";
+    return canStart(room) ? "" : "Not ready to start.";
   }
 
   function renderLobby() {
     const host = $("#lobby-root");
     if (!host || !catalog()) return;
     host.replaceChildren();
-    host.append(el("p", { class: "sys-warning", text: "Online lobby — peer-validated preview. Every remote command is re-validated by your engine (seat, sequence, command id, legality) and illegal commands are rejected. This is NOT server-authoritative multiplayer: no Edge Functions are deployed, so online matches grant no rewards, rank or currency, and a determined client could still desync its own view. Server-authoritative validation is tracked as blocked pending owner approval and a database migration." }));
-    if (state.transportError) host.append(el("p", { class: "sys-errors", text: `Online transport unavailable: ${state.transportError} — rooms cannot be created or joined from this browser right now. Local Practice, Deck Builder and Shop still work.` }));
-    if (state.lobbyMessage) host.append(el("p", { class: "sys-status", text: state.lobbyMessage }));
+    const root = el("div", { class: "vl-lobby" });
+    host.append(root);
+    const [badgeClass, badgeText] = CONNECTION_BADGE[state.connection] ?? CONNECTION_BADGE.offline;
+    root.append(el("div", { class: "vl-lobby-bar" }, [
+      el("div", { class: "vl-lobby-badges" }, [
+        el("span", { class: "vl-badge vl-badge--preview", text: "Preview · peer-validated" }),
+        el("span", { class: `vl-badge ${badgeClass}`, text: badgeText, role: "status" }),
+        el("span", { class: "vl-badge vl-badge--muted", text: "No rewards · no rank" }),
+      ]),
+      el("button", { type: "button", class: "vl-btn vl-btn--quiet", text: "← Back to menu", onclick: () => ctx.showView?.("menu") }),
+    ]));
 
-    if (!state.room) {
-      host.append(el("div", { class: "sys-row" }, [
-        el("button", { type: "button", class: "button primary", text: "Create room", onclick: async () => {
-          try {
-            state.room = createRoom({ host: profile() });
-            state.mySeat = 0;
-            await ensureChannel(state.room.code);
-            await state.channel.sendRoom(state.room).catch(() => {});
-            state.lobbyMessage = `Room ${state.room.code} created. Share the code with your opponent.`;
-          } catch (error) {
-            state.transportError = String(error?.message ?? error);
-          }
-          renderLobby();
-        } }),
-        el("input", { type: "text", placeholder: "Room code (6 letters/digits)", id: "lobby-code-input" }),
-        el("button", { type: "button", class: "button secondary", text: "Join room", onclick: async () => {
-          const input = $("#lobby-code-input");
-          const code = (input?.value ?? "").trim().toUpperCase();
-          if (!isRoomCode(code)) { state.lobbyMessage = "Enter a 6-character room code."; renderLobby(); return; }
-          try {
-            const channel = await ensureChannel(code);
-            // Placeholder until the host's room arrives. updatedAt 0 so the
-            // first real room is always adopted, whatever the two clocks say.
-            state.room = { code, status: "waiting", seats: [], updatedAt: 0 };
-            await channel.sendJoin?.({ id: profile().id, displayName: profile().displayName }).catch(() => {});
-            // Fallback: the host broadcasts room state on join; if nothing
-            // arrives, the joiner is told to check the code and retry.
-            state.lobbyMessage = `Joining room ${code}… if no room appears within a few seconds, check the code and try again.`;
-          } catch (error) {
-            state.transportError = String(error?.message ?? error);
-          }
-          renderLobby();
-        } }),
+    if (state.transportError) {
+      root.append(el("div", { class: "vl-error", role: "alert" }, [
+        el("strong", { text: "Online transport unavailable. " }),
+        `${state.transportError}. Rooms cannot be created or joined from this browser right now; Practice, Deck Builder and Shop still work. `,
+        state.lastAction ? el("button", { type: "button", class: "vl-btn vl-btn--secondary", text: "Retry", onclick: () => state.lastAction && runLobbyAction(state.lastAction) }) : null,
       ]));
-      host.append(el("p", { class: "muted small", text: "Two players, one room: the host creates it, the guest joins by code, both pick a legal owned deck, both ready up, and the host starts. Deck lists are shared at match start so both clients build the same match; hands are shuffled locally from the shared seed and never broadcast — but a modified client could reconstruct them from that seed, so treat online hands as unhidden in this preview. Reconnection is not supported: reloading the page leaves the match." }));
+    }
+    if (state.lobbyMessage) root.append(el("p", { class: "vl-status", role: "status", text: state.lobbyMessage }));
+
+    const room = state.room;
+    const mySeatEntry = room?.seats?.find?.((s) => s.playerId === profile().id);
+
+    if (!room || (!mySeatEntry && !state.joining)) {
+      // No room: host, join, and your deck.
+      const active = decks().find((d) => d.id === ctx.activeDeckId?.()) ?? decks()[0];
+      const busy = state.connection === "connecting";
+      const codeInput = el("input", { type: "text", class: "vl-input vl-input--code", id: "lobby-code-input", inputmode: "text", autocomplete: "off", maxlength: "6", placeholder: "CODE", "aria-label": "Room code (6 characters)" });
+      const joinBtn = el("button", { type: "button", class: "vl-btn vl-btn--secondary", text: "Join room", disabled: busy ? "disabled" : undefined, onclick: () => {
+        const code = (codeInput.value ?? "").trim().toUpperCase();
+        if (!isRoomCode(code)) { state.lobbyMessage = "Enter the 6-character room code from your host."; renderLobby(); $("#lobby-code-input")?.focus(); return; }
+        joinRoomAction(code);
+      } });
+      codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinBtn.click(); });
+      root.append(el("div", { class: "vl-lobby-grid" }, [
+        el("section", { class: "vl-panel", "aria-labelledby": "lobby-host-title" }, [
+          el("h2", { class: "vl-panel-title", id: "lobby-host-title", text: "Host a room" }),
+          el("p", { class: "vl-muted", text: "Create a room, then send the 6-character code to your opponent." }),
+          el("button", { type: "button", class: "vl-btn vl-btn--primary vl-btn--lg", text: "Create room", "aria-busy": busy && state.room ? "true" : undefined, disabled: busy ? "disabled" : undefined, onclick: () => createRoomAction() }),
+        ]),
+        el("section", { class: "vl-panel", "aria-labelledby": "lobby-join-title" }, [
+          el("h2", { class: "vl-panel-title", id: "lobby-join-title", text: "Join with a code" }),
+          el("p", { class: "vl-muted", text: "Enter the code your host shared." }),
+          el("div", { class: "vl-join-row" }, [codeInput, joinBtn]),
+        ]),
+        el("section", { class: "vl-panel", "aria-labelledby": "lobby-deck-title" }, [
+          el("h2", { class: "vl-panel-title", id: "lobby-deck-title", text: "Your deck" }),
+          deckBlock(active ? deckStatusFor(active.cardIds, active.name) : deckStatusFor(null), "No saved deck yet."),
+          el("button", { type: "button", class: "vl-btn vl-btn--quiet", text: "Open Deck Builder", onclick: () => ctx.showView?.("decks") }),
+        ]),
+      ]));
+      root.append(lobbyLimits());
       return;
     }
 
-    const room = state.room;
-    host.append(el("h3", { text: `Room ${room.code} — ${room.status}` }));
-    const myDeckOptions = decks().map((d) => ({ deck: d, check: deckValidation(d) }));
-    for (const seat of room.seats) {
-      const isMine = seat.playerId === profile().id;
-      const seatNode = el("div", { class: "sys-seat" }, [
-        el("strong", { text: seat.playerId ? (isMine ? `Seat ${seat.seat + 1} — You (${seat.displayName})` : `Seat ${seat.seat + 1} — ${seat.displayName}`) : `Seat ${seat.seat + 1} — open` }),
-        el("span", { class: "muted small", text: seat.ready ? "READY" : "Not ready" }),
-      ]);
-      if (isMine) {
-        seatNode.append(el("select", { onchange: (e) => {
-          const deck = decks().find((d) => d.id === e.target.value);
-          if (!deck) return;
-          const result = setSeatDeck(room, profile().id, deck.id);
-          if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
-          state.room = { ...result.room, seats: result.room.seats.map((s) => s.playerId === profile().id ? { ...s, deckCards: deck.cardIds } : s) };
-          broadcastRoom();
-          renderLobby();
-        } }, [
-          el("option", { value: "", text: "Select a deck…" }),
-          ...myDeckOptions.map(({ deck, check }) => el("option", { value: deck.id, selected: seat.deckId === deck.id ? "selected" : undefined, text: `${deck.name}${check.ok ? "" : " (illegal — cannot ready)"}` })),
-        ]));
-        seatNode.append(el("button", { type: "button", class: "button secondary small", text: seat.ready ? "Unready" : "Ready up", disabled: !seat.deckId ? "disabled" : undefined, onclick: () => {
-          const result = setReady(state.room, profile().id, !seat.ready);
-          if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
-          state.room = result.room;
-          broadcastRoom();
-          renderLobby();
-        } }));
-      } else if (seat.deckId) {
-        seatNode.append(el("span", { class: "muted small", text: `Deck selected` }));
-      }
-      host.append(seatNode);
+    if (state.joining && !mySeatEntry) {
+      root.append(el("section", { class: "vl-panel vl-empty", "aria-live": "polite" }, [
+        el("span", { class: "vl-spinner", "aria-hidden": "true" }),
+        el("p", { text: `Joining room ${room.code}… waiting for the host to seat you.` }),
+        el("p", { class: "vl-muted", text: "If nothing happens within a few seconds, check the code with your host." }),
+        el("button", { type: "button", class: "vl-btn vl-btn--quiet", text: "Cancel", onclick: () => leaveCurrentRoom() }),
+      ]));
+      return;
     }
-    host.append(el("div", { class: "sys-row" }, [
-      el("button", { type: "button", class: "button primary", text: "Start match", disabled: canStart(room) && state.mySeat === 0 ? undefined : "disabled", onclick: () => {
-        const result = startMatch(room, (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
-        if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
-        state.room = result.room;
-        broadcastRoom();
-        startOnlineFromRoom(result.room);
-      } }),
-      el("button", { type: "button", class: "button secondary", text: "Copy room code", onclick: async () => {
-        try { await navigator.clipboard.writeText(room.code); state.lobbyMessage = "Room code copied."; } catch { state.lobbyMessage = `Room code: ${room.code}`; }
-        renderLobby();
-      } }),
-      el("button", { type: "button", class: "button danger", text: "Leave room", onclick: async () => {
-        const next = leaveRoom(room, profile().id);
-        if (state.channel) await state.channel.sendRoom(next).catch(() => {});
-        await state.channel?.leave().catch(() => {});
-        state.channel = null;
-        state.room = null;
-        state.mySeat = null;
-        ctx.endOnlineMatch?.();
-        renderLobby();
-      } }),
+
+    // In a room.
+    const STATUS_LABEL = { waiting: ["vl-badge--muted", "Waiting"], ready: ["vl-badge--ok", "Both ready"], in_match: ["vl-badge--info", "Match in progress"], finished: ["vl-badge--warn", "Finished"], closed: ["vl-badge--muted", "Closed"] };
+    const [statusClass, statusText] = STATUS_LABEL[room.status] ?? STATUS_LABEL.waiting;
+    const copyBtn = el("button", { type: "button", class: "vl-btn vl-btn--secondary", text: "Copy code", onclick: async () => {
+      try { await navigator.clipboard.writeText(room.code); state.lobbyMessage = "Room code copied."; } catch { state.lobbyMessage = `Room code: ${room.code}`; }
+      renderLobby();
+    } });
+    root.append(el("section", { class: "vl-panel", "aria-labelledby": "room-title" }, [
+      el("div", { class: "vl-room-head" }, [
+        el("div", {}, [
+          el("h2", { class: "vl-panel-title", id: "room-title", text: "Duel room" }),
+          el("div", { class: "vl-room-code", "aria-label": `Room code ${room.code.split("").join(" ")}` }, [el("small", { text: "Code" }), room.code]),
+        ]),
+        el("div", { class: "vl-lobby-badges" }, [el("span", { class: `vl-badge ${statusClass}`, text: statusText }), copyBtn]),
+      ]),
     ]));
-    if (!canStart(room)) host.append(el("p", { class: "muted small", text: "The match starts only when both seats are filled, each with a deck selected, and both players are ready. Changing a deck clears readiness." }));
+
+    const seats = room.seats.length === 2 ? room.seats : [];
+    root.append(el("div", { class: "vl-seats" }, [
+      seats[0] ? seatPanel(room, seats[0]) : null,
+      el("span", { class: "vl-versus", "aria-hidden": "true", text: "VS" }),
+      seats[1] ? seatPanel(room, seats[1]) : null,
+    ]));
+
+    const blocker = room.status === "in_match" || room.status === "finished" ? "" : startBlocker(room);
+    const isHost = state.mySeat === 0;
+    root.append(el("div", { class: "vl-room-actions" }, [
+      el("div", { class: "vl-room-actions-main" }, [
+        isHost && room.status !== "in_match" && room.status !== "finished"
+          ? el("button", { type: "button", class: "vl-btn vl-btn--primary vl-btn--lg", text: "Start match", disabled: blocker ? "disabled" : undefined, "aria-describedby": "start-blocker", onclick: () => {
+              const result = startMatch(state.room, (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0);
+              if (result.error) { state.lobbyMessage = result.error; renderLobby(); return; }
+              state.room = result.room;
+              broadcastRoom();
+              startOnlineFromRoom(result.room);
+            } })
+          : null,
+        room.status === "in_match" && ctx.isOnline()
+          ? el("button", { type: "button", class: "vl-btn vl-btn--primary", text: "Return to match", onclick: () => ctx.showView?.("battle") })
+          : null,
+        el("p", { class: "vl-status", id: "start-blocker", text: blocker || (!isHost && room.status === "ready" ? "Waiting for the host to start." : "") }),
+      ]),
+      el("button", { type: "button", class: "vl-btn vl-btn--danger", text: "Leave room", onclick: () => leaveCurrentRoom() }),
+    ]));
+    root.append(lobbyLimits());
+  }
+
+  async function leaveCurrentRoom() {
+    const room = state.room;
+    if (room && Array.isArray(room.seats) && room.seats.length) {
+      const next = leaveRoom(room, profile().id);
+      if (state.channel) await state.channel.sendRoom(next).catch(() => {});
+    }
+    await state.channel?.leave().catch(() => {});
+    state.channel = null;
+    state.room = null;
+    state.mySeat = null;
+    state.joining = false;
+    state.connection = "offline";
+    state.presence = null;
+    state.seenPresent = null;
+    state.lobbyMessage = "";
+    ctx.endOnlineMatch?.();
+    renderLobby();
   }
 
   function render(view) {
@@ -562,5 +788,10 @@ export function mountSystems(ctx) {
     else if (view === "lobby") renderLobby();
   }
 
-  return { render, renderDecks, renderShop, renderLobby, seedStarterIfNeeded };
+  /** Open the Shop on a given tab ("collection" | "singles" | null). */
+  function setShopTab(tab) {
+    state.shopTab = tab === "collection" || tab === "singles" ? tab : "packs";
+  }
+
+  return { render, renderDecks, renderShop, renderLobby, seedStarterIfNeeded, setShopTab };
 }

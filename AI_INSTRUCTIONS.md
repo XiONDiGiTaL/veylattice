@@ -45,6 +45,30 @@ GAME_RULES.md. The following are requirements, not suggestions:
    dependency (currently: server-authoritative multiplayer) labelled
    honestly with what is missing.
 
+## Interface design system (2026-10-29) — mandatory read
+
+`docs/UI_DESIGN_SYSTEM.md` is canonical for every menu, lobby, panel and
+control. Its rules, in short:
+
+1. Use the `ui.css` tokens (`--vl-*`) and components (`.vl-btn`,
+   `.vl-panel`, `.vl-mode`, `.vl-seat`, `.vl-deck`, `.vl-badge`,
+   `<dialog class="vl-dialog">`). Never restyle a screen with ad-hoc colours.
+2. The main menu is the entry point. One Play primary action opens the
+   mode dialog. No match ever starts on page load.
+3. Show a destination only if its system works. Mark working-with-limits
+   systems with a Preview badge (the online room). Never add buttons for
+   unimplemented systems (local hot-seat, server-authoritative online,
+   cloud economy).
+4. The lobby renders real room and seat state from `src/game/lobby.js`.
+   It never simulates players or claims a match started.
+5. Use Cinzel only for the wordmark and major headings; Inter for
+   everything else. Fonts are self-hosted under `fonts/`; there is no
+   external font CDN.
+6. Motion honours `prefers-reduced-motion` and the Reduced motion setting.
+   There is no rAF/canvas loop on the menu.
+7. Touch targets are at least 44px, focus is visible, there is no
+   horizontal overflow at 390px, and dialogs use native `showModal()`.
+
 ## Soundtrack (2026-10-29) — mandatory read
 
 `src/audio/soundtrack.js` is the SOLE authority for soundtrack integration:

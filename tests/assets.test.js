@@ -35,6 +35,7 @@ test("the import map precedes every module script, and the entry is versioned", 
 test("stylesheets are versioned and never root-relative (Pages subpath)", () => {
   assert.match(html, /<link rel="stylesheet" href="\.\/styles\.css\?v=[0-9a-f]{10}">/);
   assert.match(html, /<link rel="stylesheet" href="\.\/battlefield\.css\?v=[0-9a-f]{10}">/);
+  assert.match(html, /<link rel="stylesheet" href="\.\/ui\.css\?v=[0-9a-f]{10}">/);
   assert.doesNotMatch(html, /(src|href)="\/(src|styles|battlefield|music|CardFrames)/);
 });
 

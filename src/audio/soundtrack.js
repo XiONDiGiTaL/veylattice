@@ -451,6 +451,11 @@ export function createAudioManager(options = {}) {
           } catch {
             /* ignore */
           }
+          // The element is paused now; without this the no-restart guard in
+          // playBackground treated the paused track as still playing and
+          // unmuting never resumed it (found 2026-10-29 via the new
+          // utility-corner audio toggle in a real browser).
+          backgroundStarted = false;
         }
         pendingRole = pendingRole ?? currentRole;
         setStatus("muted");

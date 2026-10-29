@@ -185,7 +185,7 @@ export function recordRemoteCommand(room, envelope) {
  *   revision counter (src/net/online.js), not by timestamps.
  * ------------------------------------------------------------------ */
 
-const OWN_SEAT_FIELDS = ["deckId", "deckCards", "ready", "displayName"];
+const OWN_SEAT_FIELDS = ["deckId", "deckCards", "deckName", "ready", "displayName"];
 const TERMINAL_OR_LIVE = new Set(["in_match", "finished", "closed"]);
 
 function copyOwnFields(target, source) {

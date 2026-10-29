@@ -23,6 +23,14 @@ Establish scale and camera, block out silhouettes, test them on the actual board
 
 Do not trace or closely imitate commercial-game models, card frames, UI, iconography, creatures or effects. Build a coherent original Veylattice visual language. Art briefs and screenshots are not finished game assets.
 
+## Interface (2026-10-29)
+
+The 2D interface follows `docs/UI_DESIGN_SYSTEM.md`: midnight/obsidian
+glass surfaces, a Lattice-gold primary accent, element colours used as
+meaning (never panel fills), Cinzel display plus Inter UI, and real card
+faces in menu compositions. That document governs presentation only. The
+battlefield, frames and rules keep their own canonical documents.
+
 ## Canonical layout and presentation (2026-10-29, reconciled)
 
 This section is the single source of truth for the arena, card fields and

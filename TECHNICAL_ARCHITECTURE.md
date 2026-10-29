@@ -86,6 +86,15 @@ UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules 
 | Secrets | Only the publishable/anon key is in the bundle (`src/net/config.js`). `service_role` is absent from the repo and browser. |
 | Offline | `CLOUD_ENABLED = false` or any network failure degrades to a clearly labelled local profile; no feature blocks on sync. |
 
+## Interface layer (2026-10-29)
+
+`ui.css` holds the design tokens (`--vl-*`) and components for the main menu, the Play dialog
+and the lobby, and the global restyle of buttons and type (docs/UI_DESIGN_SYSTEM.md). It is
+stamped like the other stylesheets. Fonts are self-hosted in `fonts/` as variable woff2
+files, about 74 KB in total, loaded with `font-display: swap`. The menu's card fan uses
+`Cards/cards/*.svg` with lazy decoding. There is no canvas or animation loop on the menu, and
+the battle engine and 3D arena initialise only when a match starts.
+
 ## Public documentation basis
 GitHub Pages is static hosting: https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages . Supabase RLS/security guidance: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/docs/guides/database/secure-data . These links explain platform/security constraints, not implementation completion.
 

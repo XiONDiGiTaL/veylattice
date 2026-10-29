@@ -353,3 +353,16 @@ test("starting background music ends a still-sounding result stinger", () => {
   manager.playBackground("menu");
   assert.ok(stinger.pauseCalls > pausesBefore, "stinger paused when the menu theme starts");
 });
+
+test("mute then unmute resumes the same background track (no-restart guard reset)", async () => {
+  const { manager, created } = managerWith(suppliedManifest());
+  manager.playBackground("menu");
+  await tick();
+  const playsBefore = created[0].playCalls;
+  manager.applySettings({ muted: true });
+  assert.equal(manager.status, "muted");
+  manager.applySettings({ muted: false });
+  await tick();
+  assert.equal(created[0].playCalls, playsBefore + 1, "unmute calls play() again on the paused element");
+  assert.equal(manager.status, "playing");
+});

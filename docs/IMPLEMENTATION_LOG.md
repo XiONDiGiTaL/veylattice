@@ -1199,3 +1199,57 @@ TODO STABILITY-001 and CHANGELOG.
 - `npm test` 185/185; `npm run check` 185/185.
 
 **Not verified:** the live site itself after this change, in any real browser.
+
+## Session 2026-10-29 (late) · UI-002 — premium main menu, Play dialog, online room
+
+**Base:** origin/main `59374ca`. Push was still refused by the session git proxy.
+
+### Phase 1 — audit and directive (before code)
+**References:**
+- LeapBuddies and VoxelRage: cloned from GitHub and read (CSS tokens; menu screenshots
+  `menu-keys-final.png`, `voxel-rage-menu-final.png`).
+- Moxgate: text fetch only (navigation order; Solo / 1v1 / Commander modes; "No download or
+  account required"; dark purple theme).
+- xiondigital.net/leapbuddies: text fetch (mode grouping: online vs. on this device).
+- YouTube reference: fetch failed, so it was not used.
+
+**Audit of the live app:**
+- The menu had 3 competing CTAs, 7 links and a status block.
+- `menu-practice-deck` errors were written to the hidden battle message line, so they were
+  invisible on the menu.
+- There was no local mode (hot-seat was replaced by AI in M1-006).
+
+**Directive docs written first:** docs/UI_DESIGN_SYSTEM.md (canonical), plus AI_INSTRUCTIONS,
+ART_BIBLE, PROJECT_BRIEF and TECHNICAL_ARCHITECTURE updates.
+
+### Implementation
+`ui.css`, `fonts/` (OFL; @fontsource-variable/cinzel 5.3.0 and inter 5.3.0 from npm),
+`index.html` (menu, dialog, utility buttons, lobby header, library note), `src/ui/menu.js`
+(new), `src/ui/systems.js` (lobby rewrite, `setShopTab`), `src/main.js` (wiring, audio toggle,
+context line, draw label), `src/game/lobby.js` (deckName), `src/audio/soundtrack.js` (unmute),
+`tools/stamp-assets.mjs` (ui.css), tests (`menu.test.js`, audio, assets).
+
+### Measured and fixed during verification
+- **Card fan:** preserve-3d/perspective over the SVG faces gave frames up to 650 ms while
+  anything animated (perfmenu variants). The 2D fan holds 16.7 ms p50 and 16.8 ms max.
+- **Unmute** did not resume music: mute paused the element but left `backgroundStarted`, so
+  `playBackground` short-circuited. Reproduced in the browser (no element playing after
+  unmute); fixed and unit-tested.
+- **`[hidden]`:** "Return to match" was visible with no match because `.vl-btn{display}` beat
+  `[hidden]`. A global `[hidden]{display:none!important}` fixes it.
+- **Contrast:** `--vl-text-3` measured 4.09:1 on panels; raised to #8891ab (5.4:1 on panels).
+- **Touch target:** the phone profile chip measured 42px; set to ≥44.
+
+### Results
+- **menu-acceptance.cjs** 27/27. Covers: entry point; Play visible at 1440×900 and 390×844;
+  keyboard open/inert/Esc/focus return; 7 destinations plus settings; library browse-only;
+  audio mute/unmute through the manager; illegal deck refused with reason; Quick Practice
+  starts; Return to match only while live; difficulty persisted; reduced motion (media query
+  and setting); no overflow; targets ≥44px; no console errors.
+- **Other browser checks:** lobby-e2e (−3 s, 6 turns) 29/29; all-tabs (desktop and phone) all
+  working; button sweep with no JS errors in 8 views; two-match audio unchanged; stale-cache
+  guard OK; cloud-sync boot OK.
+- **arena-perf:** menu idle 0 draw calls at 59–60 fps; battle idle 0 draws at 60 fps.
+- **Unit tests:** `npm test` 193/193, `npm run check` 193/193.
+
+**Not verified:** the live site and real devices; audible output.

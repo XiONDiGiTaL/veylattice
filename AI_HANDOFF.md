@@ -26,6 +26,31 @@
   (`npm run check` adds syntax checks).
 
 
+## Latest session — 2026-10-29 (late) · UI-002 premium menu, Play dialog, online room
+
+**Base:** origin/main `59374ca` (the owner applied STABILITY-001). This session's work is one
+local commit on top of it. Push is still blocked by the session git proxy, so the change was
+handed over as a patch and bundle.
+**Canonical design:** `docs/UI_DESIGN_SYSTEM.md`. Read it before touching any screen.
+
+- **Implemented and browser-checked** (headless Chromium; see the IMPLEMENTATION_LOG entry):
+  menu, Play dialog, online room, tokens/components (`ui.css`), self-hosted fonts.
+- **Feature availability is truthful:** Local Match is not offered, and Online is badged
+  Preview.
+- **Also fixed:** the unmute bug (audio manager) and the global `[hidden]` override.
+- **Remaining:**
+  - UI-003: Decks/Shop/Library/Settings/battle HUD inherit tokens only.
+  - Live and real-device verification.
+  - Server-authoritative online and cloud economy are still proposals.
+- **Workflow:** `npm run stamp` after any src/ or CSS change. `ui.css` is a stamped
+  stylesheet.
+
+Next three tasks:
+1. Push, hard-refresh the live site once, then confirm the menu, Play dialog, audio toggle and
+   lobby on a real desktop and phone.
+2. UI-003 for Decks and Shop on the `.vl-*` components.
+3. A two-device lobby check on real Supabase.
+
 ## Latest session — 2026-10-29 (evening) · STABILITY-001: dead tabs after deploy
 
 Origin is `7b9709e`: the owner applied the earlier patch, and its tree is identical to local

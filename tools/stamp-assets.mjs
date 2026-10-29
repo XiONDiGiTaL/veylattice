@@ -46,7 +46,7 @@ export function moduleFiles() {
   return walk(join(root, "src")).map((full) => `./${relative(root, full).split(sep).join("/")}`);
 }
 
-export const STYLESHEETS = ["./styles.css", "./battlefield.css"];
+export const STYLESHEETS = ["./styles.css", "./battlefield.css", "./ui.css"];
 export const ENTRY = "./src/main.js";
 
 export function expectedStamp() {

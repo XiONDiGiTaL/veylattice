@@ -26,3 +26,15 @@ authoritative multiplayer, ranked progression and reward-bearing matches
 are NOT implemented: online matches grant no rewards or rank until Edge
 Function validation is deployed and verified. Do not describe expanded
 specifications as playable features. See ROADMAP.md for milestones.
+
+### Player-facing modes (feature availability, 2026-10-29)
+| Mode | Status |
+| --- | --- |
+| Solo Duel (active deck vs AI, difficulty + persona) | Implemented |
+| Quick Practice (random practice deck vs AI) | Implemented |
+| Guided First Match (tutorial) | Implemented |
+| Online Room (two players by code) | Preview — peer-validated, no rewards |
+| Local hot-seat | Not implemented (replaced by AI in M1-006); not offered |
+| Ranked / rewards / cloud economy | Not implemented; not offered |
+
+Interface presentation is governed by docs/UI_DESIGN_SYSTEM.md.

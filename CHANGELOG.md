@@ -4,6 +4,62 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-29 - UI-002: premium main menu, Play dialog, online room and design system
+
+Directives first: new canonical `docs/UI_DESIGN_SYSTEM.md`, with pointers from
+AI_INSTRUCTIONS.md, ART_BIBLE.md, PROJECT_BRIEF.md (feature-availability table) and
+TECHNICAL_ARCHITECTURE.md. References: LeapBuddies and VoxelRage menus were inspected from
+their GitHub source and screenshots; Moxgate only through a text fetch of its page metadata
+and navigation. The YouTube reference could not be retrieved, and nothing here is derived from
+it.
+
+Implemented:
+- `ui.css` with tokens and components (`--vl-*`, `.vl-*`), and self-hosted OFL fonts
+  (Cinzel display, Inter UI, 74 KB).
+- **Menu:**
+  - An original pentagon/counter-cycle emblem and the wordmark.
+  - A single Play action.
+  - Grouped destinations: Prepare / Explore / Together.
+  - A five-element fan of real card faces with 2D pointer parallax.
+  - CSS motes and entrance motion.
+  - The tab bar is hidden on the menu; a utility corner holds the audio toggle, settings and
+    profile.
+- **Play dialog** (native `<dialog>`):
+  - Solo Duel with deck legality and ownership check, plus opponent strength/style bound to
+    settings.
+  - Quick Practice and Guided First Match.
+  - Online Room (Preview).
+  - No Local Match (not implemented).
+- **Online room:**
+  - Connection, preview and no-rewards badges.
+  - Host / Join-with-code / Your-deck panels.
+  - A joining spinner state, and a transport-error panel with Retry.
+  - Room code with copy; two seat panels with emblem, You/Host, deck legality and Ready.
+  - Host-only Start, with the reason it is blocked.
+  - Leave; limitations in a disclosure.
+  - Seats carry `deckName` (an own-seat field).
+- The Card Library has a "Browse only" note linking to the Deck Builder.
+
+Fixed during verification:
+- Unmuting never resumed the paused background track (an audio-manager guard bug, now
+  unit-tested).
+- `[hidden]` was beaten by component `display` ("Return to match" showed without a match).
+- A 3D card fan caused ~650 ms software re-raster frames, so the fan is now 2D only.
+- Backdrop blur was removed.
+- The `--accent` alias was not applied, because it would recolour the player's team.
+- Tertiary text was raised to ≥4.5:1 contrast.
+- The phone top bar is now compact, with a scrollable tab row.
+
+Checks:
+- `npm test` 193/193 and `npm run check` 193/193 (was 185).
+- `menu-acceptance.cjs` 27/27, lobby E2E 29/29.
+- All tabs and links, the button sweep, the two-match audio pass, the stale-cache guard, the
+  cloud-sync boot and arena perf all pass with no regression.
+- Screenshots at 1440×900, 820×1180 and 390×844.
+
+Not verified: the live site and real devices (deployment blocked from this sandbox).
+
+
 ### 2026-10-29 - STABILITY-001: dead tabs after deploy (stale module cache), slow-cloud boot
 
 Owner report: on the live site, links such as Cards and the Shop "are not working at all

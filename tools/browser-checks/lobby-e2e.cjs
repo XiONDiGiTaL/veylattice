@@ -37,8 +37,8 @@ const MAX_TURNS = Number(process.argv[3] || 6);
   // 1. Host creates.
   await A.page.click("#lobby-root >> text=Create room");
   await sleep(1200);
-  const h3 = await A.page.textContent("#lobby-root h3").catch(() => "");
-  const code = (h3.match(/Room ([A-Z0-9]{6})/) || [])[1];
+  const h3 = await A.page.textContent("#lobby-root .vl-room-code").catch(() => "");
+  const code = (h3.match(/([A-HJ-NP-Z2-9]{6})/) || [])[1];
   step("host creates room", !!code, { h3 });
 
   // 2. Guest joins.
@@ -47,11 +47,10 @@ const MAX_TURNS = Number(process.argv[3] || 6);
   let joined = false;
   for (let i = 0; i < 20 && !joined; i += 1) {
     await sleep(400);
-    const t = await lobbyText(B);
-    joined = /Seat 2 — You/.test(t) && /Seat 1 — /.test(t) && !/Seat 1 — open/.test(t);
+    joined = (await B.page.$$eval("#lobby-root .vl-seat:not(.is-empty)", (n) => n.length)) === 2;
   }
   step("guest seated after join", joined, { guest: (await lobbyText(B)).slice(0, 400) });
-  const hostSeesGuest = /Seat 2 — (?!open)/.test(await lobbyText(A));
+  const hostSeesGuest = (await A.page.$$eval("#lobby-root .vl-seat:not(.is-empty)", (n) => n.length)) === 2;
   step("host sees guest seated", hostSeesGuest, { host: (await lobbyText(A)).slice(0, 400) });
   if (!joined || !hostSeesGuest) { finish(); return; }
 
@@ -66,7 +65,8 @@ const MAX_TURNS = Number(process.argv[3] || 6);
   }
   await sleep(800);
   const aReady = await lobbyText(A), bReady = await lobbyText(B);
-  step("both seats READY on both clients", (aReady.match(/READY/g) || []).length === 2 && (bReady.match(/READY/g) || []).length === 2, { aReady: aReady.slice(0, 500), bReady: bReady.slice(0, 500) });
+  const readyCount = (p) => p.page.$$eval("#lobby-root .vl-ready.is-ready", (n) => n.length);
+  step("both seats READY on both clients", (await readyCount(A)) === 2 && (await readyCount(B)) === 2, { aReady: aReady.slice(0, 300), bReady: bReady.slice(0, 300) });
   const startEnabled = await A.page.isEnabled("#lobby-root >> text=Start match");
   step("host Start enabled", startEnabled);
   if (!startEnabled) { finish(); return; }
@@ -185,8 +185,8 @@ const MAX_TURNS = Number(process.argv[3] || 6);
   const hostEndTurn = await A.page.isEnabled("#end-turn-btn");
   await A.page.click("#tab-lobby");
   await sleep(800);
-  const hostH3 = await A.page.textContent("#lobby-root h3").catch(() => "");
-  step("host told opponent left; board frozen", /opponent left/i.test(hostMsg) && !hostEndTurn && /finished/.test(hostH3), { hostMsg, hostEndTurn, hostH3 });
+  const hostH3 = await A.page.textContent("#lobby-root .vl-room-head").catch(() => "");
+  step("host told opponent left; board frozen", /opponent left/i.test(hostMsg) && !hostEndTurn && /finished/i.test(hostH3), { hostMsg, hostEndTurn, hostH3 });
   await A.page.click("#lobby-root >> text=Leave room");
   await sleep(800);
   const hostAfter = await A.page.evaluate(() => ({ battleTabDisabled: document.querySelector("#tab-battle").disabled, lobby: document.querySelector("#lobby-root").textContent.includes("Create room") }));
