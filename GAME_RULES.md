@@ -40,3 +40,22 @@ Proposed keyword Mourning: after any other Vessel is defeated, surviving source 
 
 ## Tag and mode differences
 See docs/MODES_AND_LOBBIES.md. Each seat owns its hand/deck/Flux/discard and unit cap. Team Vitality is shared in tag. Practice grants no currency, rank changes, reward packs or improved pack odds. Custom Forge cards are excluded from progression modes by proposed default.
+
+**Deck-limit status (2026-10-29 clarification, no rule change):** the deck limits the engine
+enforces — 20–40 cards, at least 10 Vessels, at least 5 Actions, at most 3 copies per canonical
+card ID — are canonical as implemented. Older "proposed default" wording about these limits refers
+to their balance tunability, not to whether they apply; a deck that violates them is rejected by
+`createMatch` today. Any future change to the numbers themselves needs an explicit, documented
+balance decision.
+
+## Canonical field layout (2026-10-29 clarification, no rule change)
+
+Each seat's field, in the same 3D arena as the battlefield, is: four Vessel
+slots (the deployed Vessels; the slot count equals the four-Vessel cap and
+adds no units), four Relic sockets (persistent Relics, four maximum),
+four Action staging slots (a view of the first four Action cards in the
+player's hand — Actions are one-shot, resolve from hand, and go to the
+owner's discard pile; they never occupy a field slot), and one discard
+pile owned by the engine. Defeated Vessels go to their owner's discard
+pile. This layout resolves the old "back-row Action zone" label: those
+sockets always held Relics, and the name is corrected wherever it appears.

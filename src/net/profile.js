@@ -12,6 +12,8 @@
  */
 
 import { CLOUD_ENABLED, PROFILE_RPC_GET, PROFILE_RPC_SAVE } from "./config.js";
+import { sanitizeEconomy } from "../game/economy.js";
+import { defaultAudioSettings, sanitizeAudioSettings } from "../audio/soundtrack.js";
 import { rpc } from "./rpc.js";
 import {
   clearSession,
@@ -57,12 +59,15 @@ export function defaultSettings() {
     archetype: "vanguard",
     reducedMotion: false,
     showCoordinates: true,
+    audio: defaultAudioSettings(),
   };
 }
 
 function toInt(value, min, max, fallback) {
   return Number.isInteger(value) && value >= min && value <= max ? value : fallback;
 }
+
+export { sanitizeEconomy };
 
 export function sanitizeName(value) {
   if (typeof value !== "string") return "Wanderer";
@@ -85,6 +90,7 @@ export function sanitizeSettings(raw) {
     archetype: ARCHETYPE_IDS.includes(raw.archetype) ? raw.archetype : base.archetype,
     reducedMotion: raw.reducedMotion === true,
     showCoordinates: raw.showCoordinates !== false,
+    audio: sanitizeAudioSettings(raw.audio),
   };
 }
 
@@ -118,6 +124,13 @@ export function sanitizeProfile(raw, fallbackId) {
     avatar: sanitizeAvatar(source.avatar),
     settings: sanitizeSettings(source.settings),
     stats: sanitizeStats(source.stats),
+    // Economy (decks live beside it in the profile payload, see main.js):
+    // local-only for now — the profile/account RPCs carry name, avatar,
+    // settings and stats only, so decks/collection/Shards do not yet sync
+    // through the cloud row. They persist on this device, keyed to this
+    // profile id, and survive refresh. A server migration is tracked in
+    // TODO.md before cloud economy sync may be claimed.
+    economy: sanitizeEconomy(source.economy),
     updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : null,
   };
 }

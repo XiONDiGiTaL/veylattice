@@ -34,3 +34,15 @@ Use canonical names, Flux costs, effects and stats. Preserve rules text exactly;
 
 ## Binary installation
 If this directive was committed before the image files, copy the complete `CardFrames` folder from the supplied asset ZIP into the repository root and commit it. The directory is not installed or production-ready until its PNGs, manifest, compositor and styles exist together. Do not claim images were uploaded from this directive alone.
+
+## Integration status (2026-10-29)
+
+The overlays are now used by the actual card pipeline:
+`src/render/approved-frame.js` composites the approved overlay over the
+card illustration (manifest art aperture, 214x300, never stretched) for
+the Card Library, Deck Builder, Shop, Collection, discard viewer and
+enlarged card viewer. Battle-hand mini cards still use the vector face
+until a full hand migration is tested; that is a staged migration, not
+a second frame authority. Relics remain explicitly pending: no approved
+dedicated Relic frame exists, so Relics use a functional neutral
+presentation with a "Relic frame pending" flag (see TODO.md).

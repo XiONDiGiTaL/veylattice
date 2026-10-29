@@ -24,6 +24,9 @@
     <button id="tab-guide" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-guide">How to Play</button>
     <button id="tab-roster" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-roster">Roster</button>
     <button id="tab-library" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-library">Cards</button>
+    <button id="tab-decks" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-decks">Decks</button>
+    <button id="tab-shop" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-shop">Shop</button>
+    <button id="tab-lobby" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-lobby">Lobby</button>
     <button id="tab-profile" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-profile">Settings</button>
   </nav>
 
@@ -58,6 +61,9 @@
           <button id="menu-practice" class="button primary large" type="button">
             Practice match
           </button>
+          <button id="menu-practice-deck" class="button secondary large" type="button">
+            Play with active deck
+          </button>
           <button id="menu-tutorial" class="button accent large" type="button">
             Guided first match
           </button>
@@ -77,6 +83,18 @@
             <strong>Card Library</strong>
             <span>All 107 printed card faces, at full size</span>
           </button>
+          <button id="menu-decks" class="menu-link" type="button">
+            <strong>Deck Builder</strong>
+            <span>Build, save and select decks from your collection</span>
+          </button>
+          <button id="menu-shop" class="menu-link" type="button">
+            <strong>Shop &amp; Collection</strong>
+            <span>Buy 6-card packs, Singles and dissolve cards for Shards</span>
+          </button>
+          <button id="menu-lobby" class="menu-link" type="button">
+            <strong>Online Lobby</strong>
+            <span>Peer-validated rooms — server-authoritative play not yet deployed</span>
+          </button>
           <button id="menu-settings" class="menu-link" type="button">
             <strong>Profile &amp; Settings</strong>
             <span>Name, avatar, AI opponent, interface options</span>
@@ -84,11 +102,13 @@
         </div>
 
         <div class="menu-unavailable">
-          <p class="eyebrow">NOT IN THIS BUILD</p>
+          <p class="eyebrow">HONEST STATUS</p>
           <p class="muted small">
-            Deck Builder · Shop · Online lobby. These are specified milestones, not working
-            features, so they are not offered as buttons. The Card Library is browse-only:
-            it shows the shipped faces, it does not yet let you build a deck from them.
+            Deck Builder, Shop and the online lobby are working systems in this build.
+            Server-authoritative multiplayer is not: online matches are peer-validated
+            previews with no rewards or rank until trusted command validation is deployed.
+            Decks, collection and Shards persist on this device; they do not yet sync
+            through the cloud profile row.
           </p>
         </div>
       </div>
@@ -218,6 +238,8 @@
             <span class="hud-chip">FLUX <b id="enemy-flux">0</b></span>
             <span class="hud-chip">HAND <b id="enemy-hand">5</b></span>
             <span class="hud-chip">VESSELS <b id="enemy-unit-count">0</b></span>
+            <span class="hud-chip">DISCARD <b id="enemy-discard-count">0</b></span>
+            <button id="enemy-discard-view" class="button secondary small" type="button">View discard</button>
           </div>
           <div class="hud-status">
             <span id="opponent-difficulty" class="pill">STANDARD</span>
@@ -226,8 +248,8 @@
         </header>
 
         <div class="slot-row">
-          <p class="row-tag"><span>BACK ROW</span><em>Set · Activate</em></p>
-          <div id="enemy-action-slots" class="slot-grid action-grid" role="group" aria-label="Opponent back-row Action zones"></div>
+          <p class="row-tag"><span>RELIC ROW</span><em>Set · Persistent</em></p>
+          <div id="enemy-action-slots" class="slot-grid action-grid" role="group" aria-label="Opponent Relic zones"></div>
         </div>
         <div class="slot-row">
           <p class="row-tag"><span>FRONT ROW</span><em>Summoned Vessels</em></p>
@@ -257,9 +279,15 @@
         </aside>
 
         <div class="arena-core">
+          <div class="arena-3d-tools">
+            <button id="arena-toggle" class="button secondary small" type="button">Classic grid</button>
+            <span class="muted small">3D arena: drag to orbit a little, click a tile or Vessel to act. Action staging, Relic sockets and discard piles sit on the card platforms at each end.</span>
+          </div>
+          <p id="arena-notice" class="muted small" role="status"></p>
+          <div id="arena-3d" class="arena-3d" aria-label="3D battlefield"></div>
           <div class="board-wrap">
             <div class="board-stage">
-              <div id="board" class="board" role="grid" aria-label="7 by 7 tactical battlefield"></div>
+              <div id="board" class="board" role="grid" aria-label="5 by 5 tactical battlefield"></div>
               <span class="board-post tl" aria-hidden="true"></span>
               <span class="board-post tr" aria-hidden="true"></span>
               <span class="board-post bl" aria-hidden="true"></span>
@@ -292,7 +320,7 @@
       </section>
 
       <div class="battle-status">
-        <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your three starting rows.</p>
+        <p id="game-message" class="message" role="status" aria-live="polite">Summon a Vessel into your two home rows.</p>
         <button id="turn-bar-cancel" class="button secondary small" type="button" hidden>Cancel</button>
       </div>
 
@@ -303,8 +331,8 @@
           <div id="player-vessel-slots" class="slot-grid vessel-grid" role="group" aria-label="Your front-row Vessel zones"></div>
         </div>
         <div class="slot-row">
-          <p class="row-tag"><span>BACK ROW</span><em>Set · Activate</em></p>
-          <div id="player-action-slots" class="slot-grid action-grid" role="group" aria-label="Your back-row Action zones"></div>
+          <p class="row-tag"><span>RELIC ROW</span><em>Set · Persistent</em></p>
+          <div id="player-action-slots" class="slot-grid action-grid" role="group" aria-label="Your Relic zones"></div>
         </div>
       </section>
 
@@ -328,6 +356,7 @@
             <span class="hud-chip">VESSELS <b id="unit-count">0 / 4</b></span>
             <span class="hud-chip">RELICS <b id="relic-count">0 / 4</b></span>
           </div>
+          <button id="discard-view" class="button secondary small" type="button">View discard</button>
           <button id="end-turn-btn" class="button primary end-turn" type="button">End Turn</button>
         </header>
 
@@ -368,6 +397,30 @@
   </section>
 
   <!-- ============================ PROFILE ============================ -->
+  <section id="view-decks" class="view" role="tabpanel" aria-labelledby="tab-decks" hidden>
+    <div class="sys-head">
+      <h1>Deck Builder</h1>
+      <p class="muted">Build from the canonical manifest, save multiple decks, and select one for your next match. The Card Library remains available for browsing every card.</p>
+    </div>
+    <div id="decks-root"></div>
+  </section>
+
+  <section id="view-shop" class="view" role="tabpanel" aria-labelledby="tab-shop" hidden>
+    <div class="sys-head">
+      <h1>Shop &amp; Collection</h1>
+      <p class="muted">Spend Lattice Shards on packs and Singles, and dissolve unbound copies. Purchases update your balance and collection immediately and survive refresh.</p>
+    </div>
+    <div id="shop-root"></div>
+  </section>
+
+  <section id="view-lobby" class="view" role="tabpanel" aria-labelledby="tab-lobby" hidden>
+    <div class="sys-head">
+      <h1>Online Lobby</h1>
+      <p class="muted">Create or join a room by code, pick a deck, ready up, and start a peer-validated match. See the status box in the lobby for what is — and is not — server-validated yet.</p>
+    </div>
+    <div id="lobby-root"></div>
+  </section>
+
   <section id="view-profile" class="view" role="tabpanel" aria-labelledby="tab-profile" hidden>
     <div class="profile-layout">
       <section class="panel account-panel">
@@ -467,6 +520,22 @@
         <h3>Interface</h3>
         <label class="check"><input id="settings-motion" type="checkbox"> Reduce animation and AI pacing</label>
         <label class="check"><input id="settings-coords" type="checkbox"> Show cell coordinates on empty squares</label>
+        <div class="divider"></div>
+        <h3>Audio</h3>
+        <label class="check"><input id="settings-audio-mute" type="checkbox"> Mute all sound</label>
+        <label class="field" for="settings-audio-master">
+          <span>Master volume</span>
+          <input id="settings-audio-master" type="range" min="0" max="100" step="1">
+        </label>
+        <label class="field" for="settings-audio-music">
+          <span>Music volume</span>
+          <input id="settings-audio-music" type="range" min="0" max="100" step="1">
+        </label>
+        <label class="field" for="settings-audio-sfx">
+          <span>Sound-effect volume</span>
+          <input id="settings-audio-sfx" type="range" min="0" max="100" step="1">
+        </label>
+        <p id="audio-status" class="muted small" role="status"></p>
         <button id="profile-save" class="button primary" type="button">Save profile</button>
         <p id="profile-sync" class="muted small" role="status"></p>
       </section>
@@ -523,6 +592,16 @@
         <p id="card-modal-facts" class="muted small"></p>
         <a id="card-modal-file" class="button secondary small" href="#" target="_blank" rel="noreferrer">Open the card file</a>
       </div>
+    </div>
+  </div>
+
+<div id="discard-modal" class="card-modal" hidden role="dialog" aria-modal="true" aria-labelledby="discard-title">
+    <div class="card-modal-backdrop" data-close="true"></div>
+    <div class="card-modal-body discard-modal-body">
+      <button id="discard-modal-close" class="card-modal-close" type="button" aria-label="Close discard pile">×</button>
+      <h2 id="discard-title">Discard pile</h2>
+      <p class="muted small">Cards here arrived through the engine — defeated Vessels and resolved Actions. Revive and return effects can move them back out through the engine.</p>
+      <div id="discard-list" class="discard-list"></div>
     </div>
   </div>
 

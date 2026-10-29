@@ -151,9 +151,11 @@ Acceptance met: the battle screen is one table object — opponent HUD, four bac
 Evidence: `npm test` -> 97/97 pass including six new field tests and the four-Relic limit test; browser at 1440×950, 1024×768 and 390×844 — summon paid 3 Flux and filled zone 1, Ember Lens filled Action zone 1 with `Relics 1/4`, clicking a filled zone selected its unit and highlighted the board, stale selection cleared after defeat, zero console errors, no horizontal overflow.
 Not claimed: no drag-and-drop; Actions cannot be set face-down (no canonical rule); the four zones are not part of a deck builder (not built); the browser check did not reach a live undefended Nexus to click the new strike target (same engine command is unit-tested).
 
-### M3-001 | TODO | Stash, deck builder, shop, Singles and recycling UI
-Depends on M2-002. Paths: UI, collection modules, tests/.
-Acceptance: clearly labeled demo-only balances until trusted integration; six-card pack presentation, permanent discovery concepts, protected quantities and explicit confirmations; no local data presented as server currency.
+### M3-001 | DONE | Stash, deck builder, shop, Singles and recycling UI
+Depends on M2-002. Paths: src/game/decks.js, src/game/economy.js, src/ui/systems.js, src/net/profile.js, tests/decks.test.js, tests/economy.test.js.
+Acceptance met: Deck Builder (create/edit/save/duplicate/rename/delete/select, manifest search/filter/sort, engine + ownership validation, illegal decks cannot start a match, local-profile persistence across refresh); Shop (300-Shard packs of exactly 5 Commons + 1 Rare-or-better, operation-id idempotency, Singles by rarity price with discovery requirement, dissolution with bound-starter protection, saved-deck protection and confirmation, collection view); balances are local-only and labelled as such — no local data is presented as server currency.
+Evidence: `npm test` 149/149 including new decks/economy suites; browser check at /veylattice/ subpath (see docs/IMPLEMENTATION_LOG.md 2026-10-29).
+Outstanding: cloud sync of decks/collection/Shards (needs a server migration, see M4-001); rank-modified pack odds (server-only, not applied locally).
 
 ### M3-002 | IN_PROGRESS | Versioned schemas and expansion validation
 Depends on M2-001. Paths: content manifests, validators, tests/.
@@ -172,9 +174,11 @@ Acceptance: versioned/idempotent commands, private projections, persisted deadli
 
 ## M5 - Four-seat lobbies and Tag (P1)
 
-### M5-001 | TODO | Lobby lifecycle, teams and reconnect
-Depends on M4-002. Paths: lobby/transport/backend/UI/tests.
-Acceptance: all human/AI seat combinations, codes/invites/readiness, team turns, reconnect/AI takeover, no hand leakage or host-trusted rewards, all documented lifecycle tests.
+### M5-001 | IN_PROGRESS | Lobby lifecycle, teams and reconnect (peer-validated preview DONE; server-authoritative BLOCKED)
+Depends on M4-002. Paths: src/game/lobby.js, src/net/online.js, src/ui/systems.js, tests/lobby.test.js.
+Delivered (peer-validated preview): two-player rooms by 6-character code over Supabase Realtime broadcast; seat assignment, deck selection, readiness gating (deck changes clear readiness), host start with shared seed, synchronized turns; every remote command re-validated by the receiving engine (seat, sequence, command id, legality); deck lists shared at match start, hands never broadcast; online matches grant no rewards/rank/currency.
+BLOCKED (server-authoritative): Edge Function command validation, rooms/matches migrations, RLS and trusted settlement — requires separate owner approval before any reward-bearing or ranked online claim. Two-browser end-to-end verification also outstanding.
+Acceptance (remaining): all human/AI seat combinations, team turns, reconnect/AI takeover, no hand leakage, duplicate start/command handling — under the server-authoritative implementation, not the preview.
 
 ## M6 - Ranked and rotations (P2)
 
@@ -183,6 +187,23 @@ Depends on M4-002, M3-002.
 Acceptance: three-match promotion series, no in-season demotion, monthly reset, retained inventory/emblems, rank rewards/odds, weekly rotation/occasional Friday sale; UTC boundaries and economy/farming checks pass.
 
 ## M7 - World systems and 3D (P2)
+
+### ARENA-3D | DONE | Genuine 3D battlefield with integrated card fields
+Paths: src/render/arena3d.js, src/main.js, index.html, styles.css, tests/arena3d.test.js.
+Acceptance met: Three.js primary renderer with CSS-3D fallback/toggle; one scene with opponent field, 5x5 grid, player field, 4 Vessel slots + 4 Relic sockets + 4 Action staging slots + discard pile per seat; real voxel Vessel geometry from the same box data as card art; raycast picking to engine cells; legal-move/attack/summon tints; desktop three-quarter and narrow top-down cameras.
+Evidence: tests/arena3d.test.js (mapping bijectivity, field layout, camera presets); browser check at /veylattice/ subpath (see log 2026-10-29).
+Outstanding: mobile performance measurement for the WebGL scene; battle-hand migration to approved frames.
+
+### FRAME-001 | DONE (partial) | Approved CardFrames in the card pipeline; Relic frame PENDING
+Paths: src/render/approved-frame.js, CardFrames/FRAME_DIRECTIVE.md, tests/frames.test.js.
+Acceptance met: six approved overlays composited (manifest apertures, 214x300, never stretched) in Deck Builder, Shop, Collection and discard viewer with canonical text; frame geometry asserted against the manifest in tests.
+PENDING: a dedicated approved Relic frame does not exist — Relics use a flagged neutral presentation and must not borrow a Vessel frame. Battle-hand mini cards still use the vector face (staged migration).
+
+### AUDIO-001 | DONE | Original soundtrack integration (system + supplied tracks wired)
+Paths: src/audio/soundtrack.js, src/net/profile.js, src/main.js, index.html, tests/audio.test.js.
+Acceptance met (system): central manifest + manager (single-element background reuse, no-restart on re-render, fade on switch, stinger once per match key, draw plays neither sting, mute/volume/sfx controls that persist via profile.settings.audio, autoplay-blocked status + gesture retry, visibility pause/resume, missing-file/error tolerance without crashing); view mapping menu/decks/shop/battle + silent result screen; subpath-safe music/ URLs.
+Evidence: tests/audio.test.js (15 tests) + updated profile expectation; `npm test` 164/164, `npm run check` 164/164, 0 fail.
+Update 2026-10-29: the six tracks arrived mid-session via origin commit f51cec5 ("music") and are now wired into SOUNDTRACK (ffprobe-verified MP3, decode-clean; stingers 12.4 s / 11.0 s, backgrounds 138–174 s). No music was generated as a substitute. Remaining: audible playback confirmation in live browser verification (autoplay-gated).
 
 ### M7-001 | TODO | Arena affinity, terrain and hazards
 Depends on M1-003, M2-001. Paths: src/arenas/, rules, UI, tests/.

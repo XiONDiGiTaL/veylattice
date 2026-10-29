@@ -4,6 +4,195 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-10-29 - AUDIO-001 (update) - Supplied tracks arrived and are wired
+
+**Correction to the AUDIO-001 entry below:** its "no music files" status
+was accurate when written. During the same session, commit f51cec5
+("music") landed on origin/main supplying exactly six MP3s, and this
+change set wires them into the manifest — no files were generated,
+renamed, or re-pointed. Verified with ffprobe + full ffmpeg decode (all
+clean, MP3 48 kHz stereo, browser-compatible): menu
+`Veylattice_ Main Menu.mp3` 174.0 s, battle `Veylattice_ Battle.mp3`
+153.6 s, preparations `Veylattice_ Planning.mp3` 137.6 s, shop
+`Veylattice_ Shop.mp3` 172.0 s, victory `Veylattice_ Victory.mp3` 12.4 s,
+defeat `Veylattice_ Defeat.mp3` 11.0 s. The two stingers match the
+directive's ~10 s signature; all four backgrounds run 2+ minutes.
+Musical character was not auditioned, so the mapping rests on filenames
+plus that duration signature. The working tree was rebased onto f51cec5
+(clean, no conflicts — that commit touches only `music/`), and the suite
+still passes with the real manifest: `npm test` 164/164. The soundtrack
+is therefore implemented end to end in code; audible playback in a real
+browser remains to be confirmed in live verification (autoplay policy
+means the first track starts on the user's first gesture).
+
+
+### 2026-10-29 - AUDIO-001 - Soundtrack system shipped; tracks absent (BLOCKED on supplied files)
+
+**Verified asset status (do not overclaim):** the repository contains no
+music files. `music/` does not exist in the working tree, in git history,
+or on the remote, and no audio file of any format exists anywhere in the
+repo. The soundtrack directive's premise (supplied tracks in `music/`)
+does not hold for this tree, so no track-to-file mapping could be
+verified by listening, and no music was generated, renamed, or invented
+to fill the gap. Every manifest role is honestly `file: null, status:
+"missing"`.
+
+**System implemented (activates on a manifest-only change once files
+arrive):** `src/audio/soundtrack.js` — central `SOUNDTRACK` manifest
+(menu/battle/preparations/shop backgrounds, victory/defeat stingers) +
+`createAudioManager` (one reused background element, no restart on
+re-render/navigation, short fade on switch, stinger at most once per
+match key, draws play neither sting, mute + master/music/sfx volumes,
+autoplay-blocked status with retry on the next gesture, tab-hide pause /
+tab-show resume respecting user pause, missing-file and decode-error
+tolerance with no crash, subpath-safe `music/<file>` URLs under the
+document base). Wired to real view state (`viewMusicRole`): menu family
+-> menu, Decks -> preparations, Shop -> shop, battle -> battle, result
+screen -> silence; stingers fire only from `onMatchEnd` (its
+recorded-guard makes them once-only; `renderResult` never touches
+audio); menu music resumes only on return to the menu. Settings live in
+`profile.settings.audio` via `sanitizeAudioSettings` with working mute +
+range controls in the profile view, persisted through the existing
+profile save path. Correction to the directive's premise: Deck Builder
+and Shop ARE functional screens in this tree (2026-10-29 session), so
+their themes are wired to real screens, not placeholders.
+
+**Verification:** `tests/audio.test.js` (15 tests: manifest honesty,
+subpath URLs incl. the no-trailing-slash edge, view mapping, no-restart,
+single-element rapid navigation, stinger-once, missing-file silence,
+mute-across-screens, blocked-retry, error status, visibility, settings
+clamping, profile carriage, dispose) plus the updated profile-settings
+expectation. Three test-caught defects were fixed during the session:
+subpath resolution dropping the last segment without a trailing slash,
+autoplay retries blocked by the no-restart guard, and the started-flag
+needing optimistic synchrony across rapid re-renders. Final:
+`npm test` 164/164, `npm run check` 164/164, 0 fail. Browser check of the
+running app: see `docs/IMPLEMENTATION_LOG.md` 2026-10-29 (local-browser
+route blocked at the tool layer; owner chose push-first, live-site
+verification second).
+
+**Not claimed:** any audible music (no files); loop seamlessness of
+unreceived tracks; SFX playback (volume channel exists, no SFX assets).
+
+### 2026-10-29 - CANON-001 / ARENA-3D / M3-001 / M5-001-preview - Canonical directives reconciled, 3D battlefield, Deck Builder, Shop, peer-validated lobby
+
+**Phase 1 — directives reconciled before any implementation.** Audited all
+listed documents, code, assets and history against the running game.
+Contradictions found and fixed in the same change set: `src/ui/fields.js`
+described a 49-tile grid (the engine is 5x5/25); the board's ARIA label
+said "7 by 7"; the in-game hint said "three starting rows" (the rule is
+two home rows per seat); `docs/MECHANIC_ADAPTATION_MATRIX.md` said "three
+starting rows" and "7x7 board"; the "back-row Action zone" label named
+Relic sockets after a card type that never occupies a zone. All are
+corrected, and a canonical layout section (2026-10-29) was added to
+`docs/ARENA_SYSTEM.md`, `docs/CARD_FRAMES.md`, `ART_BIBLE.md`,
+`CARD_DESIGN_GUIDE.md`, `docs/IMPLEMENTATION_PROMPT.md`,
+`AI_INSTRUCTIONS.md` (mandatory read + 7 requirements) and
+`GAME_RULES.md` (clarification only — no rule, stat, effect, id or
+balance change). `PROJECT_BRIEF.md`'s stale "early DOM prototype, no AI"
+status was replaced with the verified 2026-10-29 status. Baseline before
+changes: `npm test` 129/129 pass.
+
+**Canonical layout (no balance change).** One shared 5x5 grid (seat 0 rows
+3-4, seat 1 rows 0-1, row 2 contested) via `BOARD_SIZE` /
+`deploymentBounds` / `rowOwner`. Per seat: 4 Vessel slots (= 4-Vessel
+cap, never extra units), 4 Relic sockets (= 4-Relic cap), a 4-slot
+Action staging row that is a *view of the first four Action cards in
+hand* (Actions resolve from hand to discard and never occupy a zone),
+and 1 engine-owned discard pile. Deck rules unchanged: 20-40 cards,
+>=10 Vessels, >=5 Actions, <=3 copies per id, plus ownership for saved
+decks. Element cycle Wood > Earth > Water > Fire > Metal > Wood with
+1.5x / 0.5x (min 1) / neutral damage; Otherworldly is a subtype only.
+Card slots use the approved-frame geometry 214x300 (aspect 0.713);
+`Cards/EXAMPLE.jpg` remains a composition reference, not a dimension
+source. Abstract references only: Yu-Gi-Oh! (zones/targeting),
+Pokemon (type readability), Duelyst (grid tactics), Hearthstone
+(interaction polish) — no copied art, names, layouts or mechanics.
+
+**3D battlefield (`src/render/arena3d.js`).** Three.js (WebGL, CDN ES
+module, no build step) is the primary renderer; the CSS-3D board is the
+fallback and accessible grid, with a toggle in the arena. Opponent field
+beyond the far side, 5x5 grid centre, player field near side, in one
+scene with platforms, corner posts, trees, shrine, lighting and shadows.
+Playable Vessels are real voxel geometry from the same box data as
+their card illustrations (palette-resolved, seat-facing, idle bob,
+selection ring). Tiles tint for legal summon/move/attack, raycast
+picking maps clicks to engine cells, discard piles stack with counts
+and open a viewer listing the actual engine discard contents. Desktop
+elevated three-quarter camera; narrow screens more top-down; drag
+orbits slightly. Pure mapping helpers (`cellToWorld`, `worldToCell`,
+`fieldLayout`, `cameraForWidth`) are unit-tested.
+
+**Approved frames (`src/render/approved-frame.js`).** The six approved
+`CardFrames/` overlays are now used by the actual card pipeline:
+Library-adjacent views (Deck Builder, Shop, Collection, discard viewer)
+composite the overlay over the illustration inside the manifest art
+aperture, with canonical name/cost/stats/effect text as DOM nodes.
+Relics have no approved dedicated frame: they render in a flagged
+neutral presentation and stay tracked as pending in TODO.md — they
+never borrow a Vessel frame. Battle-hand mini cards still use the
+vector face (staged migration, documented in
+`CardFrames/FRAME_DIRECTIVE.md`). Tests assert overlay PNG sizes match
+the manifest and that frame geometry has not drifted.
+
+**Deck Builder (`src/game/decks.js`, `src/ui/systems.js`).** Create,
+edit, save, duplicate, rename, delete and select decks from the
+canonical manifest with search, category/element filters and sorting.
+Validation is engine `validateDeck` plus ownership; errors name the
+exact rule (size, type minima, copy limit, unowned copies). Illegal
+decks save as drafts but cannot start a match. Saved decks persist on
+the local profile (keyed to its id) and survive refresh; the active
+deck can play a Practice match. New profiles are seeded with a legal
+40-card "Starter Lattice" deck and a bound starter collection.
+
+**Shop (`src/game/economy.js`).** Lattice Shards (new profiles start
+with 300). Packs cost 300 and contain exactly 5 Commons + 1
+Rare-or-better (Unranked rates 90/9/1; rank-modified rates are NOT
+applied locally). Purchases are idempotent by operation id (replays
+return the original opening). Singles use the documented rarity prices
+and require discovery; dissolution pays the documented payout, is
+blocked for bound starter copies and for any sale that would break a
+saved deck, and requires confirmation. Collection view shows owned
+quantities and bound protection. Economy is local-only: the existing
+profile/account RPCs carry name/avatar/settings/stats only, so
+decks/collection/Shards do not yet sync through the cloud row.
+
+**Online lobby, peer-validated preview (`src/game/lobby.js`,
+`src/net/online.js`).** Rooms by 6-character code over Supabase
+Realtime broadcast, with seat assignment, deck selection (deck lists
+shared at match start so both clients build the same match; hands are
+never broadcast), readiness gating (deck changes clear readiness),
+host start with a shared seed, and synchronized turns. Every remote
+command is re-validated by the receiving client's engine (seat,
+sequence, command id, engine legality) and rejected otherwise.
+NOT server-authoritative: no Edge Functions are deployed, so online
+matches grant no rewards, rank or currency and are labelled as a
+preview in the UI. Server-authoritative validation remains BLOCKED
+pending owner approval and a database migration (see TODO M4-002 /
+M5-001). Two-browser end-to-end verification was NOT performed in
+this session (single-browser verification only) — the lobby must not
+be described as verified end to end until that check runs.
+
+**Also fixed in this change set.** Opponent discard count added to the
+HUD; both discard piles open a viewer. Field labels corrected
+(Relics, not "Action zones"). Online-aware seat handling in the HUD
+so a guest seat renders its own hand and HUD.
+
+Verification: `npm test` -> **149/149 pass** (20 new tests: decks,
+economy, lobby, frames, arena mapping). Local static server serves
+index, main, systems, arena and frame assets at root and under a
+`/veylattice/` subpath (200s). Browser check at the subpath: BLOCKED at the tool layer — the live-browser session refused
+every local address before loading (localhost and the VM's reserved-range address); the local
+servers themselves answer 200. See `docs/IMPLEMENTATION_LOG.md` session 2026-10-29 for the
+verification paths still open. No browser observation is claimed for this session.
+
+Not claimed: server-authoritative multiplayer; ranked progression;
+reward-bearing online matches; cloud sync of decks/collection/Shards;
+two-player end-to-end lobby verification; battle-hand migration to
+approved frames; a dedicated Relic frame; mobile performance
+measurement for the WebGL scene.
+
+
 ### 2026-10-28 - ART-005 - Humanoids split by body plan; human knight wave
 
 Scope: four slim humanoids (Reef Duelist, Quarry Engineer, Emberwright Adept, Razorline Duelist)

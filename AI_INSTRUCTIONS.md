@@ -13,6 +13,70 @@ Do not include secrets, credentials, private player data or hidden chain-of-thou
 ## Read order and precedence
 Read README.md, PROJECT_BRIEF.md, GAME_RULES.md, TECHNICAL_ARCHITECTURE.md, docs/MODES_AND_LOBBIES.md, docs/PROGRESSION_AND_CONTENT.md, docs/UNIT_VISUAL_DESIGNS.md, docs/VOXEL_ART_BIBLE.md, and docs/IMPLEMENTATION_PROMPT.md. Then read relevant existing world, arena, synergy, creator, frame, catalog and testing documents. GAME_RULES.md overrides older combat/deck proposals, including docs/COMBAT_RULES.md and older card-guide examples. docs/PROGRESSION_AND_CONTENT.md governs collection/rarity. Preserve existing lore and stable IDs. User requirements are mandatory; explicitly labeled proposed defaults remain tunable, not user-approved final balance.
 
+
+## Canonical arena and card presentation (2026-10-29) — mandatory read
+
+Before modifying the game, read docs/ARENA_SYSTEM.md (canonical layout
+section), CardFrames/FRAME_DIRECTIVE.md and docs/CARD_FRAMES.md, and
+GAME_RULES.md. The following are requirements, not suggestions:
+
+1. Build the battlefield as a genuine 3D environment (Three.js primary,
+   CSS-3D fallback): one 5x5 grid, opponent field far, player field near,
+   4 Vessel slots + 4 Relic sockets + 4 Action staging slots + 1 discard
+   pile per seat, all in the same scene. Action staging is a view of the
+   hand, never a zone; Relic sockets are not Action slots.
+2. Use the approved CardFrames overlays (214x300, manifest apertures)
+   instead of inventing replacement frames. Relics have no approved frame:
+   flag them pending, do not silently give them a Vessel frame.
+3. Preserve the rules engine and canonical content: no balance, stat,
+   effect, id or elemental change without an explicit, documented owner
+   decision. GAME_RULES.md overrides older proposals.
+4. Use `BOARD_SIZE`, `DEPLOYMENT_ROWS`, `deploymentBounds` and `rowOwner`;
+   never hardcode row numbers in renderers. The board is 5x5 / 25 tiles.
+5. Update documentation and tests whenever the implementation changes,
+   verify the actual running application (not just a build), and record
+   incomplete work honestly — a partial renderer is not a completed 3D
+   world, and a peer-validated lobby is not server-authoritative.
+6. Commit and push completed work per the repository workflow, after
+   reviewing the full diff. Never commit secrets or credentials.
+7. Deck Builder, Shop and Online Lobby are implemented systems, not
+   roadmap labels: remove a "NOT IN THIS BUILD" label only after the
+   feature passes its acceptance tests, and keep any genuinely blocked
+   dependency (currently: server-authoritative multiplayer) labelled
+   honestly with what is missing.
+
+## Soundtrack (2026-10-29) — mandatory read
+
+`src/audio/soundtrack.js` is the SOLE authority for soundtrack integration:
+the `SOUNDTRACK` manifest (role -> file under `music/`, or null) and the
+`createAudioManager` manager (background/stinger playback, single-element
+reuse, no-restart guard, stinger-once-per-match-key, mute/volume, autoplay
+retry on gesture, visibility pause/resume, graceful missing-file handling).
+Screens must NEVER construct audio elements, hardcode track paths, or add
+parallel playback logic — they call `playBackground(role)` /
+`playStinger(role, matchKey)` and let `viewMusicRole(view, { matchOver })`
+decide. Track URLs resolve as `music/<file>` under the document base so
+they survive the `/veylattice/` Pages subpath; never use root-relative
+`/music/...` paths. Audio preferences live in `profile.settings.audio`
+(master/music/sfx/muted) via `sanitizeAudioSettings`, surfaced by real
+controls in the profile/settings view. Result stingers fire only from
+`onMatchEnd` (once, via its recorded-guard); `renderResult` must never
+touch audio; draws play neither sting; menu music resumes only on return
+to the menu. A future screen registers its music by adding ONE manifest
+role and ONE `viewMusicRole` mapping — no new playback code.
+
+ASSET STATUS (verified 2026-10-29): at session start the repo contained
+NO music files; during the session commit f51cec5 ("music") landed on
+origin/main supplying all six tracks, and the manifest now names them
+(MP3, 48 kHz stereo; menu 174 s, battle 154 s, preparations 138 s, shop
+172 s, victory 12 s, defeat 11 s — all ffprobe-verified and decode-clean;
+musical character not auditioned, mapping rests on filenames + the
+duration signature). Do NOT rename, regenerate, or re-point these files
+without re-verifying format and duration in the same change. A manifest
+entry with `file: null` still means "nothing to play" (no element, no
+download, status "unavailable") if a track is ever removed — and `npm
+test` asserts every named manifest file exists on disk.
+
 ## Vocabulary and constraints
 Vessel = unit; Action = one-shot card; Relic = persistent card; Flux = pool resource; Vitality = player life; Guard = persistent unit defense; Lattice Shards = proposed earned shop/recycling currency. Five elements: Wood, Fire, Earth, Metal, Water. Otherworldly is a subtype, not a sixth element. Board 5x5 (25 tiles, two deployment rows per seat), configurable through `BOARD_SIZE`/`DEPLOYMENT_ROWS` in `src/game/constants.js` — never hardcode row numbers in renderers, derive them with `deploymentBounds`/`rowOwner`; four Vessels and four Relics per seat; printed Attack/Guard 1-10, runtime bonuses may exceed 10. Decks 20-40 cards, at least 10 Vessels and 5 Actions, up to three copies per canonical card ID. The minimum total and Action minimum are proposed defaults.
 

@@ -235,3 +235,12 @@ material, a voxel grain and a lit corner, and a side wall rotated by the negativ
 so it is a real vertical face. Height steps between surfaces (water 0, sand 3, grass 6, moss 11,
 stone 16, shrine 22 px) are what make the board read as terrain rather than a diagram. Scenery is
 authored per tile at the back edge, and units stand on the tile face at board scale, upright.
+
+## 2026-10-29 note
+
+Card illustration and in-game voxel model are the same character: the
+illustration pipeline projects the voxel box data, and the Three.js
+arena builds the same boxes as WebGL geometry. Silhouette, proportions,
+armour, weapons, accessories, materials and colours must correspond
+across all three. A model change changes the card art with it; a card
+illustration must never depict a different character from its model.

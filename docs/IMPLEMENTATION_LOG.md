@@ -896,3 +896,130 @@ screenshots at 690x1225 and 390x844. The illustration budget test failed once (I
 mail ring grid, not by raising the limit.
 **Not verified:** no formal tooltip/ARIA pass on the new hash marks; combat animations were not
 re-watched on the new terrain; mobile was checked visually only at 390 px wide.
+
+## Session 2026-10-29 · Full 3D battlefield + Deck Builder + Shop + Online Lobby preview (uncommitted at log time)
+
+**Base revision:** `main` at `ffbf2be` (merge); working tree clean at session start. Baseline `npm test`
+129/129.
+**Task:** two mandatory phases — (1) reconcile all canonical directives, (2) implement the redesigned
+3D battlefield (5x5, two four-slot rows per player, Relics, discards, approved frames, Three.js arena)
+plus Deck Builder, Shop, and Online Lobby. No balance changes; `GAME_RULES.md` stayed authoritative.
+**Phase 1 (directives):** appended the canonical field layout to `docs/ARENA_SYSTEM.md`,
+`docs/CARD_FRAMES.md`, `ART_BIBLE.md`, `CARD_DESIGN_GUIDE.md`, `docs/IMPLEMENTATION_PROMPT.md`; mandatory-read
+block in `AI_INSTRUCTIONS.md`; layout clarification in `GAME_RULES.md` (no rule change); refreshed
+`PROJECT_BRIEF.md` status; 2026-10-29 additions in `TECHNICAL_ARCHITECTURE.md`; integration note in
+`CardFrames/FRAME_DIRECTIVE.md`; identity notes in `docs/UNIT_VISUAL_DESIGNS.md`, `docs/VOXEL_ART_BIBLE.md`.
+Fixed stale strings: `src/ui/fields.js` (25 tiles, `RELIC_SLOTS` alias for the misnamed
+`ACTION_SLOTS`), `src/main.js` ("two home rows"), `index.html`, `tests/terrain.test.js`,
+`docs/MECHANIC_ADAPTATION_MATRIX.md`.
+**Canonical layout decided:** per seat — 4 Vessel slots (= the deployment cap, never extra units),
+4 Relic sockets (= the Relic cap), a 4-slot Action staging row that is a VIEW of the first four
+Action cards in hand (Actions are never a zone; they resolve hand → discard), and 1 engine-owned
+discard pile. Card geometry is 214:300 from the approved frames; `Cards/EXAMPLE.jpg` is composition
+reference only (752x1418). Relics have no approved dedicated frame — neutral "RELIC FRAME PENDING"
+presentation, never a borrowed Vessel frame.
+**Phase 2 (implementation):**
+- `src/render/arena3d.js` (new): Three.js scene via CDN ES module, no build step; tiles from
+  `terrain.js`, voxel Vessels via `modelFor`, field platforms, discard stacks, label sprites, raycast
+  picking, drag-orbit, pure exports `cellToWorld`/`worldToCell`/`fieldLayout`/`cameraForWidth`
+  (desktop [0,8.5,10.5], mobile <700px [0,13.5,5.5]). CSS-3D board stays as fallback + accessible
+  grid behind an arena toggle; if Three/WebGL fails the game stays playable with a notice.
+- `src/ui/fields.js` + `index.html` + `styles.css`: opponent DISCARD chip, per-player "View discard"
+  buttons opening an approved-frame discard modal (`openDiscardViewer`), arena container/toggle/notice,
+  Decks/Shop/Lobby tabs and views, "Play with active deck" menu button. `NOT IN THIS BUILD` block
+  replaced with an honest status note.
+- `src/game/decks.js` (new): sanitize/CRUD, `validateDeckWithOwnership`, `maxDeckRequirement`
+  (dissolution guard). `src/game/economy.js` (new): `rollPack` (exactly 5 Common + 1 Rare-or-better,
+  Unranked rates 90/9/1), `purchasePack`/`purchaseSingle`/`dissolve`/`starterCollection`/
+  `sanitizeEconomy` (now also carries `decks` + `activeDeckId`); prices adopted from
+  `docs/PROGRESSION_AND_CONTENT.md` proposals and labelled as shipped local defaults: new profiles
+  300 Lattice Shards, pack 300, Singles 60/100/240/600/1200, dissolution 10/15/40/100/200, starter
+  copies bound and never dissolvable, purchases idempotent by operation id. Economy is LOCAL-PROFILE
+  ONLY — decks/collection/Shards do not sync via cloud RPCs (needs a migration; tracked as blocked).
+- `src/ui/systems.js` (new): Deck Builder (create/edit/save/duplicate/rename/delete, search/sort/
+  filter, composition counts, precise validation errors, ownership-aware add buttons, active-deck
+  selection gating match start), Shop (balance, packs, singles, dissolution with pre-confirmation),
+  Lobby UI (create/join/leave, readiness, deck selection, connection status). Wired into `main.js`
+  via callbacks; starter profile seeds a legal 40-card "Starter Lattice" deck + bound starter
+  collection; active legal+owned deck plays for the human seat, else the practice deck.
+- `src/game/lobby.js` (new): room state machine, 6-char codes from an unambiguous alphabet,
+  `validateRemoteCommand`/`recordRemoteCommand` (seat/sequence/command-id checks).
+  `src/net/online.js` (new): Supabase Realtime channel per room code, dynamic CDN import of
+  `@supabase/supabase-js@2`, room/command/join broadcasts + presence.
+- `src/main.js`: `mySeat()`/`foeSeat()` (online-aware; offline seats unchanged), online match start /
+  remote-command apply (envelope validated, then engine; desync logged honestly, never hidden),
+  broadcast of local commands with unique ids, AI turn suppressed online, online match end records
+  no stats/rank/currency, discard viewer, arena mount with `arenaMounting` guard + fallback notice.
+  One defect fixed during review: the arena `onUnit` callback captured the mount-time match object —
+  it now resolves `ui.match` at click time, so a second match reuses the mounted arena correctly.
+- `src/render/approved-frame.js` (new): `FRAME_GEOMETRY` mirroring the manifest, `frameKeyFor`
+  (element → frame, action → action, relic → null).
+**Honest limits (do not overclaim):** Online Lobby is a PEER-VALIDATED PREVIEW over Supabase
+Realtime broadcast, NOT server-authoritative — authoritative Edge Functions are BLOCKED pending owner
+approval + a database migration (repo `AI_INSTRUCTIONS.md` forbids migrations/provisioning without
+separate approval). Online matches grant no rewards/rank/stats. Hands are never broadcast; both
+clients shuffle locally from a shared seed. Two-browser end-to-end lobby verification NOT yet done.
+Battle-hand cards still use the legacy hand renderer; approved-frame migration of the battle hand is
+outstanding. Dedicated Relic frame still PENDING (no asset provided).
+**Verification actually run:** `npm test` 149/149 (baseline 129 + new `tests/decks.test.js`,
+`tests/economy.test.js`, `tests/lobby.test.js`, `tests/frames.test.js` (PNG IHDR vs manifest),
+`tests/arena3d.test.js`); one self-inflicted test error fixed (seat 0 deck after opening hand +
+first-turn draw is 34, seat 1 is 35 — test corrected, engine untouched). Local static servers on
+ports 8000 (root) and 8001 (`/veylattice` subpath symlink); curl 200s for index/main/systems/
+arena3d/overlay/manifest at both paths. Browser verification: BLOCKED at the tool layer, not the app. The live-browser session rejected every local address before loading (localhost and the VM's reserved-range address both refused as invalid requests; a public-IP control was attempted normally, so the block is specific to non-public addresses). The local servers themselves answer 200 (verified by curl). No menu/tab/deck/shop/lobby/arena observation was obtained this way. Remaining verification paths: (a) the user takes over the live browser window, navigates to the local build, and hands it back, or (b) commit + push, then verify against the public live site and fix forward. Decision taken 2026-10-29 09:56 EDT by the owner: push first, then verify on the live site (see commit/push record below).
+**Not verified / not done:** two-browser lobby E2E; server-authoritative multiplayer; cloud economy
+sync; mobile WebGL performance measurement; battle-hand approved-frame migration; Relic frame.
+
+## Session 2026-10-29 · AUDIO-001 · Soundtrack system (tracks absent — BLOCKED)
+
+**Base revision:** working tree continuing the 2026-10-29 battlefield/Deck Builder/Shop/lobby
+change set (uncommitted at session time); `npm test` 149/149 at session start.
+**Phase 1 finding (verified, not assumed):** there is NO `music/` directory and NO audio file
+of any format anywhere in the repo — checked the working tree, `git ls-files`, a filesystem
+scan for mp3/ogg/wav/flac/m4a/opus, and `git log --all -- music/*` (empty). The directive's
+premise of supplied tracks does not hold for this tree. No track identity, duration, or format
+could be measured (ffprobe is installed but there is nothing to probe), no file was renamed,
+regenerated, or invented, and no role was pointed at an unrelated track. All six roles are
+manifest-missing by verified fact. A second premise correction: the directive calls Deck
+Builder and Shop "planned, not functional" — in this tree both are functional screens, so
+their themes are wired to real screens.
+**Implementation:** `src/audio/soundtrack.js` (manifest + `createAudioManager`, dependency-free);
+`src/net/profile.js` (`profile.settings.audio` via `sanitizeAudioSettings`); `src/main.js`
+(manager owned at boot, `viewMusicRole` driving `showView`, stinger key per match,
+`onMatchEnd` stops battle music then plays exactly one victory/defeat sting, draws none,
+`renderResult` untouched by audio, gesture unlock + visibility handlers, working mute/range
+controls in the profile view); `index.html` audio controls with `role="status"` status line.
+Track URLs resolve as `music/<file>` under the document base (Pages-subpath safe).
+**Verification actually run:** `tests/audio.test.js` (15 tests) + updated `tests/profile.test.js`
+expectation for the extended settings shape. Three defects were caught by the new tests and
+fixed, not waived: (1) `new URL("music/x", base)` without a trailing slash drops the last
+path segment — the resolver now forces a directory base; (2) autoplay-rejection retries were
+swallowed by the no-restart guard — the manager now tracks whether the element ever started;
+(3) the started flag had to become optimistic-synchronous or rapid re-renders replayed.
+Final: `npm test` 164/164, `npm run check` 164/164, 0 fail; `node --check` clean on all touched
+modules. Browser check of the running app: local-browser route blocked at the tool layer (see
+earlier entry); owner chose push-first, live-site verification second.
+**Not verified / not done:** any audible music (no files); loop seamlessness of unreceived
+tracks; SFX playback (volume channel only, no SFX assets); supplying the six tracks remains
+BLOCKED on the owner.
+
+## Session 2026-10-29 · AUDIO-001 (continued) · Supplied tracks wired
+
+**What changed mid-session:** while the soundtrack system was being built, origin/main moved
+from ffbf2be to f51cec5 ("music"), supplying exactly six MP3s. The local commit was rebased
+onto f51cec5 (clean, no conflicts — f51cec5 touches only `music/`). A plain `git push` then
+failed in this shell (no credential prompt available), so the push route is the GitHub Data
+API via the user's connected custom.github credential (see push record below).
+**Verification of the tracks (ffprobe + full ffmpeg decode, all clean, MP3 48 kHz stereo):**
+menu `Veylattice_ Main Menu.mp3` 174.0 s / 4,004,186 bytes; battle `Veylattice_ Battle.mp3`
+153.6 s / 3,735,339; preparations `Veylattice_ Planning.mp3` 137.6 s / 3,397,241; shop
+`Veylattice_ Shop.mp3` 172.0 s / 4,276,127; victory `Veylattice_ Victory.mp3` 12.4 s / 318,839;
+defeat `Veylattice_ Defeat.mp3` 11.0 s / 275,583. Filenames map unambiguously to the six
+directive roles, and the stinger durations match the ~10 s signature. Musical character was
+NOT auditioned (no listening tool in this environment) — the mapping claim rests on filenames
+plus durations, stated as such wherever it appears. Manifest, tests (real-manifest test now
+asserts the six files exist; missing-file test uses an explicitly empty manifest; a
+space-in-filename URL case was added), and all docs that previously said "absent" were
+updated in the same change set. Final: `npm test` 164/164.
+**Not verified:** audible playback in a real browser (autoplay-gated; live verification
+pending); loop seamlessness of the background tracks (no loop-point metadata supplied).

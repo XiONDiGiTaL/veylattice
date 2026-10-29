@@ -87,3 +87,46 @@ UTC boundaries for seasons/shops; restricted CORS origins; schema/content/rules 
 
 ## Public documentation basis
 GitHub Pages is static hosting: https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages . Supabase RLS/security guidance: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/docs/guides/database/secure-data . These links explain platform/security constraints, not implementation completion.
+
+## 2026-10-29 additions (implemented in this change set)
+
+- **3D battlefield (`src/render/arena3d.js`):** Three.js loaded as an ES
+  module from CDN at runtime; the scene is built from the same voxel box
+  data as the CSS-3D models and the card illustrations, so model identity
+  cannot drift between card, roster and board. Tile meshes carry logical
+  coordinates and raycast picking maps clicks back to engine cells; the
+  CSS-3D board is the fallback and accessible grid. No build step is
+  added; Pages serves the static bundle under `/veylattice/` as before.
+- **Decks (`src/game/decks.js`) and economy (`src/game/economy.js`):**
+  pure, testable modules. Decks are validated by the engine's
+  `validateDeck` plus an ownership check against the local collection,
+  and are stored on the local profile (`profile.economy`). Packs are
+  exactly 5 Common + 1 Rare-or-better, 300 Shards, with operation ids for
+  idempotent replays. Economy data is local-only for now: the existing
+  profile/account RPCs carry name, avatar, settings and stats only, so
+  decks, collection and Shards do not yet sync through the cloud row —
+  that needs a server migration (tracked, not silently assumed).
+- **Lobby (`src/game/lobby.js`, `src/net/online.js`):** pure room state
+  machine plus a Supabase Realtime broadcast transport. Every remote
+  command is re-validated by the receiving client's engine and rejected
+  on wrong seat, stale sequence, duplicate command id or illegality.
+  This is peer-validated, NOT server-authoritative: no Edge Functions
+  are deployed, so online matches are practice-only with no rewards,
+  rank or currency. Applying the rooms/matches migrations and deploying
+  trusted command validation requires separate owner approval.
+- **Soundtrack (`src/audio/soundtrack.js`):** dependency-free ES module.
+  One manifest (`SOUNDTRACK`: menu/battle/preparations/shop backgrounds,
+  victory/defeat stingers) and one manager instance owned by `main.js`.
+  Background playback reuses a single `<audio>` element across roles with
+  a short fade; stingers use a second element and play at most once per
+  match key. Settings (`profile.settings.audio`: master/music/sfx/muted)
+  are sanitised by `sanitizeAudioSettings` and rendered as working range
+  + mute controls in the profile view; they persist through the existing
+  profile save path (local + cloud settings row). Autoplay refusal is
+  reported as "blocked" (never fake "playing") and retried on the next
+  pointer/key gesture; tab-hide pauses, tab-show resumes only if the user
+  never paused. Missing files create no element and no download.
+  UPDATE (2026-10-29): the six tracks arrived via origin commit f51cec5
+  and are now named in the manifest (MP3, 48 kHz stereo; stingers 12.4 s
+  / 11.0 s, backgrounds 138–174 s, all decode-clean). Audible playback in
+  a real browser is confirmed only by live verification, not by tests.

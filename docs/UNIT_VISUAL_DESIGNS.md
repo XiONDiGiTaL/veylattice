@@ -1,6 +1,6 @@
 # Unique Voxel Unit and Entity Design Briefs
 
-Status: original production briefs for the 18 existing official Vessels, not delivered model assets. Use with docs/VOXEL_ART_BIBLE.md and existing stable modelId values. Do not replace the art bible. Each needs front/side/rear/three-quarter references, palette, blockout, rig, idle/move/summon/attack/hit/defeat, portrait crop and provenance. One tile footprint, outline readable at 64-96 pixels. Shared rigs permitted; recolors are not unique designs. Printed stats remain in content data.
+Status: original production briefs for the 18 original official Vessels, not delivered model assets. The roster has since grown to 65 Vessels; these briefs cover the original 18. Use with docs/VOXEL_ART_BIBLE.md and existing stable modelId values. Do not replace the art bible. Each needs front/side/rear/three-quarter references, palette, blockout, rig, idle/move/summon/attack/hit/defeat, portrait crop and provenance. One tile footprint, outline readable at 64-96 pixels. Shared rigs permitted; recolors are not unique designs. Printed stats remain in content data.
 
 ## 1. Ashen Crownblade / ashen_crownblade
 Tall wedge-shaped warrior: narrow waist beneath broad scorched-ivory shoulders, a five-prong broken crown helm with one missing tooth, and a heavy rectangular sword wider at its ember-cut tip. Charcoal joints and bronze rivets separate ceramic armor slabs; a ragged black-red half-cape hangs only from the left shoulder. Keep the face a dark slit, not a generic glowing skull. Idle rests blade beside one foot; attack lifts the sword in a heavy diagonal chop with a brief ember seam, defeat kneels as the crown fractures. Portrait preserves crown and oversized blade.
@@ -176,3 +176,12 @@ and mass rather than palette.
   the offhand that no other Vessel has.
 - **Thornmarch Ranger / `thornmarch_ranger`** (Wood, 2/3, cost 2, `swift`). Hooded leather coat, tall
   longbow, no cape, a feather at the shoulder. The only hooded bow-carrier in the pool.
+
+## 2026-10-29 note
+
+Card illustration and in-game voxel model are the same character: the
+illustration pipeline projects the voxel box data, and the Three.js
+arena builds the same boxes as WebGL geometry. Silhouette, proportions,
+armour, weapons, accessories, materials and colours must correspond
+across all three. A model change changes the card art with it; a card
+illustration must never depict a different character from its model.

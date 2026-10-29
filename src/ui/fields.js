@@ -3,8 +3,8 @@
  *
  * The battlefield has two different systems and this module keeps them apart:
  *
- *  - The tactical grid (`match.board`, 49 tiles) is where Vessels move and
- *    fight. The engine owns it.
+ *  - The tactical grid (`match.board`, 25 tiles, BOARD_SIZE 5x5) is where
+ *    Vessels move and fight. The engine owns it.
  *  - The card fields (`vessel` and `action` slots, four per seat) are where a
  *    player's summoned cards and persistent Relics sit. This module derives
  *    that field from match state; it never decides legality.
@@ -17,8 +17,16 @@ import { MAX_RELICS_PER_SEAT, MAX_UNITS_PER_SEAT } from "../game/constants.js";
 
 /** Four front-row Vessel zones per seat. */
 export const VESSEL_SLOTS = MAX_UNITS_PER_SEAT;
-/** Four back-row Action zones per seat, and therefore four Relic slots. */
+/**
+ * Four back-row Relic sockets per seat (legacy export name ACTION_SLOTS:
+ * the old UI labelled these zones "Action zones", but Actions never occupy
+ * a zone — they resolve from hand to discard. See docs/ARENA_SYSTEM.md
+ * canonical layout 2026-10-29. The separate Action staging row is a view
+ * of the first four Action cards in hand, defined in src/render/arena3d.js.
+ */
 export const ACTION_SLOTS = MAX_RELICS_PER_SEAT;
+/** Alias with the canonical name: four Relic sockets per seat. */
+export const RELIC_SLOTS = MAX_RELICS_PER_SEAT;
 
 /** Stable slot key used for DOM ids and tests. */
 export function slotKey(seat, kind, index) {

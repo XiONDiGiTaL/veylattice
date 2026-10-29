@@ -44,6 +44,7 @@ test("settings only accept known difficulties, styles and booleans", () => {
     archetype: "warden",
     reducedMotion: true,
     showCoordinates: true,
+    audio: { master: 1, music: 0.8, sfx: 0.8, muted: false },
   });
   const rejected = sanitizeSettings({
     difficulty: "impossible",

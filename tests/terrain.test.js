@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { ARENA, PROP_MODELS, TERRAIN_KINDS, arenaMap, propsAt, terrainAt } from "../src/render/terrain.js";
 import { BOARD_SIZE, CELL_COUNT } from "../src/game/constants.js";
 
-test("the arena covers all 49 logical tiles with a known kind", () => {
+test("the arena covers all 25 logical tiles with a known kind", () => {
   const map = arenaMap();
   assert.equal(map.length, BOARD_SIZE);
   for (let y = 0; y < BOARD_SIZE; y += 1) {

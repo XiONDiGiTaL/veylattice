@@ -10,9 +10,10 @@
   setting or base-site file was modified.
 - Pages caches JS for up to four hours (`max-age=14400`), so a warm browser can briefly run a cached
   module against new HTML. Hard-refresh before debugging "stale" behaviour after a deploy.
-- Latest pushed commit: `e8703de` (ART-001). **LAYOUT-001, CONTENT-001, GRID-002 and ART-002 are in the
-  working tree, uncommitted and undeployed.** The live site therefore still serves the ART-001 build
-  (old layout, 18 Vessels, 7x7). Nothing has been deployed in this session.
+- Latest pushed commit at the start of the 2026-10-29 session: `ffbf2be` (merge). The 2026-10-29
+  session's work (3D battlefield, Deck Builder, Shop, Online Lobby preview, directive reconciliation)
+  was uncommitted at handoff-write time; see "Latest session — 2026-10-29" below. Do NOT quote
+  `e8703de` as the latest pushed commit — that line was stale.
 - Live verification after S-M2-D, in a fresh incognito context: first visit opened How to Play; menu
   rendered 4 decorative models (50 boxes); Roster rendered 18 cards / 18 models / 209 boxes; a practice
   match created 49 cells and summoned a `Mireglass Stalker` with `data-model-id` and 12 boxes; **zero
@@ -24,6 +25,61 @@
   runtime dependencies**; tests use Node's built-in runner. Current suite: **129 tests, 129 pass**
   (`npm run check` adds syntax checks).
 
+
+## Latest session — 2026-10-29 · Full 3D battlefield + Deck Builder + Shop + Online Lobby preview
+
+**Working tree (uncommitted at handoff-write time):** new `src/render/arena3d.js`,
+`src/render/approved-frame.js`, `src/game/decks.js`, `src/game/economy.js`, `src/game/lobby.js`,
+`src/net/online.js`, `src/ui/systems.js`, new `tests/decks.test.js`, `tests/economy.test.js`,
+`tests/lobby.test.js`, `tests/frames.test.js`, `tests/arena3d.test.js`; edits to `src/main.js`,
+`src/ui/fields.js`, `src/net/profile.js`, `index.html`, `styles.css`, `tests/terrain.test.js`, and
+the canonical docs (`AI_INSTRUCTIONS.md`, `GAME_RULES.md`, `PROJECT_BRIEF.md`,
+`TECHNICAL_ARCHITECTURE.md`, `ART_BIBLE.md`, `CARD_DESIGN_GUIDE.md`, `CardFrames/FRAME_DIRECTIVE.md`,
+`docs/ARENA_SYSTEM.md`, `docs/CARD_FRAMES.md`, `docs/IMPLEMENTATION_PROMPT.md`,
+`docs/UNIT_VISUAL_DESIGNS.md`, `docs/VOXEL_ART_BIBLE.md`, `docs/MECHANIC_ADAPTATION_MATRIX.md`,
+`README.md`, `ROADMAP.md`, `TODO.md`, `CHANGELOG.md`, `docs/IMPLEMENTATION_LOG.md`).
+
+What changed (no balance changes; `GAME_RULES.md` stayed authoritative):
+
+1. **Canonical field layout (Phase 1).** Per seat: 4 Vessel slots (= deployment cap), 4 Relic
+   sockets (= Relic cap), a 4-slot Action staging row that is a VIEW of the first four Action cards
+   in hand (Actions are never a zone; they resolve hand → discard), 1 engine-owned discard pile.
+   Card geometry 214:300 from the approved frames; `Cards/EXAMPLE.jpg` is composition reference
+   only. Relics: no approved dedicated frame — neutral "RELIC FRAME PENDING" presentation.
+2. **Three.js 3D arena** (`arena3d.js`, CDN ES module, no build step): 5x5 tiles from `terrain.js`,
+   voxel Vessels via `modelFor`, field platforms, discard stacks, label sprites, raycast picking,
+   drag-orbit, desktop camera [0,8.5,10.5], mobile <700px [0,13.5,5.5]. CSS-3D board remains as
+   fallback + accessible grid behind a toggle; WebGL failure leaves the game playable with notice.
+3. **Deck Builder** (decks.js + systems.js): create/edit/save/duplicate/rename/delete, search/sort/
+   filter, composition counts, precise validation errors, ownership-aware adds, active-deck gating
+   of match start. Starter profile seeds a legal 40-card "Starter Lattice" deck + bound collection.
+4. **Shop** (economy.js + systems.js): local-profile only. New profiles 300 Lattice Shards; pack 300
+   = exactly 5 Common + 1 Rare-or-better (Unranked rates 90/9/1); Singles 60/100/240/600/1200;
+   dissolution 10/15/40/100/200, starter copies bound, dissolution blocked if it breaks a saved
+   deck, purchases idempotent by operation id. Cloud sync needs a migration — tracked as blocked.
+5. **Online Lobby preview** (lobby.js + online.js + systems.js): Supabase Realtime broadcast rooms,
+   6-char codes, readiness, deck selection, envelope validation (seat/seq/command-id) then engine
+   application, desync logged honestly. **NOT server-authoritative** — authoritative Edge Functions
+   are BLOCKED pending owner approval + database migration (repo rule: no migrations/provisioning
+   without separate approval). Online matches grant no rewards/rank/stats; hands never broadcast
+   (shared seed, local shuffle). Two-browser E2E NOT yet done — do not claim multiplayer operational.
+
+Checks actually run: `npm test` 149/149 (baseline 129); local servers on 8000 (root) and 8001
+(`/veylattice` subpath) with curl 200s; browser check outcome recorded in CHANGELOG.md once known.
+One review fix: arena `onUnit` now resolves `ui.match` at click time (was capturing mount-time match).
+
+Soundtrack addendum (same session, after the owner chose push-first/live-verify at 09:56
+EDT): `src/audio/soundtrack.js` (manifest + manager), profile audio settings, main.js
+view/result wiring, settings controls, and `tests/audio.test.js` (15 tests) are implemented.
+UPDATE same session: origin commit f51cec5 ("music") supplied all six tracks mid-session;
+the tree was rebased onto it (clean) and the manifest now names them (ffprobe-verified MP3,
+decode-clean; stingers 12.4/11.0 s, backgrounds 138–174 s). The earlier "no files" status is
+superseded — do NOT repeat it. Audible browser playback still awaits live verification.
+Final suite at handoff time: 164/164 (`npm test` and `npm run check`).
+
+Next three executable tasks: (1) two-browser lobby E2E verification; (2) server-authoritative
+migration proposal for owner approval (Edge Functions + tables); (3) battle-hand approved-frame
+migration + dedicated Relic frame request, and mobile WebGL performance measurement.
 
 ## Latest session — GRID-002 / ART-002 (5x5 arena, generated card art, AI legality fix)
 

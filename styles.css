@@ -2726,3 +2726,44 @@ body.card-modal-open { overflow: hidden; }
   .library-filters { gap: 8px; }
   .chip { padding: 6px 12px; font-size: 12px; }
 }
+
+/* ---- 2026-10-29: approved-frame cards, systems views, 3D arena ---- */
+.arena-3d { width: 100%; min-height: 320px; }
+.arena-3d canvas { display: block; width: 100%; border-radius: 12px; }
+.arena-3d-tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.sys-head { max-width: 900px; margin-bottom: 16px; }
+.sys-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.sys-balance { font-size: 20px; font-weight: 700; }
+.sys-status { background: rgba(127, 208, 138, 0.14); border: 1px solid rgba(127, 208, 138, 0.4); padding: 10px 12px; border-radius: 8px; }
+.sys-warning { background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.45); padding: 10px 12px; border-radius: 8px; }
+.sys-errors { color: #ffb3a8; }
+.sys-deck { border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.sys-deck-head { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pill.ok { background: rgba(127, 208, 138, 0.2); }
+.pill.bad { background: rgba(224, 90, 74, 0.25); }
+.sys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.sys-card { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 8px; }
+.sys-card-name { display: block; font-weight: 700; font-size: 13px; margin-top: 6px; }
+.sys-card-meta, .sys-card-owned { display: block; font-size: 11px; opacity: 0.8; }
+.sys-seat { border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 10px; margin: 10px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.sys-opening { border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.discard-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-height: 60vh; overflow: auto; }
+.sys-discard-row { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 8px; }
+.discard-modal-body { max-width: 900px; }
+
+/* Approved frame card: 214:300 geometry from CardFrames/frame-manifest.json. */
+.approved-card { position: relative; width: 100%; aspect-ratio: 214 / 300; container-type: inline-size; overflow: hidden; border-radius: 6px; background: #1a2233; }
+.approved-card.relic-pending { border: 2px solid #c9a86f; }
+.approved-art { position: absolute; object-fit: cover; z-index: 1; }
+.approved-art-full { inset: 0; width: 100%; height: 100%; }
+.approved-overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.approved-name { position: absolute; z-index: 3; left: 9%; top: 3.5%; width: 66%; font-family: Georgia, serif; font-weight: 700; font-size: 9cqw; line-height: 1.1; color: #1c2416; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.approved-cost { position: absolute; z-index: 3; right: 4%; top: 2.5%; width: 14%; text-align: center; font-family: Georgia, serif; font-weight: 700; font-size: 11cqw; color: #fff; text-shadow: 0 1px 3px #000; }
+.approved-mid { position: absolute; z-index: 3; left: 0; right: 0; top: 65.5%; text-align: center; font-size: 7cqw; font-weight: 700; color: #1c2416; letter-spacing: 0.04em; }
+.approved-text { position: absolute; z-index: 3; left: 10%; right: 10%; top: 72%; font-size: 6.5cqw; line-height: 1.25; color: #1c2416; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+.approved-card.relic-pending .approved-name { color: #f5eeda; top: 4%; }
+.approved-card.relic-pending .approved-text { color: #f5eeda; }
+@media (max-width: 640px) {
+  .sys-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .arena-3d { min-height: 240px; }
+}

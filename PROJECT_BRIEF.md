@@ -16,5 +16,13 @@ Readable positioning, resource decisions and accessible counterplay; original si
 ## First playable slice
 A complete offline prebuilt Practice match against legal-move AI: draw/play/summon/move/attack/retaliate, 120-second timer, mulligan, effects, discard and a reachable win state. No earned online rewards in this slice. Build server progression and multiplayer later, not as a substitute for a functioning rules engine.
 
-## Current status
-Early DOM prototype and content/design documents. The inspected prototype has no autonomous opponent, full movement, persistent damage/retaliation, complete win loop, authenticated collection or online lobby implementation. Do not describe expanded specifications as playable features. See ROADMAP.md for milestones.
+## Current status (2026-10-29, verified against code)
+Playable offline Practice against a tactical AI with full movement,
+persistent Guard damage, retaliation, elemental damage, discard, revive
+effects and a reachable win state; a Three.js 3D battlefield (CSS-3D
+fallback); a functional Deck Builder and Shop on local profiles; and a
+peer-validated online lobby preview over Supabase Realtime. Server-
+authoritative multiplayer, ranked progression and reward-bearing matches
+are NOT implemented: online matches grant no rewards or rank until Edge
+Function validation is deployed and verified. Do not describe expanded
+specifications as playable features. See ROADMAP.md for milestones.

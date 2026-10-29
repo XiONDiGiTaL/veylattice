@@ -64,6 +64,12 @@ import {
   tutorialStep,
 } from "./ui/tutorial.js";
 import { fieldState } from "./ui/fields.js";
+import { sanitizeEconomy } from "./game/economy.js";
+import { validateDeckWithOwnership } from "./game/decks.js";
+import { recordRemoteCommand, validateRemoteCommand } from "./game/lobby.js";
+import { mountSystems } from "./ui/systems.js";
+import { buildApprovedCard } from "./render/approved-frame.js";
+import { createAudioManager, viewMusicRole } from "./audio/soundtrack.js";
 
 const GUIDE_SEEN_KEY = "veylattice.guide.seen.v1";
 
@@ -102,7 +108,7 @@ const ui = {
   sync: { state: "local", message: "Local only" },
   selectedCard: null,
   selectedUnit: null,
-  message: "Summon a Vessel into your three starting rows.",
+  message: "Summon a Vessel into your two home rows.",
   log: [],
   view: "menu",
   tutorial: null,
@@ -114,6 +120,13 @@ const ui = {
   accountBusy: false,
   library: { category: "all", element: "all" },
   libraryBuilt: false,
+  online: null,
+  audio: null,
+  audioMatchKey: 0,
+  arena: null,
+  arenaMode: "3d",
+  arenaFailed: false,
+  systems: null,
 };
 
 /* ------------------------------ helpers ------------------------------ */
@@ -188,11 +201,18 @@ function setMessage(text) {
   if (node) node.textContent = text;
 }
 
+function mySeat() {
+  return ui.online ? ui.online.mySeat : HUMAN_SEAT;
+}
+function foeSeat() {
+  return mySeat() === 0 ? 1 : 0;
+}
+
 function humanCanAct() {
   return (
     Boolean(ui.match) &&
     !isOver(ui.match) &&
-    ui.match.active === HUMAN_SEAT &&
+    ui.match.active === mySeat() &&
     !ui.aiBusy &&
     ui.view === "battle"
   );
@@ -268,7 +288,7 @@ function categoryLabel(def) {
  */
 function selectedCardEntry() {
   if (!ui.match || !ui.selectedCard) return null;
-  const card = ui.match.players[HUMAN_SEAT].hand.find((c) => c.instanceId === ui.selectedCard);
+  const card = ui.match.players[mySeat()].hand.find((c) => c.instanceId === ui.selectedCard);
   if (!card) return null;
   const def = ui.match.catalog.get(card.cardId);
   if (!def) return null;
@@ -405,13 +425,16 @@ function newMatch(options = {}) {
   ui.aiGeneration += 1;
   ui.aiBusy = false;
   ui.recorded = false;
+  ui.online = null;
   const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-  // Fresh 40-card practice selection each match so the 65-Vessel pool is
-  // actually reachable before a deck builder exists.
+  // The active saved deck (when legal and owned) plays for the human seat;
+  // otherwise a fresh 40-card practice selection, so the full pool stays
+  // reachable. The practice deck never grants collection ownership.
   const practiceDeck = buildPracticeDeck(ui.catalog, { rng: seededRng(seed ^ 0x9e3779b9) });
+  const humanDeck = options.humanDeck ?? null;
   ui.match = createMatch({
     catalog: ui.catalog,
-    decks: [practiceDeck, practiceDeck],
+    decks: [humanDeck ?? practiceDeck, practiceDeck],
     rng: seededRng(seed),
     now: Date.now(),
   });
@@ -433,6 +456,106 @@ function newMatch(options = {}) {
   if (ui.match.active === AI_SEAT) runAiTurn();
 }
 
+
+/* --------------------------- online matches --------------------------- */
+
+/* --------------------------- soundtrack --------------------------- */
+
+function renderAudioStatus() {
+  const node = $("#audio-status");
+  if (!node) return;
+  const audio = ui.audio;
+  if (!audio) { node.textContent = "Audio system initialising…"; return; }
+  const status = audio.status;
+  if (status === "unavailable") {
+    node.textContent = "Music unavailable: no soundtrack files have been supplied yet (see music/ manifest). Sound settings below still save and will apply once files arrive.";
+  } else if (status === "muted") {
+    node.textContent = "Music muted.";
+  } else if (status === "blocked") {
+    node.textContent = "Music paused by the browser until your next click or keypress.";
+  } else if (status === "playing" && audio.currentRole) {
+    node.textContent = `Now playing: ${audio.currentRole}.`;
+  } else if (status === "paused") {
+    node.textContent = "Music paused.";
+  } else {
+    node.textContent = "Music ready.";
+  }
+}
+
+function initAudio() {
+  if (ui.audio) return;
+  ui.audio = createAudioManager({
+    settings: ui.profile?.settings?.audio,
+    onStatus: () => renderAudioStatus(),
+  });
+  renderAudioStatus();
+}
+
+/** Select background music from the actual view + match state. Never restarts
+ *  a track that is already playing (the manager enforces that), and never
+ *  restarts battle music on the result screen (role null while match over). */
+function updateMusicForView() {
+  if (!ui.audio) return;
+  const role = viewMusicRole(ui.view, { matchOver: ui.match?.phase === "over" });
+  if (role) ui.audio.playBackground(role);
+}
+
+
+function startOnlineMatch({ room, mySeat: seat, decks, seed, channel }) {
+  ui.aiGeneration += 1;
+  ui.aiBusy = false;
+  ui.recorded = false;
+  ui.selectedCard = null;
+  ui.selectedUnit = null;
+  ui.log = [];
+  $("#result-overlay").hidden = true;
+  ui.audioMatchKey += 1;
+  ui.online = { room, mySeat: seat, channel, remoteApplying: false };
+  ui.match = createMatch({
+    catalog: ui.catalog,
+    decks,
+    rng: seededRng(seed),
+    now: Date.now(),
+  });
+  setMessage(`Online match started in room ${room.code}. ${ui.match.active === seat ? "Your turn first." : "Your opponent moves first."}`);
+  render();
+  showView("battle");
+}
+
+function applyRemoteCommand(envelope) {
+  if (!ui.match || !ui.online) return;
+  const check = validateRemoteCommand(ui.online.room, ui.match, envelope);
+  if (!check.ok) {
+    pushLog(`Online command rejected: ${check.error}`);
+    render();
+    return;
+  }
+  const before = snapshotUnits(ui.match);
+  ui.online.remoteApplying = true;
+  let result;
+  try {
+    result = applyCommand(ui.match, envelope.command, { now: Date.now() });
+  } finally {
+    ui.online.remoteApplying = false;
+  }
+  if (result.state !== ui.match) ui.match = result.state;
+  if (!result.ok) {
+    pushLog(`Online state diverged — opponent command rejected (${result.code}): ${result.message}. Leave the room and rejoin to resync.`);
+    render();
+    return;
+  }
+  ui.online.room = recordRemoteCommand(ui.online.room, envelope);
+  logEvents(result.events, "Opponent");
+  render();
+  playEvents(result.events, before);
+  if (isOver(ui.match)) onMatchEnd();
+}
+
+function endOnlineMatch() {
+  if (ui.online?.channel) ui.online.channel.leave().catch(() => {});
+  ui.online = null;
+}
+
 function dispatch(command) {
   const now = Date.now();
   // Snapshot positions and Guard values before the command so the presentation
@@ -446,6 +569,19 @@ function dispatch(command) {
     return false;
   }
   logEvents(result.events, "You");
+  if (ui.online && !ui.online.remoteApplying) {
+    const envelope = {
+      seq: (ui.online.room?.lastSeq ?? -1) + 1,
+      commandId: `cmd-${Date.now()}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`,
+      seat: mySeat(),
+      playerId: ui.profile?.id,
+      command,
+    };
+    ui.online.room = recordRemoteCommand(ui.online.room, envelope);
+    ui.online.channel?.sendCommand(envelope).catch(() => {
+      setMessage("Online command applied locally but the broadcast failed — your opponent may not see it. Leave and rejoin if the game desyncs.");
+    });
+  }
   // The tutorial only watches events the engine already accepted. The engine
   // calls a passed turn `turnEnd`; the guide speaks of it as ending the turn.
   for (const event of result.events) {
@@ -464,6 +600,7 @@ function pace() {
 }
 
 async function runAiTurn() {
+  if (ui.online) return;
   if (!ui.match || isOver(ui.match) || ui.match.active !== AI_SEAT) return;
   const generation = ui.aiGeneration;
   ui.aiBusy = true;
@@ -528,6 +665,17 @@ function onMatchEnd() {
   if (!ui.match || ui.match.phase !== "over" || ui.recorded) return;
   ui.recorded = true;
   const { winnerSeat, reason } = ui.match.result;
+  // Result policy: battle music stops, then ONE stinger for win/loss, none
+  // for a draw. renderResult() never touches audio, so overlay re-renders
+  // cannot replay the cue, and menu music resumes only on return to menu.
+  ui.audio?.stopBackground();
+  if (winnerSeat === mySeat()) ui.audio?.playStinger("victory", ui.audioMatchKey);
+  else if (winnerSeat !== null) ui.audio?.playStinger("defeat", ui.audioMatchKey);
+  if (ui.online) {
+    // Online preview matches are practice-only: no stats, rank or currency.
+    renderResult(winnerSeat === null ? "draw" : winnerSeat === mySeat() ? "win" : "loss", reason);
+    return;
+  }
   const outcome = winnerSeat === null ? "draw" : winnerSeat === HUMAN_SEAT ? "win" : "loss";
   ui.profile = {
     ...ui.profile,
@@ -628,7 +776,7 @@ function onCellClick(x, y) {
     return;
   }
 
-  if (occupant && occupant.owner === HUMAN_SEAT) {
+  if (occupant && occupant.owner === mySeat()) {
     ui.selectedUnit = occupant.id;
     ui.selectedCard = null;
     setMessage(
@@ -711,7 +859,7 @@ function playSelectedCard() {
  */
 function vesselSelectionMessage(def, instanceId) {
   const match = ui.match;
-  const player = match.players[HUMAN_SEAT];
+  const player = match.players[mySeat()];
   const summon = getLegalActions(match).summons.find((s) => s.instanceId === instanceId);
   const cells = summon?.cells.length ?? 0;
   if (cells > 0) {
@@ -720,7 +868,7 @@ function vesselSelectionMessage(def, instanceId) {
   if (player.summonUsed >= 1) {
     return `${def.name}: you have already summoned this turn. End the turn to summon again.`;
   }
-  const count = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
+  const count = Object.values(match.units).filter((u) => u.owner === mySeat()).length;
   if (count >= MAX_UNITS_PER_SEAT) {
     return `${def.name}: you already control ${MAX_UNITS_PER_SEAT} Vessels — the maximum.`;
   }
@@ -733,13 +881,13 @@ function vesselSelectionMessage(def, instanceId) {
 /** Explain *why* a summon failed using the rule that rejected it. */
 function summonBlockReason(card, x, y) {
   const match = ui.match;
-  const player = match.players[HUMAN_SEAT];
+  const player = match.players[mySeat()];
   if (unitAt(match, x, y)) return `${coordLabel(x, y)} already holds a Vessel.`;
-  if (y < deploymentBounds(HUMAN_SEAT).min) {
+  if (y < deploymentBounds(mySeat()).min) {
     return `${coordLabel(x, y)} is outside your deployment zone — summon on the tinted home rows.`;
   }
   if (player.summonUsed >= 1) return "You have already summoned this turn. End the turn to summon again.";
-  const count = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
+  const count = Object.values(match.units).filter((u) => u.owner === mySeat()).length;
   if (count >= MAX_UNITS_PER_SEAT) return `You already control ${MAX_UNITS_PER_SEAT} Vessels — the maximum.`;
   if (player.flux < (card?.cost ?? 0)) {
     return `${card?.name ?? "That card"} costs ${card?.cost ?? 0} Flux and you have ${player.flux}.`;
@@ -976,7 +1124,7 @@ function renderBoard() {
       const zone = `zone-${rowOwner(y)}`;
       const classes = ["cell", zone];
       if (legalSummon) classes.push("legal");
-      else if (summonCard && !occupant && y >= deploymentBounds(HUMAN_SEAT).min)
+      else if (summonCard && !occupant && y >= deploymentBounds(mySeat()).min)
         classes.push("deploy-blocked");
       if (moveKeys.has(`${x},${y}`)) classes.push("move");
       if (occupant && attackIds.has(occupant.id)) classes.push("attack");
@@ -1047,7 +1195,7 @@ function renderBoard() {
         const unit = el(
           "span",
           {
-            class: `unit ${occupant.owner === HUMAN_SEAT ? "friendly" : "enemy"} ${occupant.element} ${
+            class: `unit ${occupant.owner === mySeat() ? "friendly" : "enemy"} ${occupant.element} ${
               occupant.ready ? "ready" : "unready"
             }`,
           },
@@ -1073,8 +1221,8 @@ function renderHand() {
   hand.replaceChildren();
   const match = ui.match;
   const interactive = humanCanAct();
-  // The human's hand is always the one on screen, including during the AI turn.
-  const player = match.players[HUMAN_SEAT];
+  // The local player's hand is always the one on screen, including during the opponent's turn.
+  const player = match.players[mySeat()];
   for (const card of player.hand) {
     const def = match.catalog.get(card.cardId);
     if (!def) continue;
@@ -1158,7 +1306,7 @@ function renderSelectedPanel() {
   const match = ui.match;
 
   if (ui.selectedCard) {
-    const card = match.players[HUMAN_SEAT].hand.find((c) => c.instanceId === ui.selectedCard);
+    const card = match.players[mySeat()].hand.find((c) => c.instanceId === ui.selectedCard);
     const def = card ? match.catalog.get(card.cardId) : null;
     if (def) {
       const entry = selectedCardEntry();
@@ -1490,11 +1638,15 @@ function renderMenuState() {
   const context = $("#menu-context");
   if (!context) return;
   if (!ui.match) {
-    context.textContent = "No match in progress. Practice is free, unranked, and needs no account.";
+    const econ = sanitizeEconomy(ui.profile?.economy);
+    const active = econ.decks.find((d) => d.id === econ.activeDeckId);
+    context.textContent = active
+      ? `No match in progress. Active deck: ${active.name}. Practice is free, unranked, and needs no account.`
+      : "No match in progress. Practice is free, unranked, and needs no account.";
   } else if (isOver(ui.match)) {
-    context.textContent = `Last match finished — ${ui.match.result?.winnerSeat === HUMAN_SEAT ? "victory" : "defeat"}. Starting again records a new result.`;
+    context.textContent = `Last match finished — ${ui.match.result?.winnerSeat === mySeat() ? "victory" : "defeat"}. Starting again records a new result.`;
   } else {
-    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === HUMAN_SEAT ? "your move" : "opponent acting"}.`;
+    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === mySeat() ? "your move" : "opponent acting"}.`;
   }
 }
 
@@ -1790,6 +1942,12 @@ function renderPrompt() {
 
 function renderOpponent() {
   const match = ui.match;
+  if (ui.online) {
+    const foe = ui.online.room?.seats?.[foeSeat()];
+    $("#opponent-name").textContent = foe?.displayName ?? "Opponent";
+    $("#opponent-difficulty").textContent = "ONLINE";
+    return;
+  }
   const archetype = currentArchetype();
   const difficulty = currentDifficulty();
   $("#opponent-avatar").src = emblemAvatar(archetype.id, archetype.label);
@@ -1797,7 +1955,7 @@ function renderOpponent() {
   const nameHint = $("#opponent-name");
   if (nameHint) nameHint.title = `${difficulty.label} difficulty · ${archetype.description}`;
   $("#opponent-difficulty").textContent = difficulty.label.toUpperCase();
-  if (!ui.aiBusy) $("#opponent-status").textContent = match.active === AI_SEAT ? "Ready" : "Waiting";
+  if (!ui.aiBusy) $("#opponent-status").textContent = match.active === foeSeat() ? "Ready" : "Waiting";
 }
 
 function renderLog() {
@@ -1812,6 +1970,140 @@ function renderLog() {
   }
 }
 
+
+/* --------------------------- 3D arena + discard --------------------------- */
+
+function arenaViewData(match) {
+  const interact = humanCanAct();
+  const card = interact && ui.selectedCard ? selectedCardEntry() : null;
+  const summonCard = card?.category === "vessel" ? card : null;
+  const legalSummons = [];
+  if (summonCard) {
+    for (let y = 0; y < BOARD_SIZE; y += 1) for (let x = 0; x < BOARD_SIZE; x += 1) {
+      if (canSummon(match, summonCard.instanceId, x, y)) legalSummons.push([x, y]);
+    }
+  }
+  const moves = interact && ui.selectedUnit ? getLegalMoves(match, ui.selectedUnit) : [];
+  const attacks = interact && ui.selectedUnit ? getLegalAttacks(match, ui.selectedUnit) : [];
+  const attackCells = attacks.filter((a) => a.type === "unit").map((a) => {
+    const unit = match.units[a.unitId];
+    return unit ? [unit.x, unit.y] : null;
+  }).filter(Boolean);
+  const units = Object.values(match.units).map((unit) => ({
+    id: unit.id, cardId: unit.cardId, element: unit.element, seat: unit.owner,
+    x: unit.x, y: unit.y, selected: ui.selectedUnit === unit.id,
+  }));
+  const fields = {};
+  for (const seat of [0, 1]) {
+    const field = fieldState(match, seat);
+    const player = match.players[seat];
+    const actions = seat === mySeat()
+      ? player.hand.filter((c) => match.catalog.get(c.cardId)?.category === "action").slice(0, 4)
+          .map((c) => match.catalog.get(c.cardId))
+      : Array.from({ length: Math.min(4, player.hand.filter((c) => match.catalog.get(c.cardId)?.category === "action").length) }, () => null);
+    while (actions.length < 4) actions.push(null);
+    const top = player.discard.length > 0 ? match.catalog.get(player.discard[player.discard.length - 1]) : null;
+    fields[seat] = {
+      vessels: field.vessels.map((unit) => unit ? match.catalog.get(unit.cardId) : null),
+      relics: field.relics.map((relic) => relic ? match.catalog.get(relic.cardId) : null),
+      actions,
+      discardCount: player.discard.length,
+      discardTop: top ? top.name : null,
+    };
+  }
+  const selectedUnit = ui.selectedUnit ? match.units[ui.selectedUnit] : null;
+  return {
+    units,
+    tiles: {
+      selected: selectedUnit ? { x: selectedUnit.x, y: selectedUnit.y } : null,
+      legalMoves: moves.map((m) => [m.x, m.y]),
+      legalAttacks: attackCells,
+      legalSummons,
+    },
+    fields,
+  };
+}
+
+async function renderArena(match) {
+  const host = $("#arena-3d");
+  if (!host) return;
+  if (ui.arenaMode !== "3d") {
+    host.hidden = true;
+    const board = $("#board");
+    if (board) board.closest(".board-wrap").hidden = false;
+    return;
+  }
+  host.hidden = false;
+  const boardWrap = $("#board")?.closest(".board-wrap");
+  if (boardWrap) boardWrap.hidden = true;
+  if (!ui.arena && !ui.arenaFailed && !ui.arenaMounting) {
+    ui.arenaMounting = true;
+    try {
+      const { mountArena } = await import("./render/arena3d.js");
+      ui.arena = await mountArena(host, {
+        onCell: (x, y) => onCellClick(x, y),
+        onUnit: (unitId) => {
+          // Resolve against the live match, not the match object captured
+          // at mount time (a new match reuses the mounted arena).
+          const unit = ui.match?.units[unitId];
+          if (!unit) return;
+          if (unit.owner === mySeat()) {
+            ui.selectedUnit = unitId;
+            ui.selectedCard = null;
+            setMessage(`${unit.name}: Attack ${unit.attack}, Guard ${Math.max(0, unit.guard)}/${unit.maxGuard}, movement ${unit.movement}, range ${unit.range}.`);
+            render();
+          } else {
+            setMessage(`${unit.name} — ${ELEMENT_LABELS[unit.element]} ${unit.subtype ?? "Vessel"}, Attack ${unit.attack}, Guard ${Math.max(0, unit.guard)}/${unit.maxGuard}.`);
+          }
+        },
+      });
+    } catch (error) {
+      console.warn("3D arena unavailable, using the classic grid:", error);
+      ui.arenaMounting = false;
+      ui.arenaFailed = true;
+      ui.arenaMode = "classic";
+      const notice = $("#arena-notice");
+      if (notice) notice.textContent = "3D arena could not load (WebGL or the Three.js module is unavailable here) — using the classic grid. The game is fully playable.";
+      host.hidden = true;
+      if (boardWrap) boardWrap.hidden = false;
+      return;
+    }
+  }
+  ui.arenaMounting = false;
+  if (ui.arena) ui.arena.render(arenaViewData(match), { reducedMotion: ui.profile?.settings?.reducedMotion === true });
+}
+
+function openDiscardViewer(seat) {
+  const match = ui.match;
+  if (!match) return;
+  const modal = $("#discard-modal");
+  const list = $("#discard-list");
+  const title = $("#discard-title");
+  if (!modal || !list) return;
+  const player = match.players[seat];
+  title.textContent = `${seat === mySeat() ? "Your" : "Opponent"} discard pile — ${player.discard.length} card${player.discard.length === 1 ? "" : "s"}`;
+  list.replaceChildren();
+  if (player.discard.length === 0) {
+    list.append(el("p", { class: "muted", text: "Nothing has been discarded yet." }));
+  } else {
+    for (const cardId of [...player.discard].reverse()) {
+      const def = match.catalog.get(cardId);
+      if (!def) continue;
+      const row = el("div", { class: "sys-discard-row" }, [
+        buildApprovedCard(def, { artUri: illustrationDataUri(def), effectText: effectSummary(def) }),
+        el("span", { class: "sys-card-name", text: def.name }),
+      ]);
+      list.append(row);
+    }
+  }
+  modal.hidden = false;
+}
+
+function closeDiscardViewer() {
+  const modal = $("#discard-modal");
+  if (modal) modal.hidden = true;
+}
+
 function render() {
   renderMenuState();
   const match = ui.match;
@@ -1822,7 +2114,7 @@ function render() {
     ui.selectedUnit = null;
     setMessage("That Vessel was destroyed. Select another card or Vessel.");
   }
-  if (ui.selectedCard && !match.players[HUMAN_SEAT].hand.some((card) => card.instanceId === ui.selectedCard)) {
+  if (ui.selectedCard && !match.players[mySeat()].hand.some((card) => card.instanceId === ui.selectedCard)) {
     ui.selectedCard = null;
   }
   renderBoard();
@@ -1835,8 +2127,8 @@ function render() {
   renderTutorial();
   renderPrompt();
 
-  const human = match.players[HUMAN_SEAT];
-  const ai = match.players[AI_SEAT];
+  const human = match.players[mySeat()];
+  const ai = match.players[foeSeat()];
   const vitalityPct = (value) => `${Math.max(0, Math.min(100, (value / 30) * 100)).toFixed(1)}%`;
   for (const [value, bar] of [
     [human.vitality, "#player-vitality-bar"],
@@ -1849,14 +2141,14 @@ function render() {
   $("#enemy-vitality").textContent = String(ai.vitality);
   $("#enemy-flux").textContent = String(ai.flux);
   $("#enemy-hand").textContent = String(ai.hand.length);
-  const aiUnitCount = Object.values(match.units).filter((u) => u.owner === AI_SEAT).length;
+  const aiUnitCount = Object.values(match.units).filter((u) => u.owner === foeSeat()).length;
   $("#enemy-unit-count").textContent = String(aiUnitCount);
   $("#log-count").textContent = String(ui.log.length);
   $("#turn-number").textContent = String(match.turn);
   $("#turn-owner").textContent =
     match.phase === "over"
       ? "Match complete"
-      : match.active === HUMAN_SEAT
+      : match.active === mySeat()
         ? "Your turn"
         : "Opponent's turn";
 
@@ -1868,14 +2160,16 @@ function render() {
   }
   $("#deck-count").textContent = String(human.deck.length);
   $("#discard-count").textContent = String(human.discard.length);
-  const unitCount = Object.values(match.units).filter((u) => u.owner === HUMAN_SEAT).length;
+  const enemyDiscard = $("#enemy-discard-count");
+  if (enemyDiscard) enemyDiscard.textContent = String(ai.discard.length);
+  const unitCount = Object.values(match.units).filter((u) => u.owner === mySeat()).length;
   $("#unit-count").textContent = `${unitCount} / ${MAX_UNITS_PER_SEAT}`;
-  $("#relic-count").textContent = `${fieldState(match, HUMAN_SEAT).relicCount} / ${MAX_RELICS_PER_SEAT}`;
+  $("#relic-count").textContent = `${fieldState(match, mySeat()).relicCount} / ${MAX_RELICS_PER_SEAT}`;
 
   const actions = getLegalActions(match);
   const canAct = humanCanAct();
   $("#mulligan-btn").disabled =
-    !canAct || !ui.selectedCard || !actions.canMulligan || match.active !== HUMAN_SEAT;
+    !canAct || !ui.selectedCard || !actions.canMulligan || match.active !== mySeat();
   $("#end-turn-btn").disabled = !canAct;
 
   const entry = selectedCardEntry();
@@ -1904,6 +2198,7 @@ function render() {
   nexus.classList.toggle("ready", canStrike);
 
   renderChip();
+  renderArena(match);
 }
 
 function renderResult(outcome, reason) {
@@ -1952,6 +2247,17 @@ function renderProfileForm() {
   $("#archetype-help").textContent = resolveArchetype(profile.settings.archetype).description;
   $("#settings-motion").checked = profile.settings.reducedMotion === true;
   $("#settings-coords").checked = profile.settings.showCoordinates !== false;
+  const audioSettings = profile.settings.audio ?? {};
+  const setRange = (id, value) => {
+    const node = $(id);
+    if (node) node.value = String(Math.round((value ?? 0) * 100));
+  };
+  setRange("#settings-audio-master", audioSettings.master);
+  setRange("#settings-audio-music", audioSettings.music);
+  setRange("#settings-audio-sfx", audioSettings.sfx);
+  const muteBox = $("#settings-audio-mute");
+  if (muteBox) muteBox.checked = audioSettings.muted === true;
+  renderAudioStatus();
 
   const stats = profile.stats;
   $("#stat-games").textContent = String(stats.games);
@@ -1990,6 +2296,7 @@ function renderAccount() {
 
 function updateSettings(patch) {
   ui.profile = { ...ui.profile, settings: { ...ui.profile.settings, ...patch } };
+  ui.audio?.applySettings(ui.profile.settings.audio);
   renderProfileForm();
   scheduleSave();
   render();
@@ -2002,6 +2309,9 @@ const VIEWS = Object.freeze({
   roster: "#view-roster",
   library: "#view-library",
   profile: "#view-profile",
+  decks: "#view-decks",
+  shop: "#view-shop",
+  lobby: "#view-lobby",
 });
 
 function showView(requested) {
@@ -2019,11 +2329,13 @@ function showView(requested) {
     }
   }
   if (view === "battle") render();
+  else if (view === "decks" || view === "shop" || view === "lobby") ui.systems?.render(view);
   else if (view === "profile") renderProfileForm();
   else if (view === "roster") renderRoster();
   else if (view === "library") renderLibrary();
   else if (view === "menu") renderMenuState();
   else if (view === "guide") markGuideSeen();
+  updateMusicForView();
   if (typeof window !== "undefined" && window.scrollTo) {
     window.scrollTo({ top: 0, behavior: ui.profile?.settings?.reducedMotion ? "auto" : "smooth" });
   }
@@ -2049,6 +2361,45 @@ function bind() {
   $("#guide-back").addEventListener("click", () => showView("menu"));
   $("#roster-menu").addEventListener("click", () => showView("menu"));
   $("#menu-library").addEventListener("click", () => showView("library"));
+  $("#menu-decks")?.addEventListener("click", () => showView("decks"));
+  $("#menu-shop")?.addEventListener("click", () => showView("shop"));
+  $("#menu-lobby")?.addEventListener("click", () => showView("lobby"));
+  $("#menu-practice-deck")?.addEventListener("click", () => {
+    const econ = sanitizeEconomy(ui.profile?.economy);
+    const active = econ.decks.find((d) => d.id === econ.activeDeckId);
+    if (!active) { setMessage("No deck selected. Open Deck Builder to build one, or play Practice for a free prebuilt deck."); return; }
+    const check = validateDeckWithOwnership(active.cardIds, ui.catalog, econ.collection);
+    if (!check.ok) { setMessage(`Active deck "${active.name}" is not legal or not fully owned: ${check.errors.join(" ")}`); return; }
+    newMatch({ humanDeck: active.cardIds });
+  });
+  $("#arena-toggle")?.addEventListener("click", () => {
+    ui.arenaMode = ui.arenaMode === "3d" ? "classic" : "3d";
+    const btn = $("#arena-toggle");
+    if (btn) btn.textContent = ui.arenaMode === "3d" ? "Classic grid" : "3D arena";
+    render();
+  });
+  $("#discard-view")?.addEventListener("click", () => openDiscardViewer(mySeat()));
+  $("#enemy-discard-view")?.addEventListener("click", () => openDiscardViewer(foeSeat()));
+  $("#discard-modal-close")?.addEventListener("click", closeDiscardViewer);
+  $("#discard-modal")?.addEventListener("click", (event) => {
+    if (event.target.dataset.close === "true") closeDiscardViewer();
+  });
+  // Browsers block audible autoplay until a gesture: any click/keypress
+  // retries a blocked track without interrupting gameplay.
+  document.addEventListener("pointerdown", () => ui.audio?.unlock());
+  document.addEventListener("keydown", () => ui.audio?.unlock());
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) ui.audio?.handleHidden();
+    else ui.audio?.handleVisible();
+  });
+  const audioPatch = (patch) => {
+    const current = ui.profile?.settings?.audio ?? {};
+    updateSettings({ audio: { ...current, ...patch } });
+  };
+  $("#settings-audio-mute")?.addEventListener("change", (event) => audioPatch({ muted: event.target.checked }));
+  $("#settings-audio-master")?.addEventListener("input", (event) => audioPatch({ master: Number(event.target.value) / 100 }));
+  $("#settings-audio-music")?.addEventListener("input", (event) => audioPatch({ music: Number(event.target.value) / 100 }));
+  $("#settings-audio-sfx")?.addEventListener("input", (event) => audioPatch({ sfx: Number(event.target.value) / 100 }));
   $("#library-menu").addEventListener("click", () => showView("menu"));
   $("#card-modal-close").addEventListener("click", closeCardViewer);
   $("#card-modal").addEventListener("click", (event) => {
@@ -2324,6 +2675,23 @@ async function boot() {
 
   const initial = await initialiseProfile();
   ui.profile = initial.profile;
+  ui.systems = mountSystems({
+    getCatalog: () => ui.catalog,
+    getProfile: () => ui.profile,
+    saveProfile: (next) => { ui.profile = next; scheduleSave(); },
+    activeDeckId: () => sanitizeEconomy(ui.profile?.economy).activeDeckId,
+    setActiveDeckId: (id) => {
+      ui.profile = { ...ui.profile, economy: { ...sanitizeEconomy(ui.profile?.economy), activeDeckId: id } };
+      scheduleSave();
+    },
+    startPracticeWithDeck: (cardIds) => newMatch({ humanDeck: cardIds }),
+    startOnlineMatch,
+    applyRemoteCommand,
+    isOnline: () => Boolean(ui.online),
+    endOnlineMatch,
+  });
+  ui.systems.seedStarterIfNeeded();
+  initAudio();
   ui.sync = initial.sync;
   renderChip();
   renderProfileForm();

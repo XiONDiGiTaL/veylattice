@@ -162,11 +162,33 @@ draw Action's fan-and-arrow emblem in a metal scene:
 </div>
 
 Practice deals a **fresh seeded 40-card selection from the 65-Vessel pool** on every match — 20
-Vessels (four per element), eight Actions at two copies, four Relics — so the whole roster can reach
-the board before a deck builder exists. The generated deck is always checked against the canonical
-deck rules.
+Vessels (four per element), eight Actions at two copies, four Relics — or, when you select one,
+your saved Deck Builder deck (which must be legal and fully owned). The generated deck is always
+checked against the canonical deck rules. The Deck Builder and Shop are working systems on local
+profiles: build and save decks, buy 300-Shard packs (5 Commons + 1 Rare-or-better), buy Singles
+and dissolve unbound copies. The online lobby is a peer-validated preview over Supabase Realtime —
+it is not server-authoritative, grants no rewards or rank, and two-browser end-to-end verification
+is still outstanding. Decks, collection and Shards persist on this device and do not yet sync
+through the cloud profile row.
 
 ---
+
+## ▸ Soundtrack (system shipped, tracks pending)
+
+The game has a central soundtrack system with no dependencies:
+`src/audio/soundtrack.js` holds the manifest (menu, battle, preparations,
+shop, victory, defeat) and the audio manager (single background element,
+no restarts on re-render, fade on switch, one result sting per match,
+mute and master/music/sound-effect volumes that persist in profile
+settings, honest "blocked"/"unavailable" status instead of fake playback).
+Music follows the real screen — menu, Deck Builder, Shop, battle — and
+the result screen stays silent until you return to the menu; draws play
+neither the victory nor the defeat cue.
+
+**Status:** the six original tracks ship in `music/` (menu, battle,
+planning, shop, victory, defeat — MP3, verified durations 11–174 s) and
+are wired into the manifest, so the game plays them as you navigate.
+No music was generated as a substitute.
 
 ## ▸ Where to play
 
@@ -592,10 +614,10 @@ src/render/          presentation-only model layer
 src/ui/              UI state machines that are worth testing on their own
   tutorial.js          guided-match steps and the pure advance reducer
 src/main.js          HUD controller + presentation layer (events → animation)
-src/cards/           set manifest + three validated card sets (102 cards)
+src/cards/           set manifest + three validated card sets (107 cards)
 index.html           Menu, How to Play, Roster, Battle and Settings views
 styles.css           themed UI, voxel models, board zones, combat keyframes, reduced motion
-tests/               Node test runner, 122 tests, zero dependencies
+tests/               Node test runner, 164 tests, zero dependencies
 supabase/migrations/ profile + account schemas and RPCs
 docs/                rules, research, adaptation matrix, accounts, session log
 ```
@@ -634,7 +656,7 @@ npm test            # node --test "tests/*.test.js"
 | Combat | lethal trades, out-of-range retaliation, blocked line of sight, Nexus gating |
 | Actions & Relics | elemental damage, heal capping, permanent buffs, sweeps, Nexus burn vs armour, wrong-side and missing targets, Relic cap, attack/guard/mend auras, aura timing on existing and future Vessels |
 | Deck rules | canonical five-Action minimum enforced, vessel-only decks rejected, practice deck legal with no exception profile |
-| Content | 102-card pool validates through the set manifest; 60 Vessels split 12 per element; 30 Actions and 12 Relics; every effect kind is used by a shipped card; malformed effects, cross-scope effects, wrong targeting, unknown keywords and pseudo-targeting Relics are rejected |
+| Content | 107-card pool validates through the set manifest; 65 Vessels split 13 per element; 30 Actions and 12 Relics; every effect kind is used by a shipped card; malformed effects, cross-scope effects, wrong targeting, unknown keywords and pseudo-targeting Relics are rejected |
 | Economy & turns | Flux 1→10, zero-Flux restriction, summon limits, draw, fatigue |
 | Determinism | byte-identical rejection, seeded replay, catalog immutability |
 | Deadlines | boundary rejection, committed actions preserved |
