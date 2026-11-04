@@ -1,0 +1,9 @@
+function renderSync() {
+  const node = $("#profile-sync");
+  if (node) {
+    node.textContent = ui.sync.message;
+    node.dataset.state = ui.sync.state;
+  }
+  const chip = $("#profile-chip-sync");
+  if (chip) chip.textContent = ui.sync.message;
+}

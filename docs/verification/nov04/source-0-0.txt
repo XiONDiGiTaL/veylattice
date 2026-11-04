@@ -1,0 +1,28 @@
+function showView(requested) {
+  const view = requested === "battle" && !ui.match ? "menu" : requested;
+  ui.view = view;
+  // Lets the battle screen reclaim header space without changing other views.
+  document.body.dataset.view = view;
+  for (const [name, selector] of Object.entries(VIEWS)) {
+    const node = $(selector);
+    if (node) node.hidden = name !== view;
+    const tab = $(`#tab-${name}`);
+    if (tab) {
+      tab.classList.toggle("active", name === view);
+      tab.setAttribute("aria-selected", String(name === view));
+    }
+  }
+  if (view === "battle") render();
+  else if (view === "decks" || view === "shop" || view === "lobby") ui.systems?.render(view);
+  else if (view === "profile") renderProfileForm();
+  else if (view === "roster") renderRoster();
+  else if (view === "library") renderLibrary();
+  else if (view === "menu") renderMenuState();
+  else if (view === "guide") markGuideSeen();
+  updateMusicForView();
+  if (typeof window !== "undefined" && window.scrollTo) {
+    window.scrollTo({ top: 0, behavior: ui.profile?.settings?.reducedMotion ? "auto" : "smooth" });
+  }
+}
+
+/* ------------------------------ wiring ------------------------------ */

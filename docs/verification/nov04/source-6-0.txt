@@ -1,0 +1,13 @@
+function renderAccount() {
+  if (!ui.profile) return;
+  const status = accountStatus();
+  $("#account-signed-in").hidden = !status.signedIn;
+  $("#account-signed-out").hidden = status.signedIn;
+  $("#account-create").disabled = ui.accountBusy;
+  $("#account-signin").disabled = ui.accountBusy;
+  if (status.signedIn) {
+    const session = readSession();
+    $("#account-id").textContent = status.accountId.slice(0, 8);
+    $("#account-code-display").textContent = session ? formatCode(session.code) : "—";
+  }
+}

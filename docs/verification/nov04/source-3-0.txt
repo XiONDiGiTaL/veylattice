@@ -1,0 +1,20 @@
+function renderMenuState() {
+  const live = Boolean(ui.match) && !isOver(ui.match);
+  const continueButton = $("#menu-continue");
+  if (continueButton) continueButton.hidden = !live;
+  const battleTab = $("#tab-battle");
+  if (battleTab) battleTab.disabled = !ui.match;
+  const context = $("#menu-context");
+  if (!context) return;
+  if (!ui.match) {
+    const econ = sanitizeEconomy(ui.profile?.economy);
+    const active = econ.decks.find((d) => d.id === econ.activeDeckId);
+    context.textContent = active ? `Active deck · ${active.name}` : "";
+  } else if (isOver(ui.match)) {
+    const winner = ui.match.result?.winnerSeat;
+    const outcome = winner === null || winner === undefined ? "draw" : winner === mySeat() ? "victory" : "defeat";
+    context.textContent = `Last match · ${outcome}`;
+  } else {
+    context.textContent = `Match in progress · turn ${ui.match.turn} · ${ui.match.active === mySeat() ? "your move" : "opponent acting"}`;
+  }
+}

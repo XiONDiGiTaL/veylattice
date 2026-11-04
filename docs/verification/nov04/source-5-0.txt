@@ -1,0 +1,10 @@
+function saveProfile() {
+  if (!ui.profile) return;
+  ui.sync = { state: "saving", message: "Saving…" };
+  renderSync();
+  const result = await persistProfile(ui.profile);
+  ui.profile = result.profile;
+  ui.sync = result.sync;
+  renderChip();
+  renderSync();
+}

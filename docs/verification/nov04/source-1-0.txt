@@ -1,0 +1,29 @@
+function renderTimer() {
+  const match = ui.match;
+  const timer = $("#timer");
+  if (!match || match.deadlineAt === null) {
+    timer.textContent = "—";
+    timer.classList.remove("danger");
+    return;
+  }
+  const remaining = Math.max(0, match.deadlineAt - Date.now());
+  const seconds = Math.ceil(remaining / 1000);
+  const mm = Math.floor(seconds / 60);
+  const ss = String(seconds % 60).padStart(2, "0");
+  timer.textContent = `${mm}:${ss}`;
+  timer.classList.toggle("danger", remaining <= 20_000);
+  timer.setAttribute("aria-label", `${seconds} seconds remaining in this turn`);
+}
+
+/* --------------------------- card fields --------------------------- */
+
+/**
+ * One of a seat's eight persistent formation slots (ARENA-R2, 2026-11-04).
+ *
+ * Occupied slots draw a complete approved card face — illustration, name,
+ * cost, element/type and live Attack/Guard — while empty slots draw a
+ * card-shaped plate that names its owner and category. Both keep the 214:300
+ * aspect ratio, so the formation reads as a row of physical cards instead of
+ * badges in a list. Selection, readiness and placement states are unchanged
+ * from the previous functional zones.
+ */
