@@ -1,0 +1,117 @@
+name: November gameplay verification
+on:
+  push:
+    branches: [fix/nov04-gameplay-ui]
+    paths: [.github/workflows/nov04-verification.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nov04-gameplay-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/fix/nov04-gameplay-ui'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nov04-gameplay-ui
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Baseline automated checks
+        id: automated
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/nov04-results
+          npm run check 2>&1 | tee /tmp/nov04-results/automated.log
+      - name: Install isolated browser-test tools
+        id: browser_tools
+        continue-on-error: true
+        run: |
+          npm install --prefix /tmp/nov04-qa --no-package-lock playwright@1.56.1 three@0.160.0
+          /tmp/nov04-qa/node_modules/.bin/playwright install --with-deps chromium
+          mkdir -p /tmp/nov04-www
+          ln -s "$GITHUB_WORKSPACE" /tmp/nov04-www/veylattice
+          python3 -m http.server 8100 --bind 127.0.0.1 --directory /tmp/nov04-www > /tmp/nov04-results/server.log 2>&1 &
+      - name: Local-build browser checks
+        id: browser
+        if: steps.browser_tools.outcome == 'success'
+        continue-on-error: true
+        env:
+          NODE_PATH: /tmp/nov04-qa/node_modules
+          THREE_MODULE: /tmp/nov04-qa/node_modules/three/build/three.module.js
+        run: |
+          node tools/browser-checks/all-tabs.cjs > /tmp/nov04-results/tabs.json
+          node tools/browser-checks/battle-layout.cjs nov04 > /tmp/nov04-results/layout.json
+          node tools/browser-checks/audio-console-pass.cjs > /tmp/nov04-results/match.json
+          node - <<'JS'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('/tmp/nov04-results/match.json', 'utf8'));
+          if (!r.resultTitle || !r.resultReason || r.matchSeconds >= 240) throw new Error('Full-match completion was not established. Inspect match.json; do not claim it passed.');
+          const errors = (r.console || []).filter(e => e.type === 'pageerror');
+          if (errors.length) throw new Error(JSON.stringify(errors));
+          JS
+      - name: Record evidence and focused source excerpts
+        if: always()
+        env:
+          AUTOMATED_OUTCOME: ${{ steps.automated.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+          TOOLS_OUTCOME: ${{ steps.browser_tools.outcome }}
+        shell: python
+        run: |
+          import os, json, re, subprocess
+          from pathlib import Path
+          folder = Path('docs/verification/nov04')
+          folder.mkdir(parents=True, exist_ok=True)
+          base = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          outcomes = {k: os.environ.get(k, 'not run') for k in ['AUTOMATED_OUTCOME', 'BROWSER_OUTCOME', 'TOOLS_OUTCOME']}
+          lines = ['# November fixes: baseline evidence', '', 'Base commit: ' + base, 'Branch: fix/nov04-gameplay-ui', '', '## IMPLEMENTED', 'Verification automation only. No gameplay fixes, deployment, database writes or main merge.', '', '## TESTED', 'Automated outcome: ' + outcomes['AUTOMATED_OUTCOME'], 'Local-build Chromium harness outcome: ' + outcomes['BROWSER_OUTCOME'], 'Browser tool installation outcome: ' + outcomes['TOOLS_OUTCOME'], 'The browser harness serves this checkout locally; it blocks Supabase and substitutes the pinned Three.js module. This is NOT live-site or cloud/account verification.', 'A full-match pass requires inspecting the recorded result, not merely a zero script exit code.', '', '## PLANNED', 'Apply fixes in owner order after diagnosing this evidence. Live browser verification, actual Relic behavior, timer pause, safe pack products, disabled-button reasons and honest cloud scope remain outstanding.', 'No permission to mark a fix DONE is inferred from this report.']
+          for name in ['automated.log', 'tabs.json', 'layout.json', 'match.json']:
+              p = Path('/tmp/nov04-results') / name
+              if p.exists():
+                  text = p.read_text(errors='replace')
+                  if name == 'automated.log': text = '\n'.join(text.splitlines()[-14:])
+                  else:
+                      try:
+                          obj = json.loads(text)
+                          if name == 'match.json': obj = {k: obj.get(k) for k in ['battle','endTurnsClicked','matchSeconds','resultTitle','resultReason','console']}
+                          text = json.dumps(obj, indent=2)
+                      except Exception: text = 'Invalid or incomplete JSON; inspect the Actions artifact.'
+                  if len(text) <= 18000: (folder / name.replace('.log', '.txt')).write_text(text)
+          report = '\n'.join(lines) + '\n'
+          (folder / 'REPORT.md').write_text(report)
+          for name in ['CHANGELOG.md','TODO.md','AI_HANDOFF.md']:
+              p = Path(name)
+              p.write_text(p.read_text() + '\n\n## FIX-NOV04-BASELINE | IN_PROGRESS | 2026-11-04\n' + report)
+          source = Path('src/main.js').read_text()
+          markers = ['function showView(', 'function renderTimer(', 'function renderSync(', 'function renderMenuState(', 'function tick(', 'function saveProfile(', 'function renderAccount(']
+          for i, marker in enumerate(markers):
+              start = source.find(marker)
+              if start < 0: continue
+              end = source.find('\nfunction ', start + len(marker))
+              snippet = source[start:end if end >= 0 else start + 12000]
+              for n in range(0, len(snippet), 10000): (folder / f'source-{i}-{n // 10000}.txt').write_text(snippet[n:n+10000])
+      - name: Preserve screenshots and raw logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nov04-baseline-evidence
+          path: |
+            /tmp/nov04-results/
+            shot-nov04-*.png
+          retention-days: 7
+      - name: Commit diagnostics to feature branch only
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- docs/verification/nov04 AI_HANDOFF.md CHANGELOG.md TODO.md
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m 'Record November baseline tests, browser evidence and source diagnostics'
+          git push origin HEAD:fix/nov04-gameplay-ui
