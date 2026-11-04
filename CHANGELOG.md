@@ -4,6 +4,53 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-11-04 — ARENA-R2: illustrated eight-slot formations and arena reframing
+
+Base: main at `a8962ff` (== `origin/main`, ARENA-R1 already delivered and verified). Baseline `npm run check`: 197 passed, 0 failed. Post-change: **207 passed, 0 failed** (`npm run check` also syntax-checks main/engine/content/ai). `npm run stamp` and `git diff --check` pass.
+
+Added:
+- `src/render/formation-face.js` — one presentation model for a formation slot, rendered two ways. `faceGeometry(frameKey)` derives the name, cost, stat and rules bands from each approved frame's own art aperture in `frame-manifest.json`, so no band is hand-placed and a manifest edit without a code edit fails a test. `faceModel(slot)` produces the normalised text/flags (title, cost, element/type line, live `ATK · GD n/m`, SPENT, GUARD BROKEN, pending frame). `paintFace(ctx, model, {overlay, art})` paints the approved overlay + illustration + text onto a 214x300 canvas for the WebGL field cards; `buildSlotContents()` builds the DOM card face (`buildApprovedCard`) or a labelled empty plate. Relics keep the neutral presentation and a visible `FRAME PENDING` flag — no Vessel frame is borrowed.
+- `tests/formation.test.js` — nine tests: eight slots per seat in two rows of four, occupancy from engine state, live Guard in the face model, Relic never using a Vessel frame, empty-plate labels, band-inside-canvas and band-vs-aperture geometry for every approved frame, and width-clamped text truncation.
+- `formationSlots(match, seat, catalog, { effectText })` in `src/ui/fields.js` plus `FORMATION_ROWS` / `FORMATION_SIZE`. It accepts a lookup function, a Map or the catalog object, because passing the wrong one silently produced null cards.
+
+Changed:
+- `src/render/arena3d.js` — the Vessel/Relic pedestals and floating text labels are gone. Each of the eight slots per seat is a standing card-shaped slab with a painted face (`CARD_WIDTH`/`CARD_HEIGHT` from the approved 214:300 canvas), an empty slot is a card-shaped plate with its owner and category, and rows/table/camera are derived from `FIELD_Z`/`RELIC_Z`/`CARD_TILT`. Tile geometry was narrowed so the 5x5 grid reads as 25 engraved tiles. Field cards are clickable and resolve through the same slot handlers as the DOM rows.
+- Card-face textures are cached per slot content and excluded from the per-render resource sweep (`disposeObjectResources(root, keep)`), so a UI update no longer rebuilds 16 texture uploads; they are disposed with the mount.
+- The 3D Action staging strip was removed: it is a view of the hand, sat behind standing Relics where the arena camera could not see it, and duplicated the hand rail. The hand rail is the staging view; `fields[seat].actions` is still projected for any caller.
+- `src/main.js` — `formationZone()` replaces `vesselZone`/`actionZone`: occupied slots draw a real card face with live stats, empty slots draw a plate, and all the previous selection/readiness/placement classes, titles and handlers are preserved. `arenaViewData` now sends `{card, unit, effectText}` slots. In desktop 3D mode the DOM slot rows are hidden (`data-arena-view="3d"`) because the scene paints the same eight slots; classic-grid mode and phones keep the DOM rows as the accessible/readable surface.
+- `battlefield.css` — formation slot styling at the 214:300 aspect, status/pending chips, labelled empty plates, a wider war table (`1360px`, board `clamp(300px, min(52vw, 62vh), 760px)`) and a four-across mobile rail at the hand's own card scale.
+- `docs/ARENA_SYSTEM.md` — canonical layout updated: eight persistent slots per seat, formation face contract, action staging is the hand rail, camera/slab derivation.
+- `index.html` — arena hint copy now describes the eight slots instead of "card platforms"; asset stamp regenerated.
+
+Fixed during the work:
+- `faceTextureFor` read `model.text.length` on empty slots (which have no text) and threw on the first arena render; the throw aborted the whole field render.
+- The click discriminator was overwritten by the spread of `userData.slot`, so every field-card click fell through to `callbacks.onCell` with undefined coordinates. Field cards now return `{kind:"slot", slotKind, seat, index}`.
+- `formationSlots` returned null cards when handed the catalog object instead of its `byId` Map.
+
+Verified in this session (local static server, headless Chromium): native modules load with no console errors on a fresh load; a Solo Duel renders 16 card slots in the 3D scene at 1500x1300 and at 390x844; a summoned Vessel shows its approved Fire frame, name, cost and live `ATK 3 · GD 2/4`; clicking an empty 3D slot reports that slot through the DOM handler; switching to Classic grid shows two rows of four card faces per seat.
+Screenshots: `screenshots/arena-r2-05-framed.png`, `-07-all-eight.png`, `-09-occupied.png`, `-10-face-painter.png`, `-14-mobile-rows.png`.
+
+### 2026-11-04 — ARENA-R2 (second pass): framing, phone composition and face legibility
+
+Same change set, after reviewing real screenshots at 1440x960 and 390x844. `npm run check`: **207 passed, 0 failed**; `npm run stamp` and `git diff --check` pass.
+
+Fixed:
+- The near Relic row was cut off by the canvas bottom edge. Both camera presets were recomputed against the actual field geometry (`FIELD_Z`/`RELIC_Z` + `CARD_TILT`) instead of eyeballed: the near row's base sat at NDC y ≈ -1.03. Desktop is now `[0, 13.2, 11.0]` → `[0, 0.2, 1.2]`, which keeps all sixteen cards inside the frame with margin.
+- The floating `Discard n` sprite sat on top of the fourth Vessel slot. It was removed (both HUDs already print `DISCARD n` and there is a *View discard* button); the physical stack of discard cards remains, flat on the table beside the row. `textSprite` became dead code and was deleted rather than left behind.
+- The SPENT / GUARD BROKEN badge was drawn at the same baseline as the stat string and overprinted `GD n/m`. It is now a small plated badge in the bottom-right of the art aperture (`paintStatus`), so a status never hides a number.
+- The stat band clipped `ATK 4 · GD 2/3` to `ATK 4 · G…`; the type/stats split moved from 62/36 to 52/45.
+- The Relic element rune was drawn at `(24, 196)`, on top of the card name. It moved to the art's top-left corner, where the approved frames put their element mark.
+- `buildCard()` derived its seat tint from a caller-passed `sign`; removing that local surfaced a `ReferenceError` that aborted the entire field render (found in the browser, not by tests). The sign is now derived from `slot.seat` inside `buildCard`, so a slot cannot be painted with the other seat's tint.
+
+Changed:
+- In 3D mode the arena column takes the free width (`minmax(148px, 232px) minmax(0, 1fr) minmax(196px, 268px)`, `min-width: 941px`) instead of being pinned to the old 595px board column, which had drawn the cards ~50px wide. The canvas height is now also capped by the viewport (`min(width * 1.02, innerHeight * 0.78, 860)`) so a wide column no longer grows the page without growing the cards.
+- Phones get a grid-framed camera (`[0, 9.2, 5.6] → [0, 0.1, 0.4]`) and the scene stops drawing its formation rows entirely: at 314px wide the canvas shows the 5x5 grid at ~55px per tile, and the two DOM rails (already re-enabled below 640px) carry the eight slots at a readable card width. This is the "no miniature" rule made structural rather than a CSS nicety.
+
+Verified in the browser this pass: 1440x960 desktop shows all eight slots of both seats with no clipping and no discard plaque; a summoned Mireglass Stalker renders its Water frame with art, name, cost 2, `ATK 4 · GD 2/3` and a SPENT badge, and its voxel model stands on the grid; 390x844 shows a large grid plus readable DOM formation rails; the face painter was rendered at 2x for both a Vessel and an occupied Relic (neutral plate, `RELIC · FRAME PENDING`).
+Screenshots: `arena-r2-16-desktop.png`, `-19-face-painter.png`, `-20-desktop-occupied.png`, `-22-mobile-grid.png`, `-24-desktop-top.png`.
+
+Limitations (updated, honest): no screenshot of an occupied **Relic** slot inside the 3D scene (the neutral painter was verified in isolation at 2x); no measured GPU/frame-time comparison, so "fewer texture rebuilds" is a code property, not a benchmark result; card-face text is painted once per content key, so a live Guard change repaints rather than animating the number; one 404 (music asset) appears in the local console on a fresh load and is not caused by this change; targeting/confirmation and the animation layer are **not** in this change; online play was not exercised.
+
 ### 2026-11-04 — ARENA-R1: renderer foundation (sandbox-tested patch)
 
 Base: main at 1ed84f7d3156a4bbd8d9a61d9ac61bdc04034400. Baseline npm run check: 193 passed, 0 failed. Post-change npm run check: 197 passed, 0 failed. npm run stamp, node --check src/render/arena3d.js, and git diff --check passed in the Vercel sandbox.

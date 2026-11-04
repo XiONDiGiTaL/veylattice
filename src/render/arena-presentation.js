@@ -29,14 +29,24 @@ export function tileMarkers(tiles = {}) {
   return result;
 }
 
-/** Dispose shared geometry/material/texture objects at most once per traversal. */
-export function disposeObjectResources(root) {
+/**
+ * Dispose shared geometry/material/texture objects at most once per traversal.
+ *
+ * `keep` (optional Set) holds resources owned by the caller rather than by the
+ * swept group — the arena's cached card-face textures survive a render pass.
+ * Materials are always swept; only textures can be retained.
+ */
+export function disposeObjectResources(root, keep = null) {
   const resources = new Set();
   root.traverse((node) => {
     if (node.geometry) resources.add(node.geometry);
     for (const material of [node.material].flat().filter(Boolean)) {
       resources.add(material);
-      for (const value of Object.values(material)) if (value?.isTexture) resources.add(value);
+      for (const value of Object.values(material)) {
+        if (!value?.isTexture) continue;
+        if (keep?.has?.(value)) continue;
+        resources.add(value);
+      }
     }
   });
   for (const resource of resources) resource.dispose?.();

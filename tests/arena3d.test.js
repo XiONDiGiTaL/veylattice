@@ -2,7 +2,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { BOARD_SIZE } from "../src/game/constants.js";
-import { cameraForWidth, cellToWorld, fieldLayout, worldToCell } from "../src/render/arena3d.js";
+import {
+  CARD_ASPECT,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  cameraForWidth,
+  cardAnchor,
+  cellToWorld,
+  fieldLayout,
+  worldToCell,
+} from "../src/render/arena3d.js";
+
+test("formation cards keep the approved 214:300 shape and stand at the table's edge", () => {
+  assert.ok(Math.abs(CARD_WIDTH / CARD_HEIGHT - 214 / 300) < 1e-9, "card slots are never stretched");
+  assert.ok(Math.abs(CARD_ASPECT - 300 / 214) < 1e-9);
+  const anchor = cardAnchor({ x: 0, z: 4 });
+  assert.ok(anchor.y > 0.3, "the card body clears the table surface");
+  assert.ok(anchor.z > 4, "the leaning card's foot moves toward the viewer (seat 0)");
+});
 
 test("tile <-> world mapping is bijective across the 5x5 grid", () => {
   for (let y = 0; y < BOARD_SIZE; y += 1) {
@@ -32,13 +49,21 @@ test("opponent and player fields are on opposite sides and never overlap the boa
   assert.deepEqual(foe.vessels.map((s) => s.x), mine.vessels.map((s) => s.x), "both fields share slot columns");
 });
 
-test("camera: desktop is elevated three-quarter, narrow screens go more top-down", () => {
+test("camera: desktop frames both formations, narrow screens frame the grid", () => {
   const desktop = cameraForWidth(1200);
   const mobile = cameraForWidth(360);
   assert.equal(desktop.mobile, false);
   assert.equal(mobile.mobile, true);
-  assert.ok(mobile.position[1] > desktop.position[1], "mobile camera is higher");
-  assert.ok(mobile.position[2] < desktop.position[2], "mobile camera is closer to top-down");
+  // Desktop holds all eight slots of both seats in one frame, so its eye line
+  // is raised and pulled back. Phones hand the eight slots to the DOM rails
+  // and come in close on the 5x5 grid instead, which is the difference these
+  // two assertions lock in: a lower, nearer eye, still looking down.
+  assert.ok(mobile.position[1] < desktop.position[1], "mobile eye is lower");
+  assert.ok(mobile.position[2] < desktop.position[2], "mobile eye is nearer the board");
+  for (const preset of [desktop, mobile]) {
+    assert.ok(preset.position[1] > preset.lookAt[1], "both presets look down at the table");
+    assert.ok(preset.position[2] > preset.lookAt[2], "both sit on seat 0's side of the board");
+  }
 });
 
 test("camera preset at yaw 0 sits on the player's (seat 0, +z) side, not rotated onto the x axis", async () => {

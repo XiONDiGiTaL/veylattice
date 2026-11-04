@@ -24,6 +24,16 @@ test("tile markers ignore out-of-bounds or malformed display coordinates", () =>
   assert.deepEqual(tileMarkers({ legalMoves: [[-1, 0], [5, 0], [0, 5], [0.5, 2], null], selected: { x: 99, y: 99 } }), []);
 });
 
+test("resource teardown keeps caller-owned textures such as cached card faces", () => {
+  const calls = [];
+  const kept = { isTexture: true, dispose: () => calls.push("kept") };
+  const owned = { isTexture: true, dispose: () => calls.push("owned") };
+  const material = { map: kept, emissiveMap: owned, dispose: () => calls.push("material") };
+  const root = { traverse: (fn) => [{ material }].forEach(fn) };
+  disposeObjectResources(root, new Set([kept]));
+  assert.deepEqual(calls.sort(), ["material", "owned"], "a kept texture survives the sweep");
+});
+
 test("resource teardown handles shared resources and material arrays once", () => {
   const calls = [];
   const geometry = { dispose: () => calls.push("geometry") };

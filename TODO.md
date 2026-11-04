@@ -289,6 +289,34 @@ Depends on M1-005. Acceptance: arrow-key grid traversal, focus return after comm
 - ART-006e | TODO | Author weapon silhouettes for the humans at the detail level of the construct and beast rigs.
 - ART-006f | TODO | Separate the remaining robe-wearer cluster (Furnace Abbot, Null-Choir Cantor, Dust Sage, Emberwright Adept) with authored geometry.
 
-## ARENA-R1 | IN_PROGRESS | P0 | Renderer foundation
-Dependencies: existing arena and canonical models. Paths: src/render/arena*, tests/arena-presentation.test.js.
-Sandbox implementation and automated checks passed: material differentiation, shape cues and resource disposal; 197 tests passed, 0 failures. Browser acceptance remains pending; full redesign is not DONE. Next: inspect desktop/mobile, review/export or commit the patch, then ARENA-R2 illustrated eight-slot formations and confirmation targeting.
+## ARENA-R1 | DONE | P0 | Renderer foundation
+Dependencies: existing arena and canonical models. Paths: src/render/arena-presentation.js, src/render/arena3d.js, tests/arena-presentation.test.js.
+Acceptance met: material-aware MeshStandardMaterial from part metadata, shape-based tile cues, softer terrain tint, deduplicated teardown including the static scene. Evidence: commit `a8962ff` on `main` (== `origin/main`); 207/207 tests on 2026-11-04; arena inspected running at 1500x1300 and 390x844.
+
+## ARENA-R2 | IN_PROGRESS | P0 | Illustrated eight-slot formations and arena reframing
+Depends on ARENA-R1. Paths: src/render/formation-face.js (new), src/ui/fields.js, src/render/arena3d.js, src/render/arena-presentation.js, src/main.js, battlefield.css, tests/formation.test.js (new), docs/ARENA_SYSTEM.md. The parent stays IN_PROGRESS until ARENA-R2d and ARENA-R2e land: a formation layout is not the full redesign.
+
+#### ARENA-R2a | DONE | Exactly eight persistent slots per seat
+Acceptance met: `formationSlots()` projects 4 Vessel + 4 Relic slots (two rows of four) per seat from match state, in draw order, with stable keys; Actions never occupy a slot; a missing match still projects eight slots. The DOM rows and the 3D scene consume that one projection.
+Evidence: tests `each seat projects exactly eight persistent slots, two rows of four`, `a placed Vessel fills one Vessel row slot…`, `a set Relic fills the Relic row…`; 207/207 pass. Screenshot: screenshots/arena-r2-07-all-eight.png.
+
+#### ARENA-R2b | DONE | Complete, correctly-proportioned card faces in slots
+Acceptance met: an occupied slot draws the approved frame overlay + illustration + name + cost + element/type + live `ATK · GD n/m` (and SPENT / GUARD BROKEN); an empty slot draws a plate with the same 214:300 aspect, the owner (YOUR/ENEMY FORMATION) and category (VESSEL SLOT n / RELIC SOCKET n); text bands are derived from each frame's art aperture; Relics use the neutral presentation with a visible FRAME PENDING flag and never a Vessel frame.
+Evidence: tests `approved frame geometry stays inside the 214x300 canvas…`, `a Vessel face shows canonical identity and live Guard…`, `a Relic keeps the neutral pending-frame presentation…`; browser paint check (screenshots/arena-r2-10-face-painter.png, -09-occupied.png).
+Remaining: the Relic face inside the 3D scene was not screenshotted; only the isolated painter was.
+Fixed in the second pass: the SPENT badge no longer overprints `GD n/m` (it is plated over the art's bottom-right corner), the stat band no longer truncates to `ATK 4 · G…` (52/45 split), and the Relic rune moved off the card name to the art's top-left. Evidence: screenshots/arena-r2-19-face-painter.png (Vessel + occupied Relic at 2x).
+
+#### ARENA-R2c | DONE | Arena reframing and slot interaction
+Acceptance met: rows placed from `FIELD_Z`/`RELIC_Z`, table slab sized from those constants, camera reframed so all four rows fit, grid tiles engraved into 25 distinct tiles, 3D field cards clickable and routed through the same handlers as the DOM slots, cached face textures excluded from the per-pass sweep and disposed with the mount.
+Evidence: screenshots/arena-r2-05-framed.png, -07-all-eight.png, -09-occupied.png, -14-mobile-rows.png; a 3D slot click reported `Front-row zone 2 is open…` through `onVesselSlotClick`; clean console on a fresh load.
+Second pass (2026-11-04): both camera presets were recomputed from the field geometry to stop the near Relic row clipping; the `Discard n` sprite that covered slot 4 was removed; 3D mode takes the free column width and the canvas is viewport-capped, so the formation cards are ~65px wide instead of ~50px; phones get a grid-framed camera and the scene stops drawing its formation rows, leaving the eight slots to the DOM rails at a readable card width. Evidence: screenshots/arena-r2-16-desktop.png, -20-desktop-occupied.png, -22-mobile-grid.png, -24-desktop-top.png. `node --check`, `npm run stamp` and `git diff --check` pass; 207/207 tests pass.
+
+#### ARENA-R2d | TODO | Card-driven targeting and confirmation controller
+Dependencies: ARENA-R2a/R2c. Paths: src/main.js, new src/ui/targeting.js, src/render/arena3d.js, src/ui/fields.js, src/game/engine.js (read-only).
+Acceptance: a selected hand card highlights only engine-legal summon tiles; selecting a tile previews placement and requires confirm; a targeted Action highlights only engine target ids (friendly/enemy contracts preserved) and previews the effect for supported kinds; confirm revalidates against the current state version; cancel/Escape/turn change/match end/stale state clear the targeting state; untargeted Actions never enter tile/unit targeting; no invented mechanics (`damageAll` hits every enemy Vessel, `revive` returns the highest-cost defeated Vessel to hand — neither is a placed radius or a summon).
+Current partial state: legal summon tiles are already highlighted from `canSummon` and invalid tiles are simply not offered, but there is no preview/confirm step and no explicit rejection feedback.
+
+#### ARENA-R2e | TODO | Event-driven animation layer
+Dependencies: ARENA-R2c. Paths: src/render/arena3d.js, src/render/models.js, src/render/vessels/.
+Acceptance: idle/summon/move/melee/ranged/cast/hit/guard-break/stun/death/victory driven by accepted engine events plus a pre-command snapshot, using existing group/pivot metadata so rigs differ; damage/heal/Guard numbers reflect the actual event; reduced motion honoured from both setting and OS preference; stable scene objects retained across UI updates; resources disposed.
+Current state: a single shared bob plus a spawn-free rebuild of every Vessel group on each render. No event-driven states yet.

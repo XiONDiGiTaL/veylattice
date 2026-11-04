@@ -21,12 +21,31 @@
 
 import { BOARD_SIZE } from "../game/constants.js";
 import { materialSettings, tileMarkers, disposeObjectResources } from "./arena-presentation.js";
+import { FRAME_CANVAS } from "./approved-frame.js";
+import { faceModel, loadArt, loadOverlay, paintFace } from "./formation-face.js";
 import { modelFor } from "./models.js";
 import { arenaMap, terrainAt } from "./terrain.js";
 
 export const TILE = 1.15;
-export const FIELD_Z = 4.35;
-export const ACTION_STRIP_Z = 5.55;
+/**
+ * Formation card geometry (ARENA-R2, 2026-11-04).
+ *
+ * Cards are the approved 214x300 frame canvas scaled into world units, so the
+ * 3D slot and the DOM slot are the same shape and neither is stretched. The
+ * rows are wider than the 5x5 grid on purpose: a substantial card reads at a
+ * glance, and a 5x5 grid squeezed to card width is exactly the miniaturised
+ * dashboard this composition replaces.
+ */
+export const CARD_WIDTH = 1.46;
+export const CARD_ASPECT = FRAME_CANVAS.height / FRAME_CANVAS.width;
+export const CARD_HEIGHT = CARD_WIDTH * CARD_ASPECT;
+/** Lean of a standing card away from vertical; the face turns up to the camera. */
+export const CARD_TILT = 0.44;
+export const FIELD_Z = 3.5;
+export const RELIC_Z = 6.3;
+export const ACTION_STRIP_Z = 7.0;
+const CARD_COLUMNS = Object.freeze([-2.4, -0.8, 0.8, 2.4]);
+const FACE_SCALE = 1.5;
 
 const TERRAIN_COLORS = Object.freeze({
   grass: "#4a7a3a",
@@ -52,26 +71,53 @@ export function worldToCell(worldX, worldZ) {
   return { x, y };
 }
 
-/** Slot centres for one seat's card field. Seat 1 is the far side. */
+/**
+ * Slot centres for one seat's card field. Seat 1 is the far side.
+ *
+ * Row order matches `formationSlots` in src/ui/fields.js: the Vessel row sits
+ * against the grid and the Relic row behind it, so a formation reads from the
+ * contested centre outwards. The action strip is a view of the hand, not a
+ * third formation row, and sits past the Relic row.
+ */
 export function fieldLayout(seat) {
   const sign = seat === 1 ? -1 : 1;
-  const vesselZ = sign * (FIELD_Z - 0.45);
-  const relicZ = sign * (FIELD_Z + 0.45);
-  const actionZ = sign * ACTION_STRIP_Z;
-  const slots = (z) => [-2.4, -0.8, 0.8, 2.4].map((x) => ({ x, z }));
+  const row = (z) => CARD_COLUMNS.map((x) => ({ x, z }));
   return {
-    vessels: slots(vesselZ),
-    relics: slots(relicZ),
-    actions: slots(actionZ),
-    discard: { x: 3.7, z: sign * FIELD_Z },
-    platform: { z: sign * FIELD_Z },
+    vessels: row(sign * FIELD_Z),
+    relics: row(sign * RELIC_Z),
+    actions: row(sign * ACTION_STRIP_Z),
+    discard: { x: 3.95, z: sign * FIELD_Z },
+    platform: { z: sign * ((FIELD_Z + RELIC_Z) / 2) },
   };
 }
 
+/** World centre of a standing card slot, with its bottom edge on the table. */
+export function cardAnchor(slot) {
+  const lift = (CARD_HEIGHT / 2) * Math.cos(CARD_TILT);
+  const push = (CARD_HEIGHT / 2) * Math.sin(CARD_TILT);
+  return { x: slot.x, y: 0.3 + lift, z: slot.z + push };
+}
+
+/** Camera preset: elevated three-quarter on desktop, more top-down on narrow screens. */
+/**
+ * Camera preset. The elevated eye line is deliberate: with two rows of
+ * standing cards at each end, a low camera lets the near row hide the far row.
+ * Looking down over the formation keeps all eight slots of both seats legible
+ * while the card faces stay turned up toward the viewer.
+ */
 /** Camera preset: elevated three-quarter on desktop, more top-down on narrow screens. */
 export function cameraForWidth(width) {
-  if (width < 700) return { position: [0, 13.5, 5.5], lookAt: [0, 0, 0.4], mobile: true };
-  return { position: [0, 8.5, 10.5], lookAt: [0, 0, 0.4], mobile: false };
+  // Both presets are solved against the eight-slot field, not eyeballed: the
+  // near Relic row stands at z = RELIC_Z with its base on the table, so at a
+  // closer eye line its bottom edge falls past NDC y = -1 and the row is cut
+  // off by the canvas. These values keep every card of both seats inside the
+  // frame with a margin (checked in-browser at 1360x900 and 390x844).
+  // Phones frame the grid alone, large and readable. The eight formation cards
+  // are carried by the DOM rails at a readable card width (battlefield.css),
+  // because a 390px canvas can only show an eight-card field as a miniature —
+  // which is the thing this composition is meant to stop doing.
+  if (width < 700) return { position: [0, 9.2, 5.6], lookAt: [0, 0.1, 0.4], mobile: true };
+  return { position: [0, 13.2, 11.0], lookAt: [0, 0.2, 1.2], mobile: false };
 }
 
 /**
@@ -102,55 +148,6 @@ function canvasTexture(draw, width = 256, height = 128) {
   draw(canvas.getContext("2d"), width, height);
   return canvas;
 }
-
-function textSprite(THREE, text, { fg = "#ffffff", bg = "rgba(10,14,20,0.82)", size = 28 } = {}) {
-  const canvas = canvasTexture((ctx, w, h) => {
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = fg;
-    ctx.font = `600 ${size}px Georgia, serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const label = String(text).length > 26 ? `${String(text).slice(0, 25)}…` : String(text);
-    ctx.fillText(label, w / 2, h / 2);
-  });
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(1.35, 0.68, 1);
-  return sprite;
-}
-
-function cardPlaneTexture(THREE, { name, cost, color, back = false }) {
-  const canvas = canvasTexture((ctx, w, h) => {
-    if (back) {
-      ctx.fillStyle = "#1a2233";
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "#8fa8c8";
-      ctx.lineWidth = 6;
-      ctx.strokeRect(10, 10, w - 20, h - 20);
-      ctx.fillStyle = "#8fa8c8";
-      ctx.font = "600 34px Georgia, serif";
-      ctx.textAlign = "center";
-      ctx.fillText("VEYLATTICE", w / 2, h / 2);
-      return;
-    }
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#f5eeda";
-    ctx.fillRect(10, 10, w - 20, h - 20);
-    ctx.fillStyle = "#16202c";
-    ctx.font = "700 26px Georgia, serif";
-    ctx.textAlign = "center";
-    const label = String(name).length > 18 ? `${String(name).slice(0, 17)}…` : String(name);
-    ctx.fillText(label, w / 2, h / 2 - 8);
-    ctx.font = "600 24px Georgia, serif";
-    ctx.fillText(`${cost} Flux`, w / 2, h / 2 + 28);
-  }, 220, 300);
-  return new THREE.CanvasTexture(canvas);
-}
-
-const ELEMENT_HEX = Object.freeze({ wood: "#4f8a4a", fire: "#b8462a", earth: "#8a6a43", metal: "#7d8aa3", water: "#2f7fa8" });
 
 function buildVoxelGroup(THREE, model, scale = 0.16) {
   const group = new THREE.Group();
@@ -207,8 +204,12 @@ export async function mountArena(container, callbacks = {}) {
   scene.add(ground);
 
   // Static table: base slab, corner posts, trees, shrine crystal.
+  // The table is sized from the formation constants, not a magic number, so
+  // the slab always ends just past the last card row.
+  const tableWidth = CARD_COLUMNS[3] * 2 + CARD_WIDTH + 2.4;
+  const tableDepth = (RELIC_Z + (CARD_HEIGHT / 2) * Math.sin(CARD_TILT)) * 2 + 1.2;
   const table = new THREE.Mesh(
-    new THREE.BoxGeometry(BOARD_SIZE * TILE + 2.4, 0.4, BOARD_SIZE * TILE + 11.5),
+    new THREE.BoxGeometry(tableWidth, 0.4, tableDepth),
     new THREE.MeshLambertMaterial({ color: "#2a2118" }),
   );
   table.position.y = -0.22;
@@ -243,8 +244,10 @@ export async function mountArena(container, callbacks = {}) {
       const kind = terrainAt(x, y).id;
       const pos = cellToWorld(x, y);
       const lift = { grass: 0.06, moss: 0.11, stone: 0.16, sand: 0.03, water: 0, crystal: 0.22 }[kind] ?? 0.06;
+      // Gaps between tiles show the dark table beneath, so the 5x5 grid reads
+      // as 25 distinct tiles from the arena camera instead of coloured bands.
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(TILE - 0.08, 0.28 + lift, TILE - 0.08),
+        new THREE.BoxGeometry(TILE - 0.18, 0.28 + lift, TILE - 0.18),
         new THREE.MeshLambertMaterial({ color: TERRAIN_COLORS[kind] ?? "#4a7a3a" }),
       );
       mesh.position.set(pos.x, (0.28 + lift) / 2 - 0.02, pos.z);
@@ -259,6 +262,82 @@ export async function mountArena(container, callbacks = {}) {
   const dynamic = new THREE.Group();
   scene.add(dynamic);
   let vesselAnims = [];
+  /**
+   * Card-face textures outlive a render pass: every UI update rebuilds the
+   * dynamic group, but a face only repaints when its content or an asset
+   * changes. They are excluded from the per-pass resource sweep (they are
+   * owned by this mount, not by the group) and disposed on teardown.
+   */
+  const faceTextures = new Map();
+  const faceKeep = new Set();
+
+  function faceTextureFor(slot, sign) {
+    const model = faceModel(slot);
+    const key = [
+      model.key, model.empty ? "e" : "f", model.frameKey ?? "-",
+      model.title, model.cost, model.stats, model.status,
+      model.selected ? "s" : "", model.pendingFrame ? "p" : "",
+      sign, (model.text ?? "").length,
+    ].join("|");
+    const cached = faceTextures.get(key);
+    if (cached) return cached.texture;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(model.geometry.width * FACE_SCALE);
+    canvas.height = Math.round(model.geometry.height * FACE_SCALE);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(FACE_SCALE, FACE_SCALE);
+    // Paint immediately (frame colour, text, empty plate), then repaint once
+    // the approved overlay and illustration have decoded.
+    paintFace(ctx, model, {});
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy?.() ?? 1);
+    const entry = { texture, canvas, ctx, painted: false };
+    faceTextures.set(key, entry);
+    faceKeep.add(texture);
+
+    Promise.all([loadOverlay(model.frameKey, "./"), model.card ? loadArt(model.card) : Promise.resolve(null)])
+      .then(([overlay, art]) => {
+        if (disposed) return;
+        paintFace(ctx, model, { overlay, art });
+        entry.painted = true;
+        texture.needsUpdate = true;
+        markDirty();
+      })
+      .catch(() => {});
+    return texture;
+  }
+
+  /** One standing card face: a thin slab body plus the painted front. */
+  function buildCard(slot, slotPosition, { width = CARD_WIDTH, height = CARD_HEIGHT } = {}) {
+    // Derived from the slot, not passed in: the caller no longer needs a sign
+    // local, and a slot can never be painted with the other seat's tint.
+    const sign = slot.seat === 1 ? -1 : 1;
+    const anchor = cardAnchor(slotPosition);
+    const group = new THREE.Group();
+    group.position.set(anchor.x, anchor.y, anchor.z);
+    group.rotation.x = -CARD_TILT;
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(width, height, 0.05),
+      new THREE.MeshLambertMaterial({ color: slot.occupied ? "#1a2233" : "#0c1320" }),
+    );
+    body.castShadow = true;
+    body.receiveShadow = true;
+    group.add(body);
+    const face = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshBasicMaterial({ map: faceTextureFor(slot, sign) }),
+    );
+    face.position.z = 0.028;
+    group.add(face);
+    group.traverse((node) => {
+      node.userData.slot = { seat: slot.seat, kind: slot.kind, index: slot.index };
+      if (slot.unit?.id) node.userData.unitId = slot.unit.id;
+    });
+    dynamic.add(group);
+    return group;
+  }
   let yaw = 0;
   let mode = cameraForWidth(container.clientWidth || 900);
   let raf = 0;
@@ -292,7 +371,15 @@ export async function mountArena(container, callbacks = {}) {
 
   function resize() {
     const width = container.clientWidth || 900;
-    const height = Math.max(320, Math.min(560, Math.round(width * 0.62)));
+    // Taller viewport than the pedestal era: the composition now has to show a
+    // 5x5 grid plus two card rows at each end without cropping a formation.
+    // Near-square: a 5x5 grid plus four card rows is a deep scene, and a wide
+    // letterbox viewport can only show it by shrinking the cards.
+    // Capped by the viewport as well as the width: the formation cards are a
+    // fixed fraction of the canvas height, so an uncapped square canvas on a
+    // wide desktop column grew the page without growing the cards on screen.
+    const viewportCap = Math.round((window.innerHeight || 900) * 0.78);
+    const height = Math.max(400, Math.min(860, Math.round(width * 1.02), viewportCap));
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -313,6 +400,14 @@ export async function mountArena(container, callbacks = {}) {
     for (const hit of hits) {
       let node = hit.object;
       while (node) {
+        // A formation card is a card first: clicking it selects the slot (and
+        // the unit through it), rather than resolving to the tile behind it.
+        // `kind` stays "slot" (the click target) and the card row travels as
+        // `slotKind`, so the caller never confuses the two.
+        if (node.userData?.slot) {
+          const slot = node.userData.slot;
+          return { kind: "slot", slotKind: slot.kind, seat: slot.seat, index: slot.index, unitId: node.userData.unitId ?? null };
+        }
         if (node.userData?.unitId) return { kind: "unit", unitId: node.userData.unitId };
         if (node.userData?.cell) return { kind: "cell", ...node.userData.cell };
         node = node.parent;
@@ -330,7 +425,8 @@ export async function mountArena(container, callbacks = {}) {
     if (moved > 6) return; // a drag orbits (see pointermove); only a tap selects
     const hit = pick(event);
     if (!hit) return;
-    if (hit.kind === "unit") callbacks.onUnit?.(hit.unitId);
+    if (hit.kind === "slot") callbacks.onSlot?.(hit);
+    else if (hit.kind === "unit") callbacks.onUnit?.(hit.unitId);
     else callbacks.onCell?.(hit.x, hit.y);
   });
   // Drag horizontally to orbit a little; click (no drag) selects.
@@ -346,7 +442,7 @@ export async function mountArena(container, callbacks = {}) {
   renderer.domElement.addEventListener("pointerup", () => { dragX = null; });
 
   function clearDynamic() {
-    disposeObjectResources(dynamic);
+    disposeObjectResources(dynamic, faceKeep);
     dynamic.clear();
     vesselAnims = [];
   }
@@ -423,63 +519,59 @@ export async function mountArena(container, callbacks = {}) {
       }
     }
 
-    for (const seat of [0, 1]) {
+    // On phones the formation rows are the DOM rails, so the scene stays the
+    // tactical grid rather than shrinking eight cards into a postage stamp.
+    for (const seat of mode?.mobile ? [] : [0, 1]) {
       const field = view.fields?.[seat];
       if (!field) continue;
       const layoutForSeat = fieldLayout(seat);
-      const sign = seat === 1 ? -1 : 1;
+
+      // One plinth under both formation rows. It reads as a carved table, not
+      // a panel in a dashboard, and frames the eight slots of that seat.
       const platform = new THREE.Mesh(
-        new THREE.BoxGeometry(7.4, 0.3, 2.4),
-        new THREE.MeshLambertMaterial({ color: seat === 0 ? "#243447" : "#472426" }),
+        new THREE.BoxGeometry(CARD_COLUMNS[3] * 2 + CARD_WIDTH + 0.9, 0.26, RELIC_Z - FIELD_Z + CARD_HEIGHT * 0.7 + 1.1),
+        new THREE.MeshLambertMaterial({ color: seat === 0 ? "#243447" : "#40222a" }),
       );
-      platform.position.set(0, 0.13, layoutForSeat.platform.z);
+      platform.position.set(0, 0.12, layoutForSeat.platform.z);
       platform.receiveShadow = true;
       dynamic.add(platform);
-      field.vessels?.forEach((def, i) => {
-        const slot = layoutForSeat.vessels[i];
-        if (!slot) return;
-        const pedestal = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.42, 0.5, 0.22, 20),
-          new THREE.MeshLambertMaterial({ color: def ? ELEMENT_HEX[def.element] ?? "#888888" : "#3a4356" }),
-        );
-        pedestal.position.set(slot.x, 0.4, slot.z);
-        pedestal.castShadow = true;
-        dynamic.add(pedestal);
-        const label = textSprite(THREE, def ? def.name : `Vessel ${i + 1} · empty`, { size: 24 });
-        label.position.set(slot.x, 1.15, slot.z);
-        dynamic.add(label);
-      });
-      field.relics?.forEach((def, i) => {
-        const slot = layoutForSeat.relics[i];
-        if (!slot) return;
-        const socket = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.34, 0.34, 0.12, 20),
-          new THREE.MeshLambertMaterial({ color: def ? "#c9a86f" : "#2c3547" }),
-        );
-        socket.position.set(slot.x, 0.36, slot.z);
-        dynamic.add(socket);
-        const label = textSprite(THREE, def ? `◆ ${def.name}` : `Relic ${i + 1} · empty`, { size: 22 });
-        label.position.set(slot.x, 0.95, slot.z);
-        dynamic.add(label);
-      });
-      field.actions?.forEach((def, i) => {
-        const slot = layoutForSeat.actions[i];
-        if (!slot) return;
-        const texture = cardPlaneTexture(THREE, def ? { name: def.name, cost: def.cost, color: ELEMENT_HEX[def.element] ?? "#888888" } : { back: true });
-        const plane = new THREE.Mesh(
-          new THREE.PlaneGeometry(0.52, 0.72),
-          new THREE.MeshLambertMaterial({ map: texture }),
-        );
-        plane.rotation.x = -Math.PI / 2;
-        plane.rotation.z = sign < 0 ? Math.PI : 0;
-        plane.position.set(slot.x, 0.31, slot.z);
-        dynamic.add(plane);
-      });
-      // Discard pile: stacked card boxes + count label, owned by engine state.
+
+      // Eight persistent slots per seat: four Vessels against the grid, four
+      // Relics behind. An empty slot is still a card-shaped space with its
+      // ownership and category, never a pedestal or a floating label.
+      const rows = [
+        { kind: "vessel", entries: field.vessels ?? [], positions: layoutForSeat.vessels },
+        { kind: "relic", entries: field.relics ?? [], positions: layoutForSeat.relics },
+      ];
+      for (const row of rows) {
+        row.positions.forEach((position, index) => {
+          const entry = row.entries[index] ?? null;
+          const card = entry?.card ?? null;
+          const unit = row.kind === "vessel" ? entry?.unit ?? null : null;
+          buildCard(
+            {
+              key: `seat${seat}:${row.kind}:${index}`,
+              seat, kind: row.kind, index,
+              card, unit, occupied: Boolean(card || unit),
+              effectText: entry?.effectText ?? "",
+            },
+            position,
+          );
+        });
+      }
+
+      // Action staging is NOT drawn as a third row: it is a view of the hand,
+      // which the hand rail already shows, and a row behind standing Relics is
+      // invisible from the arena camera (it would only add depth and clutter).
+      // The eight persistent slots stay the only formation rows.
+      // Discard pile: stacked card boxes on the table, owned by engine state.
+      // No floating label here: both HUDs already print DISCARD n and the
+      // plaque sat over the last Vessel slot. A label that covers a card face
+      // is worse than no label.
       const stackCount = Math.min(5, field.discardCount ?? 0);
       for (let i = 0; i < stackCount; i += 1) {
         const card = new THREE.Mesh(
-          new THREE.BoxGeometry(0.56, 0.03, 0.78),
+          new THREE.BoxGeometry(0.5, 0.03, 0.7),
           new THREE.MeshLambertMaterial({ color: i % 2 ? "#1a2233" : "#243447" }),
         );
         card.position.set(layoutForSeat.discard.x, 0.32 + i * 0.035, layoutForSeat.discard.z);
@@ -487,9 +579,6 @@ export async function mountArena(container, callbacks = {}) {
         card.castShadow = true;
         dynamic.add(card);
       }
-      const label = textSprite(THREE, `Discard ${field.discardCount ?? 0}${field.discardTop ? ` · ${field.discardTop}` : ""}`, { size: 22 });
-      label.position.set(layoutForSeat.discard.x, 1.0, layoutForSeat.discard.z);
-      dynamic.add(label);
     }
   }
 
@@ -523,6 +612,8 @@ export async function mountArena(container, callbacks = {}) {
       visibilityObserver?.disconnect();
       window.removeEventListener("resize", resize);
       clearDynamic();
+      for (const entry of faceTextures.values()) entry.texture.dispose();
+      faceTextures.clear();
       disposeObjectResources(scene);
       renderer.dispose();
       renderer.domElement.remove();

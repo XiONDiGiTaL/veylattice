@@ -16,8 +16,10 @@ body[data-view="battle"] .brand-word { font-size: 24px; }
 body[data-view="battle"] main { padding-top: 2px; }
 
 .war-table {
-  --board-size: clamp(280px, 46vh, 620px);
-  width: min(100%, 1080px);
+  /* Battlefield first: the tactical grid gets the width it needs and the
+     command wings live in the space that is left. */
+  --board-size: clamp(300px, min(52vw, 62vh), 760px);
+  width: min(100%, 1360px);
   margin: 0 auto;
   --table-edge: #2d3850;
   --table-line: rgba(122, 215, 255, 0.14);
@@ -237,8 +239,11 @@ body[data-view="battle"] main { padding-top: 2px; }
 
 .slot-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
+  /* Four card slots per row, capped so a formation is a bank of readable cards
+     rather than four posters. The 3D arena draws the same slots at scene scale. */
+  grid-template-columns: repeat(4, minmax(0, clamp(86px, 9.6vw, 126px)));
+  justify-content: start;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -318,132 +323,168 @@ button.zone-slot:focus-visible,
   50% { box-shadow: inset 0 0 0 1px rgba(110, 231, 168, 0.45), 0 0 20px rgba(110, 231, 168, 0.22); }
 }
 
-.slot-model {
+/* ------------------- formation card slots (ARENA-R2) ------------------- */
+/*
+ * Each seat has eight persistent slots in two rows of four: Vessels against
+ * the grid, Relics behind. Every slot is a card-shaped space at the approved
+ * 214:300 frame aspect — an occupied slot draws the real approved card face,
+ * an empty slot draws a labelled plate of exactly the same proportions. There
+ * is no separate miniature model: the illustration on the card IS the unit.
+ */
+
+.zone-slot {
+  display: block;
+  padding: 0;
+  min-height: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0d1524, #070b13);
+}
+
+.zone-slot > .approved-card,
+.zone-slot > .formation-plate {
+  width: 100%;
+  aspect-ratio: 214 / 300;
+  border-radius: 6px;
+}
+
+/* Card faces at slot size: art, name, cost and stats stay legible; the rules
+   line is unreadable at this size and is shown in the inspector and viewer. */
+.zone-slot .formation-face .approved-text { display: none; }
+.zone-slot .formation-face .approved-name {
+  top: 4.5%;
+  left: 10%;
+  width: 60%;
+  font-size: 8.2cqw;
+}
+.zone-slot .formation-face .approved-cost { font-size: 12.5cqw; }
+.zone-slot .formation-face .approved-mid { top: 65%; font-size: 7.4cqw; }
+
+/* Relics have no approved frame: keep the neutral presentation, show the
+   artwork, and never dress it as a Vessel frame. */
+.zone-slot .formation-face.is-pending-frame::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 16, 0.94) 38%);
+  pointer-events: none;
+}
+.zone-slot .formation-face.is-pending-frame .approved-name {
+  top: auto;
+  bottom: 10%;
+  left: 8%;
+  right: 8%;
+  width: auto;
+  font-size: 8cqw;
+  z-index: 3;
+}
+.zone-slot .formation-face.is-pending-frame .approved-mid { display: none; }
+
+.formation-status {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 5;
+  padding: 1px 5px;
+  border: 1px solid rgba(154, 127, 78, 0.5);
+  border-radius: 4px;
+  background: rgba(6, 10, 16, 0.86);
+  color: #d7c39a;
+  font-size: 7.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.formation-status.is-spent { color: #ffb59f; border-color: rgba(255, 140, 110, 0.5); }
+.formation-status.is-broken { color: #ff9aa8; border-color: rgba(255, 107, 122, 0.55); }
+.formation-status + .formation-status { bottom: 22px; }
+
+.formation-pending {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 5;
+  padding: 1px 4px;
+  border: 1px solid rgba(201, 168, 111, 0.45);
+  border-radius: 3px;
+  background: rgba(8, 12, 20, 0.88);
+  color: #c9a86f;
+  font-size: 6.5px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* Empty slot: same card shape, carved and labelled by owner and category. */
+.formation-plate {
   position: relative;
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  align-items: end;
-  justify-items: center;
-  perspective: 240px;
-  z-index: 1;
-}
-
-.slot-model .vox-model {
-  --u-base: 2.8px;
-  z-index: 1;
-  transition: transform 120ms ease;
-}
-
-.slot-model .model-shadow { width: 70%; height: 4px; }
-
-.zone-slot .slot-card {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  z-index: 1;
-}
-
-.slot-name {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.slot-meta {
-  font-size: 8.5px;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.slot-stats {
-  display: flex;
-  gap: 5px;
-  font-size: 8.5px;
-  font-variant-numeric: tabular-nums;
-  color: #d3dcf0;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.slot-stats .atk { color: #ffb0a0; }
-.slot-stats .gd { color: #9fe8c8; }
-
-.slot-tag {
-  position: absolute;
-  top: 2px;
-  right: 5px;
-  font-size: 7px;
-  letter-spacing: 0.12em;
-  color: rgba(154, 127, 78, 0.9);
-  text-transform: uppercase;
-  z-index: 1;
-}
-
-.slot-cost {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  min-width: 15px;
-  height: 15px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-size: 9px;
-  font-weight: 700;
-  color: #cfefff;
-  background: rgba(11, 24, 36, 0.9);
-  border: 1px solid rgba(122, 215, 255, 0.5);
-  z-index: 2;
-}
-
-.slot-empty {
-  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 100%;
-  font-size: 9px;
+  gap: 4px;
+  padding: 8% 8%;
+  border: 1px dashed rgba(122, 215, 255, 0.2);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(122, 215, 255, 0.06), transparent 62%),
+    linear-gradient(180deg, #101827, #070b13);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  color: #8a97b4;
+}
+
+.formation-plate::after {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border: 1px dashed rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.plate-owner {
+  font-size: 6.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #59647f;
+}
+
+.plate-rune {
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(122, 215, 255, 0.5);
+}
+
+.plate-title {
+  font-size: 8.5px;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #5d6b8c;
-  z-index: 1;
+  color: #c2cde3;
 }
 
-.slot-empty .socket {
-  width: 15px;
-  height: 15px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(122, 215, 255, 0.28);
-  border-radius: 4px;
-  font-size: 11px;
-  line-height: 1;
-  color: rgba(122, 215, 255, 0.65);
+.plate-hint {
+  font-size: 7.5px;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: #6b7898;
 }
 
-.zone-slot.is-ready .slot-empty { color: #9df0c2; }
-.zone-slot.is-ready .slot-empty .socket { border-color: rgba(110, 231, 168, 0.7); color: #9df0c2; }
-
-.action-grid .zone-slot { min-height: 28px; }
-.action-grid .slot-model { flex-basis: 22px; width: 22px; height: 26px; }
-.action-grid .slot-model .vox-model { --u-base: 2.2px; }
-.action-grid .slot-name { font-size: 10px; }
-.action-grid .slot-meta {
-  font-size: 8px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #a9b8d6;
+.zone-slot.is-ready .formation-plate {
+  border-color: rgba(110, 231, 168, 0.75);
+  color: #9df0c2;
 }
+.zone-slot.is-ready .plate-rune,
+.zone-slot.is-ready .plate-title { color: #9df0c2; }
+.zone-slot.is-blocked .formation-plate { opacity: 0.55; }
+
+
+/* In 3D mode the arena paints both formations inside the scene, so the DOM
+   rows would be a second copy of the same eight slots (and four card rows in
+   a vertical stack outweigh the battlefield). They stay in the page for the
+   classic grid, which remains the keyboard-accessible field surface. */
+.war-table[data-arena-view="3d"] .battle-field .slot-row { display: none; }
+.war-table[data-arena-view="3d"] .battle-field { padding: 4px 6px 5px; }
 
 /* ------------------------------- arena ------------------------------- */
 
@@ -857,8 +898,19 @@ button.zone-slot:focus-visible,
 
 
 
+/* In 3D mode the scene IS the battlefield: it takes the free width and the
+   two wings shrink to their content. Pinning the scene to the old 595px
+   board column drew the eight formation cards ~50px wide — a miniature, not
+   a card. Guarded by min-width so the single-column phone layout below is
+   untouched (this selector outranks a bare `.arena-shell`). */
+@media (min-width: 941px) {
+  .war-table[data-arena-view="3d"] .arena-shell {
+    grid-template-columns: minmax(148px, 232px) minmax(0, 1fr) minmax(196px, 268px);
+  }
+}
+
 @media (max-width: 940px) {
-  .war-table { --board-size: 44vh; }
+  .war-table { --board-size: min(78vw, 50vh); }
   .arena-shell { grid-template-columns: minmax(0, 1fr); }
   .arena-wing-left { display: none; }
   .arena-core { width: min(100%, var(--board-size)); justify-self: center; }
@@ -881,17 +933,11 @@ button.zone-slot:focus-visible,
   .war-table { --board-size: 46vh; padding: 7px 6px; }
   .slot-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .row-tag { flex-direction: row; align-items: baseline; gap: 6px; padding-left: 4px; }
-  .slot-grid { gap: 4px; }
-  .zone-slot { padding: 2px 4px; min-height: 36px; gap: 3px; }
-  .zone-slot .slot-model { flex-basis: 24px; width: 24px; height: 28px; }
-  .zone-slot .slot-model .vox-model { --u-base: 2.2px; }
-  .action-grid .slot-model { flex-basis: 20px; width: 20px; height: 24px; }
-  .slot-stats { display: none; }
-  .slot-name { font-size: 9.5px; }
-  .slot-meta { font-size: 7.5px; }
-  .slot-tag { display: none; }
-  .slot-empty { font-size: 8px; letter-spacing: 0.04em; }
-  .slot-empty .socket { display: none; }
+  .slot-grid { gap: 5px; }
+  .zone-slot .formation-face .approved-name { font-size: 9cqw; }
+  .plate-title { font-size: 8px; }
+  .plate-hint { font-size: 7px; }
+  .formation-pending { display: none; }
   .field-hud { flex-wrap: wrap; gap: 4px 8px; padding: 4px 7px; }
   .hud-vitality { flex: 1 1 100%; max-width: none; order: 5; }
   .hud-resources { justify-content: flex-start; }
@@ -902,11 +948,40 @@ button.zone-slot:focus-visible,
   .log-hint { display: none; }
 }
 
+/* Narrow phones: four cards per row stay four cards per row — no hidden
+   cards, no scrollbar — at the same card scale the hand rail already uses.
+   The names shrink to their initials-safe size and the rules line stays
+   hidden, so the row still reads as eight physical slots per seat. */
+@media (max-width: 640px) {
+  .slot-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .zone-slot .formation-face .approved-name { font-size: 10.5cqw; }
+  .zone-slot .formation-face .approved-cost { font-size: 15cqw; }
+  .zone-slot .formation-face .approved-mid { font-size: 9cqw; }
+  .formation-plate { gap: 2px; padding: 6% 5%; }
+  .plate-owner { font-size: 6px; letter-spacing: 0.1em; }
+  .plate-rune { font-size: 15px; }
+  .plate-title { font-size: 7.5px; letter-spacing: 0.06em; }
+  .plate-hint { font-size: 6.5px; }
+  .formation-status { display: none; }
+  /* On phones the scene camera cannot show a readable card, so the two DOM
+     card rails come back even in 3D mode: the canvas keeps the tactical grid,
+     the rails carry the eight formation slots at a readable card width. */
+  .war-table[data-arena-view="3d"] .battle-field .slot-row { display: grid; }
+  .zone-slot .formation-face .approved-name { font-size: 9.5cqw; }
+  .zone-slot .formation-face .approved-mid { font-size: 8.5cqw; }
+  .plate-owner { font-size: 7px; }
+  .plate-rune { font-size: 16px; }
+  .plate-title { font-size: 9px; }
+  .plate-hint { font-size: 8px; }
+  .formation-status { font-size: 8px; }
+}
+
 @media (max-height: 860px) and (min-width: 941px) {
   .hand-rail .card { height: 80px; }
   .field-hud { min-height: 36px; }
-  .zone-slot { min-height: 36px; }
-  .action-grid .zone-slot { min-height: 30px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

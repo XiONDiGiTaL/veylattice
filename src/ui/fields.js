@@ -96,3 +96,56 @@ export function fieldState(match, seat) {
 export function fieldUnits(match, seat) {
   return fieldState(match, seat).vessels.filter(Boolean);
 }
+
+/**
+ * The eight persistent formation slots of one seat, in draw order
+ * (2026-11-04, ARENA-R2).
+ *
+ * Row 0 is the Vessel row (four summoned Vessels), row 1 is the Relic row
+ * (four persistent Relics). That is exactly the 4-Vessel / 4-Relic caps, so a
+ * slot can never hold a second unit: the formation is a projection of the
+ * engine's own field, never an extra zone. Actions are deliberately absent —
+ * they resolve from hand to discard and never occupy a slot.
+ *
+ * `effectText` is injected by the caller (`effectSummary` in src/main.js) so
+ * this module keeps no card-copy knowledge and stays testable without the UI.
+ */
+export const FORMATION_SIZE = VESSEL_SLOTS + RELIC_SLOTS;
+export const FORMATION_ROWS = Object.freeze(["vessel", "relic"]);
+
+export function formationSlots(match, seat, catalog, { effectText = null } = {}) {
+  const field = fieldState(match, seat);
+  // Accept a lookup function, a Map (match.catalog is catalog.byId) or the
+  // catalog object itself, so callers cannot silently get null cards.
+  const lookup = typeof catalog === "function"
+    ? catalog
+    : typeof catalog?.get === "function"
+      ? (id) => catalog.get(id)
+      : typeof catalog?.byId?.get === "function"
+        ? (id) => catalog.byId.get(id)
+        : null;
+  const def = (cardId) => (cardId && lookup ? lookup(cardId) ?? null : null);
+  const slots = [];
+  for (const kind of FORMATION_ROWS) {
+    const entries = kind === "vessel" ? field.vessels : field.relics;
+    for (let index = 0; index < ACTION_SLOTS; index += 1) {
+      const entry = entries[index] ?? null;
+      const unit = kind === "vessel" ? entry : null;
+      const relic = kind === "relic" ? entry : null;
+      const card = unit ? def(unit.cardId) : relic ? def(relic.cardId) : null;
+      slots.push({
+        key: slotKey(seat, kind, index),
+        seat,
+        kind,
+        row: FORMATION_ROWS.indexOf(kind),
+        index,
+        card,
+        unit,
+        relicId: relic?.cardId ?? null,
+        occupied: Boolean(unit || relic),
+        effectText: card && effectText ? effectText(card) : "",
+      });
+    }
+  }
+  return slots;
+}

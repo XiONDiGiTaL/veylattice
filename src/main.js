@@ -64,7 +64,8 @@ import {
   skipTutorial,
   tutorialStep,
 } from "./ui/tutorial.js";
-import { fieldState } from "./ui/fields.js";
+import { fieldState, formationSlots } from "./ui/fields.js";
+import { buildSlotContents, faceModel } from "./render/formation-face.js";
 import { sanitizeEconomy } from "./game/economy.js";
 import { validateDeckWithOwnership } from "./game/decks.js";
 import { recordRemoteCommand, remoteCommandNow, validateRemoteCommand } from "./game/lobby.js";
@@ -1446,118 +1447,72 @@ function renderTimer() {
 
 /* --------------------------- card fields --------------------------- */
 
-/** A miniature copy of the real battlefield model, used inside a card zone. */
-function slotModel(cardId) {
-  const stage = el("span", { class: "slot-model", "aria-hidden": "true" });
-  const model = modelFor(cardId);
-  if (model) stage.append(buildVoxelModel(model, { className: "slot-vox" }));
-  stage.append(el("i", { class: "model-shadow" }));
-  return stage;
-}
-
-function emptyZone(label) {
-  return [
-    el("span", { class: "slot-empty" }, [
-      el("span", { class: "socket", "aria-hidden": "true", text: "+" }),
-      el("span", { text: label }),
-    ]),
-  ];
-}
-
 /**
- * One front-row Vessel zone.
+ * One of a seat's eight persistent formation slots (ARENA-R2, 2026-11-04).
  *
- * Occupied zones mirror the Vessel that owns them, including its live Guard,
- * and are the fastest way to select a unit. Empty zones explain what the row
- * is for instead of being decorative holes.
+ * Occupied slots draw a complete approved card face — illustration, name,
+ * cost, element/type and live Attack/Guard — while empty slots draw a
+ * card-shaped plate that names its owner and category. Both keep the 214:300
+ * aspect ratio, so the formation reads as a row of physical cards instead of
+ * badges in a list. Selection, readiness and placement states are unchanged
+ * from the previous functional zones.
  */
-function vesselZone(seat, index, unit) {
-  const mine = seat === mySeat();
-  const field = fieldState(ui.match, seat);
-  const classes = ["zone-slot", `zone-vessel-${index}`];
-  const card = mine ? selectedCardEntry() : null;
-  if (card?.category === "vessel") classes.push("is-ready");
+function formationZone(slot) {
+  const mine = slot.seat === mySeat();
+  const owner = mine ? "Your" : "Opponent";
+  const model = faceModel(slot);
+  const classes = ["zone-slot", `zone-${slot.kind}-${slot.index}`, `formation-${slot.kind}`];
+  const selected = mine ? selectedCardEntry() : null;
+  const selectsKind = selected?.category === slot.kind;
+  let hint = model.hint;
+  let title = "";
 
-  if (!unit) {
+  if (!slot.occupied) {
     classes.push("is-empty");
-    const emptyLabel = mine && card?.category === "vessel" ? "Choose a tile" : "Summon zone";
-    const node = el(mine ? "button" : "div", {
-      class: classes.join(" "),
-      dataset: { slot: `vessel-${index}`, seat: String(seat), occupied: "false" },
-      ...(mine ? { type: "button", onclick: () => onVesselSlotClick(seat, index) } : { role: "listitem" }),
-      "aria-label": `${mine ? "Your" : "Opponent"} front-row Vessel zone ${index + 1}, empty`,
-    }, emptyZone(emptyLabel));
-    node.title = mine
-      ? "A free Vessel zone. Summon a Vessel onto a highlighted battlefield tile."
-      : `Opponent Vessel zone ${index + 1} · empty`;
-    return node;
+    if (slot.kind === "vessel") {
+      if (selectsKind) classes.push("is-ready");
+      hint = selectsKind ? "Choose a battlefield tile" : "Summon a Vessel here";
+      title = mine
+        ? "A free Vessel slot. Summon a Vessel onto a highlighted battlefield tile."
+        : `${owner} Vessel slot ${slot.index + 1} · empty`;
+    } else {
+      const nextFree = fieldState(ui.match, slot.seat).relics.findIndex((entry) => !entry);
+      if (selectsKind) classes.push(nextFree === slot.index ? "is-ready" : "is-blocked");
+      const ready = selectsKind && nextFree === slot.index;
+      hint = ready ? "Set the selected Relic here" : "Set a persistent Relic here";
+      title = mine
+        ? "An empty Relic socket. Relics fill these four sockets from the left."
+        : `${owner} Relic socket ${slot.index + 1} · empty`;
+    }
+  } else {
+    classes.push("is-filled", `element-${slot.card?.element ?? "metal"}`, mine ? "is-mine" : "is-enemy");
+    if (model.selected) classes.push("is-selected");
+    if (slot.kind === "vessel") {
+      const guard = Math.max(0, slot.unit?.guard ?? slot.card?.guard ?? 0);
+      title = `${slot.card?.name ?? "Vessel"} · ${slot.unit?.ready === false && mine ? "not ready this turn" : "ready"} · Guard ${guard}/${slot.unit?.maxGuard ?? slot.card?.guard ?? 0}. Click to select.`;
+    } else {
+      title = `${slot.card?.name ?? "Relic"} · ${slot.effectText || "persistent Relic"}`;
+    }
   }
 
-  classes.push("is-filled", `element-${unit.element}`, mine ? "is-mine" : "is-enemy");
-  if (mine && ui.selectedUnit === unit.id) classes.push("is-selected");
-  const guard = Math.max(0, unit.guard);
+  const dataset = { slot: `${slot.kind}-${slot.index}`, seat: String(slot.seat), kind: slot.kind, occupied: String(slot.occupied) };
+  if (slot.unit?.id) dataset.unitId = slot.unit.id;
+
+  const aria = slot.occupied
+    ? slot.kind === "vessel"
+      ? `${slot.card?.name ?? "Vessel"}, ${ELEMENT_LABELS[slot.card?.element] ?? ""} ${slot.card?.subtype ?? "Vessel"}, Attack ${slot.unit?.attack ?? slot.card?.attack ?? "—"}, Guard ${Math.max(0, slot.unit?.guard ?? slot.card?.guard ?? 0)}${
+          slot.unit?.maxGuard ? ` of ${slot.unit.maxGuard}` : ""
+        }${mine && slot.unit ? (slot.unit.ready === false ? ", not ready this turn" : ", ready") : ""}`
+      : `${slot.card?.name ?? "Relic"}, ${ELEMENT_LABELS[slot.card?.element] ?? "unknown"} Relic, ${slot.effectText ?? ""}`
+    : `${owner} ${slot.kind === "vessel" ? "front-row Vessel slot" : "back-row Relic socket"} ${slot.index + 1}, empty`;
+
   const node = el(mine ? "button" : "div", {
     class: classes.join(" "),
-    dataset: { slot: `vessel-${index}`, seat: String(seat), occupied: "true", unitId: unit.id },
-    ...(mine ? { type: "button", onclick: () => onVesselSlotClick(seat, index) } : { role: "listitem" }),
-    "aria-label": `${unit.name}, ${ELEMENT_LABELS[unit.element]} ${unit.subtype ?? "Vessel"}, Attack ${unit.attack}, Guard ${guard} of ${unit.maxGuard}${
-      mine ? (unit.ready ? ", ready" : ", not ready this turn") : ""
-    }`,
-  }, [
-    slotModel(unit.cardId),
-    el("span", { class: "slot-card" }, [
-      el("span", { class: "slot-name", text: unit.name }),
-      el("span", { class: "slot-stats" }, [
-        el("span", { class: "atk", text: `ATK ${unit.attack}` }),
-        el("span", { class: "gd", text: `GD ${guard}/${unit.maxGuard}` }),
-        el("span", { text: `MV ${unit.movement}` }),
-        el("span", { text: `RG ${unit.range}` }),
-      ]),
-    ]),
-    el("span", { class: "slot-tag", text: mine && !unit.ready ? "WAIT" : ELEMENT_ABBR[unit.element] ?? "" }),
-  ]);
-  node.title = `${unit.name} · ${unit.ready || !mine ? "ready" : "not ready this turn"} · Guard ${guard}/${unit.maxGuard}. Click to select.`;
-  return node;
-}
-
-/** One back-row Action zone: a set Relic, or the next free socket. */
-function actionZone(seat, index, relic) {
-  const mine = seat === mySeat();
-  const field = fieldState(ui.match, seat);
-  const nextFree = field.relics.findIndex((entry) => !entry);
-  const classes = ["zone-slot", `zone-action-${index}`];
-  const card = mine ? selectedCardEntry() : null;
-  if (!relic) {
-    classes.push("is-empty");
-    if (mine && card?.category === "relic") classes.push(nextFree === index ? "is-ready" : "is-blocked");
-    const label = mine && card?.category === "relic" && nextFree === index ? "Set here" : "Relic zone";
-    const node = el(mine ? "button" : "div", {
-      class: classes.join(" "),
-      dataset: { slot: `action-${index}`, seat: String(seat), occupied: "false" },
-      ...(mine ? { type: "button", onclick: () => onActionSlotClick(seat, index) } : { role: "listitem" }),
-      "aria-label": `${mine ? "Your" : "Opponent"} back-row Action zone ${index + 1}, empty`,
-    }, emptyZone(label));
-    node.title = mine
-      ? "An empty back-row zone. Relics fill these four sockets from the left."
-      : `Opponent Action zone ${index + 1} · empty`;
-    return node;
-  }
-
-  const def = ui.match.catalog.get(relic.cardId);
-  classes.push("is-filled", `element-${def?.element ?? "metal"}`, mine ? "is-mine" : "is-enemy");
-  const node = el(mine ? "button" : "div", {
-    class: classes.join(" "),
-    dataset: { slot: `action-${index}`, seat: String(seat), occupied: "true" },
-    ...(mine ? { type: "button", onclick: () => onActionSlotClick(seat, index) } : { role: "listitem" }),
-    "aria-label": `${def?.name ?? "Relic"}, ${ELEMENT_LABELS[def?.element] ?? "unknown"} Relic, ${def ? effectSummary(def) : ""}`,
-  }, [
-    el("span", { class: "slot-card" }, [
-      el("span", { class: "slot-name", text: def?.name ?? "Relic" }),
-      el("span", { class: "slot-meta", text: def ? effectSummary(def) : "" }),
-    ]),
-    el("span", { class: "slot-tag", text: `${ELEMENT_ABBR[def?.element] ?? ""} · SET` }),
-  ]);
-  node.title = def ? `${def.name} · ${effectSummary(def)}` : "Relic";
+    dataset,
+    ...(mine ? { type: "button", onclick: () => (slot.kind === "vessel" ? onVesselSlotClick(slot.seat, slot.index) : onActionSlotClick(slot.seat, slot.index)) } : { role: "listitem" }),
+    "aria-label": aria,
+  }, buildSlotContents(slot, { hint }));
+  node.title = title;
   return node;
 }
 
@@ -1568,16 +1523,18 @@ function actionZone(seat, index, relic) {
 function renderFields() {
   if (!ui.match) return;
   for (const [seat, prefix] of [[foeSeat(), "enemy"], [mySeat(), "player"]]) {
-    const field = fieldState(ui.match, seat);
+    const slots = formationSlots(ui.match, seat, ui.match.catalog, { effectText: effectSummary });
+    const vessels = slots.filter((slot) => slot.kind === "vessel");
+    const relics = slots.filter((slot) => slot.kind === "relic");
     const vesselHost = $(`#${prefix}-vessel-slots`);
-    const actionHost = $(`#${prefix}-action-slots`);
+    const relicHost = $(`#${prefix}-action-slots`);
     if (vesselHost) {
-      vesselHost.replaceChildren(...field.vessels.map((unit, index) => vesselZone(seat, index, unit)));
-      vesselHost.dataset.occupied = String(field.unitCount);
+      vesselHost.replaceChildren(...vessels.map((slot) => formationZone(slot)));
+      vesselHost.dataset.occupied = String(vessels.filter((slot) => slot.occupied).length);
     }
-    if (actionHost) {
-      actionHost.replaceChildren(...field.relics.map((relic, index) => actionZone(seat, index, relic)));
-      actionHost.dataset.occupied = String(field.relicCount);
+    if (relicHost) {
+      relicHost.replaceChildren(...relics.map((slot) => formationZone(slot)));
+      relicHost.dataset.occupied = String(relics.filter((slot) => slot.occupied).length);
     }
   }
 }
@@ -2036,9 +1993,20 @@ function arenaViewData(match) {
       : Array.from({ length: Math.min(4, player.hand.filter((c) => match.catalog.get(c.cardId)?.category === "action").length) }, () => null);
     while (actions.length < 4) actions.push(null);
     const top = player.discard.length > 0 ? match.catalog.get(player.discard[player.discard.length - 1]) : null;
+    // The 3D arena draws the same eight-slot formation as the DOM rows: a slot
+    // is { card, unit } so it can show live Attack/Guard and lock state, and
+    // the projection comes from fields.js rather than being rebuilt here.
+    const slots = formationSlots(match, seat, match.catalog, { effectText: effectSummary });
+    const slotEntry = (slot) => (slot.occupied
+      ? {
+          card: slot.card,
+          unit: slot.unit ? { ...slot.unit, selected: ui.selectedUnit === slot.unit.id } : null,
+          effectText: slot.effectText,
+        }
+      : null);
     fields[seat] = {
-      vessels: field.vessels.map((unit) => unit ? match.catalog.get(unit.cardId) : null),
-      relics: field.relics.map((relic) => relic ? match.catalog.get(relic.cardId) : null),
+      vessels: slots.filter((slot) => slot.kind === "vessel").map(slotEntry),
+      relics: slots.filter((slot) => slot.kind === "relic").map(slotEntry),
       actions,
       discardCount: player.discard.length,
       discardTop: top ? top.name : null,
@@ -2060,13 +2028,19 @@ function arenaViewData(match) {
 async function renderArena(match) {
   const host = $("#arena-3d");
   if (!host) return;
+  // The DOM formation rows are only shown when the arena cannot paint the
+  // slots itself; in 3D mode the scene is the field surface, and this hook
+  // keeps that decision in sync with the actual renderer state.
+  const warTable = host.closest(".war-table");
   if (ui.arenaMode !== "3d") {
+    if (warTable) warTable.dataset.arenaView = "classic";
     host.hidden = true;
     const board = $("#board");
     if (board) board.closest(".board-wrap").hidden = false;
     return;
   }
   host.hidden = false;
+  if (warTable) warTable.dataset.arenaView = "3d";
   const boardWrap = $("#board")?.closest(".board-wrap");
   if (boardWrap) boardWrap.hidden = true;
   if (!ui.arena && !ui.arenaFailed && !ui.arenaMounting) {
@@ -2075,6 +2049,12 @@ async function renderArena(match) {
       const { mountArena } = await import("./render/arena3d.js");
       ui.arena = await mountArena(host, {
         onCell: (x, y) => onCellClick(x, y),
+        // A formation card in the 3D scene resolves through the same slot
+        // handlers as the DOM rows, so both surfaces behave identically.
+        onSlot: ({ seat, slotKind, index }) => {
+          if (slotKind === "vessel") onVesselSlotClick(seat, index);
+          else onActionSlotClick(seat, index);
+        },
         onUnit: (unitId) => {
           // Resolve against the live match, not the match object captured
           // at mount time (a new match reuses the mounted arena).
@@ -2095,6 +2075,7 @@ async function renderArena(match) {
       ui.arenaMounting = false;
       ui.arenaFailed = true;
       ui.arenaMode = "classic";
+      if (warTable) warTable.dataset.arenaView = "classic";
       const notice = $("#arena-notice");
       if (notice) notice.textContent = "3D arena could not load (WebGL or the Three.js module is unavailable here) — using the classic grid. The game is fully playable.";
       host.hidden = true;

@@ -62,12 +62,28 @@ GAME_RULES.md remains authoritative for gameplay balance and rules.
 - **Card fields, per seat, physically part of the same 3D arena:**
   Vessel row = 4 slots showing deployed Vessels (exactly the 4-Vessel cap;
   a slot is never an extra unit). Relic row = 4 sockets for persistent
-  Relics (exactly the 4-Relic cap). Action staging row = 4 slots showing
-  the first four Action cards currently in hand; it is a *view of the hand*,
-  not a zone — an Action resolves from hand and its card goes to discard,
-  it never occupies a field slot. Discard pile = 1 per seat, owned by the
-  engine: defeated Vessels and resolved Actions land there, and revive /
-  return effects move cards out of it through the engine, never by animation.
+  Relics (exactly the 4-Relic cap). That is **eight persistent slots per
+  seat, two rows of four** (ARENA-R2, 2026-11-04). Action staging is a
+  *view of the hand*, not a zone — an Action resolves from hand and its card
+  goes to discard, it never occupies a field slot. Since ARENA-R2 the
+  staging view is the hand rail itself: the 3D scene no longer draws a third
+  row (it sat behind standing Relics, invisible from the arena camera, and
+  duplicated the hand). Discard pile = 1 per seat, owned by the engine:
+  defeated Vessels and resolved Actions land there, and revive / return
+  effects move cards out of it through the engine, never by animation.
+- **Formation card faces (ARENA-R2):** every slot is a card-shaped space at
+  the approved 214:300 aspect. An occupied slot draws a complete card face —
+  frame overlay, illustration, name, cost, element/type and live Attack/Guard
+  — while an empty slot draws a labelled plate of identical proportions that
+  names its owner (YOUR/ENEMY FORMATION) and category (VESSEL SLOT n /
+  RELIC SOCKET n). `src/render/formation-face.js` is the single source for
+  this: `faceGeometry()` derives every text band from the frame's own art
+  aperture, the DOM rows and the 3D canvas paint from the same model, and a
+  manifest edit without a code edit fails `tests/formation.test.js`.
+  In desktop 3D mode the scene carries the formations and the DOM rows are
+  hidden (they are four stacked card rows that would dwarf the battlefield);
+  they return in classic-grid mode and on phones, where the classic grid is
+  the accessible field surface and the 3D camera cannot show a readable card.
 - **3D arena:** Three.js (WebGL) is the primary battlefield renderer
   (`src/render/arena3d.js`); the CSS-3D board remains as the fallback when
   WebGL or the Three.js module cannot load, and as the accessible grid.
@@ -75,7 +91,11 @@ GAME_RULES.md remains authoritative for gameplay balance and rules.
   their card illustrations — never billboard sprites or flat pictures.
   The opponent field sits beyond the far side, the player field on the near
   side, and the battlefield stays the focal point. Desktop uses an elevated
-  three-quarter camera; narrow viewports use a more top-down camera.
+  three-quarter camera; narrow viewports use a more top-down camera. The eye
+  line is deliberately high: with standing cards in two rows at each end, a
+  low camera lets the near row hide the far row. Field rows are placed from
+  `FIELD_Z` / `RELIC_Z` and the table slab is sized from those constants, so
+  a layout change cannot leave a magic-number slab behind.
 - **Card frames:** approved `CardFrames/` overlays are authoritative
   (canvas 214x300, aspect 0.713; per-frame art apertures in
   `frame-manifest.json`). Wood/Fire/Earth/Metal/Water Vessels use their

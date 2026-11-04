@@ -22,9 +22,63 @@
 - ART-001 local verification: 18 roster cards / 728 boxes, a practice match to turn 6 with four
   different Vessels on the board, and zero console errors on menu, guide, roster, settings and battle.
 - Environment: Windows / Git Bash, Node v24.19.0, Python 3.14 for static serving. The app has **no
-  runtime dependencies**; tests use Node's built-in runner. Current suite: **129 tests, 129 pass**
-  (`npm run check` adds syntax checks).
+  runtime dependencies**; tests use Node's built-in runner. **Current suite: 207 tests, 207 pass**
+  (`npm run check` adds syntax checks for main/engine/content/ai).
+- Latest verified commit at the start of the 2026-11-04 session: **`a8962ff`** on `main`, equal to
+  `origin/main` (ARENA-R1 already pushed). Working tree at that point: clean. `.github/workflows/`
+  was already on main before this session.
 
+
+## Latest session — 2026-11-04 · ARENA-R2 illustrated eight-slot formations
+
+**Base:** `main` `a8962ff` (== `origin/main`); working tree clean. ARENA-R1 was already on remote
+main and its files were present and green — nothing needed cherry-picking.
+
+- **Implemented:** `src/render/formation-face.js` (new) is the single source for a formation slot:
+  `faceGeometry()` bands derived from each approved frame's art aperture, `faceModel()` text/flags,
+  `paintFace()` for the WebGL faces and `buildSlotContents()` for the DOM faces/empty plates.
+  `formationSlots()` in `src/ui/fields.js` projects exactly 4 Vessel + 4 Relic slots per seat.
+  `arena3d.js` replaced the pedestals and floating labels with standing 214:300 card faces, derived
+  row order/table/camera from constants, engraved the grid, and made field cards clickable.
+  `main.js` renders the DOM rows as real card faces (classic grid, phones) and hides them in desktop
+  3D mode where the scene paints the same eight slots.
+- **Deliberate removal:** the 3D Action staging strip. It is a view of the hand, was invisible behind
+  the standing Relic row, and duplicated the hand rail; `fields[seat].actions` is still projected.
+  `docs/ARENA_SYSTEM.md` records this as canonical.
+- **Bugs found and fixed in-session:** `model.text.length` on empty slots threw and killed the whole
+  first field render; the click discriminator was overwritten by the `userData.slot` spread so every
+  field-card click fell through to the tile handler; `formationSlots` silently produced null cards
+  when handed the catalog object instead of `catalog.byId`.
+- **Second pass (same session, after looking at real screenshots):** both camera presets were
+  recomputed from `FIELD_Z`/`RELIC_Z`/`CARD_TILT` — the near Relic row was being cut off at NDC
+  y ≈ -1.03; the `Discard n` sprite that covered Vessel slot 4 was deleted (the HUDs already print
+  it); the SPENT badge moved off the stat band onto the art; the stat band no longer truncates
+  `ATK 4 · GD 2/3`; the Relic rune moved off the card name. 3D mode now takes the free column width
+  and the canvas is viewport-capped (~65px cards instead of ~50px). Phones frame the grid alone and
+  the scene stops drawing formation rows — the DOM rails carry the eight slots at a readable width.
+  `buildCard()` now derives the seat tint from `slot.seat`; the old caller-passed `sign` had produced
+  a `ReferenceError` that killed the entire field render (caught in the browser, not by tests).
+  Screenshots: `arena-r2-16-desktop.png`, `-19-face-painter.png`, `-20-desktop-occupied.png`,
+  `-22-mobile-grid.png`, `-24-desktop-top.png`.
+- **Tests:** 197 → 207 passing, 0 failures. New `tests/formation.test.js` (nine tests). The camera
+  preset test now asserts the real contract (desktop frames both formations; phones frame the grid)
+  instead of the superseded "mobile is higher" assumption.
+- **Browser-verified** against a local `python -m http.server` (headless Chromium, 1500x1300 and
+  390x844): all 16 slots render in the 3D scene, a summoned Vessel shows its approved Fire frame with
+  `ATK 3 · GD 2/4`, a 3D slot click reports through `onVesselSlotClick`, classic grid shows two rows
+  of four card faces per seat, fresh-load console is clean.
+- **Not verified / limitations:** no screenshot of an occupied Relic slot inside the 3D scene (the
+  neutral painter was verified in isolation); no frame-time or GPU measurement, so the texture-cache
+  claim is a code property only; no targeting/confirm step yet; no animation layer yet; online play
+  not exercised; the live Pages build was **not** checked, so pushing this does not prove the site is
+  serving it (Pages caches JS for up to four hours).
+- **Next three executable steps:**
+  1. ARENA-R2d — targeting/confirmation controller (legal summon tiles already come from `canSummon`;
+     add preview, confirm, Escape/cleanup, engine-derived target ids, and honest previews for
+     `damageAll`/`revive`).
+  2. ARENA-R2e — event-driven animation layer replacing the shared bob, using a pre-command snapshot.
+  3. Re-verify the live site after the owner-authorized push/deploy (hard refresh), then continue the
+     UI pass on menus/collection with the `--vl-*` tokens.
 
 ## Latest session — 2026-10-29 (late) · UI-002 premium menu, Play dialog, online room
 
@@ -480,11 +534,13 @@ authority on legality.
 - `illustrationSource(card)`: the join the tests assert (model id, part count, palette, effect kind).
 - Actions and Relics render an emblem chosen by `effect.kind`, in their element's environment.
 
-### Tests — 122/122 passing
+### Tests — 207/207 passing (2026-11-04)
 
-`npm test` → 122 pass, 0 fail. Files: `tests/` `elemental`, `content`, `cards`, `keywords`, `engine`,
-`match`, `ai`, `profile`, `models`, `terrain`, `tutorial`, `fields`, `illustration`, plus `support.js`
-(loads the set manifest).
+`npm test` → 207 pass, 0 fail. Files: `tests/` `elemental`, `content`, `cards`, `keywords`, `engine`,
+`match`, `ai`, `profile`, `models`, `terrain`, `tutorial`, `fields`, `illustration`, `frames`,
+`formation`, `arena3d`, `arena-presentation`, `assets`, `audio`, `decks`, `economy`, `lobby`, `menu`,
+`card-files`, `plus support.js` (loads the set manifest). Older "122/129" counts in this file are
+historical, not current.
 
 ## Not implemented (do not claim otherwise)
 
@@ -496,12 +552,13 @@ authority on legality.
 - No set/activate Action back-row zones; no rule specifies them, so only the four Relic slots exist.
 - No Google/Discord sign-in (providers disabled, credentials unavailable — see `docs/ACCOUNTS.md`).
 - No rate limiting on account/profile creation (TODO M2-005).
-- Models are CSS-3D boxes: no GLB, no GPU lighting or dynamic shadows, no skeletal deformation. Limbs
-  are rigid voxel groups rotating around authored pivots, which is why attacks do swing the weapon and
-  head, but there are no per-frame skinned poses.
+- Models are voxel **boxes**, not skinned meshes: no GLB, no skeletal deformation. Limbs are rigid
+  voxel groups rotating around authored pivots, so attacks swing the weapon and head, but there are
+  no per-frame skinned poses. The WebGL arena does light them (MeshStandardMaterial per part
+  metadata, cast shadows) — corrected 2026-11-04, this line previously claimed no GPU renderer.
 - No keyboard grid traversal (TODO M7-005). No in-match pause overlay.
-- No WebGL renderer: the world is CSS-3D (real boxes, perspective, per-face shading, painted contact
-  shadows). GPU lighting and cast shadows are not implemented.
+- The 3D arena is WebGL (Three.js from CDN, dynamic import) with the CSS-3D board as fallback and as
+  the accessible grid. Corrected 2026-11-04 — the "no WebGL renderer" line was stale.
 - Card art is procedurally generated voxel rendering; there are no bespoke per-card illustrations,
   poses or effect flourishes.
 - No measured AI win rate against humans; no balance claims are justified.
@@ -523,8 +580,8 @@ authority on legality.
 ## Commands
 
 ```bash
-npm run check                             # node --check on core modules + 122 tests
-npm test                                  # 129 tests, Node built-in runner
+npm run check                             # node --check on core modules + 207 tests
+npm test                                  # 207 tests, Node built-in runner
 node --check src/main.js src/game/ai.js   # syntax sanity
 python -m http.server 8123 --bind 127.0.0.1   # then http://127.0.0.1:8123/
 ```
@@ -624,15 +681,19 @@ screenshot.
   before raising box counts much further.
 - `structuredClone`/`crypto.randomUUID` require a modern browser; there are no polyfills.
 
-## Next three executable steps
+## Next three executable steps (2026-11-04)
 
-1. **Commit and deploy** the working tree (LAYOUT-001, CONTENT-001, GRID-002, ART-002) so
-   https://xiondigital.net/veylattice/ stops serving the ART-001 build; deploy is owner-authorized only.
-2. **DECK-001** — deck builder over the 60-Vessel pool with canonical validation, ownership checks and
-   three named prebuilt archetypes; the curated practice deck is not a substitute.
-3. **ECON-001** — local-first collection, Aether Shards, six-card packs (5 Common + 1 Rare) and
-   Dissolution, clearly labelled as demo data until trusted settlement exists; prepare the migration
-   but do not apply it without owner approval.
+1. **ARENA-R2d** — targeting and confirmation controller: keep engine-derived legality, add a
+   placement/effect preview, explicit confirm, Escape/cancel and stale-state cleanup, and only
+   support mechanics the engine actually has (`damageAll` = every enemy Vessel, `revive` = highest-cost
+   defeated Vessel to hand).
+2. **ARENA-R2e** — event-driven animation layer (idle/summon/move/melee/ranged/cast/hit/guard/stun/
+   death/victory) from accepted engine events plus a pre-command snapshot, honouring reduced motion.
+3. **Deploy + re-verify** — after owner-authorized push, hard-refresh https://xiondigital.net/veylattice/
+   and confirm the new build is actually served; pushing to git does not prove deployment.
+
+Earlier steps in this section (LAYOUT-001 / DECK-001 / ECON-001) are complete: the deck builder, shop,
+collection and online lobby preview all ship in this build.
 
 ## End-of-session requirement
 
