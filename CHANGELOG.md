@@ -4,6 +4,13 @@ Engineering history, not a list of promised features. Keep entries under Unrelea
 
 ## Unreleased
 
+### 2026-11-04 — ARENA-R1: renderer foundation (sandbox-tested patch)
+
+Base: main at 1ed84f7d3156a4bbd8d9a61d9ac61bdc04034400. Baseline npm run check: 193 passed, 0 failed. Post-change npm run check: 197 passed, 0 failed. npm run stamp, node --check src/render/arena3d.js, and git diff --check passed in the Vercel sandbox.
+Changes: material-aware voxel shading, shape-based legal-tile cues, softer terrain tint, shared resource teardown and static-scene disposal; four new pure-helper tests. No rules, catalog, balance, economy, database or network changes. No deployment or push.
+Paths: src/render/arena-presentation.js, src/render/arena3d.js, tests/arena-presentation.test.js, index.html, CHANGELOG.md, TODO.md, AI_HANDOFF.md.
+Limitations: browser/mobile visuals and performance not verified; full illustrated formations, targeting confirmation and combat-animation overhaul remain unfinished. Tracking wording in the exported patch records test results obtained after the sandbox edits; runtime files match the tested version.
+
 ### 2026-10-29 - UI-002: premium main menu, Play dialog, online room and design system
 
 Directives first: new canonical `docs/UI_DESIGN_SYSTEM.md`, with pointers from

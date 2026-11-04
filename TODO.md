@@ -288,3 +288,7 @@ Depends on M1-005. Acceptance: arrow-key grid traversal, focus return after comm
 - ART-006d | DONE | Render board Vessels upright, at board scale, without covering the terrain. Evidence: `.cell .model-stage` board scale, counter-rotation, flat `.unit`; screenshots at 690x1225 and 390x844.
 - ART-006e | TODO | Author weapon silhouettes for the humans at the detail level of the construct and beast rigs.
 - ART-006f | TODO | Separate the remaining robe-wearer cluster (Furnace Abbot, Null-Choir Cantor, Dust Sage, Emberwright Adept) with authored geometry.
+
+## ARENA-R1 | IN_PROGRESS | P0 | Renderer foundation
+Dependencies: existing arena and canonical models. Paths: src/render/arena*, tests/arena-presentation.test.js.
+Sandbox implementation and automated checks passed: material differentiation, shape cues and resource disposal; 197 tests passed, 0 failures. Browser acceptance remains pending; full redesign is not DONE. Next: inspect desktop/mobile, review/export or commit the patch, then ARENA-R2 illustrated eight-slot formations and confirmation targeting.

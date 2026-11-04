@@ -20,6 +20,7 @@
  */
 
 import { BOARD_SIZE } from "../game/constants.js";
+import { materialSettings, tileMarkers, disposeObjectResources } from "./arena-presentation.js";
 import { modelFor } from "./models.js";
 import { arenaMap, terrainAt } from "./terrain.js";
 
@@ -157,7 +158,7 @@ function buildVoxelGroup(THREE, model, scale = 0.16) {
   for (const part of model.parts) {
     const color = model.palette?.[part.c] ?? (String(part.c).startsWith("#") ? part.c : model.palette?.base ?? "#888888");
     const geometry = new THREE.BoxGeometry(part.w * scale, part.h * scale, part.d * scale);
-    const material = new THREE.MeshLambertMaterial({ color });
+    const material = new THREE.MeshStandardMaterial(materialSettings(part, model.palette));
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(part.x * scale, (part.y + part.h / 2) * scale, part.z * scale);
     if (part.ry) mesh.rotation.y = (part.ry * Math.PI) / 180;
@@ -345,20 +346,14 @@ export async function mountArena(container, callbacks = {}) {
   renderer.domElement.addEventListener("pointerup", () => { dragX = null; });
 
   function clearDynamic() {
-    for (const child of [...dynamic.children]) {
-      child.traverse?.((node) => {
-        if (node.material?.map) node.material.map.dispose();
-        if (node.material) node.material.dispose?.();
-        if (node.geometry) node.geometry.dispose?.();
-      });
-      dynamic.remove(child);
-    }
+    disposeObjectResources(dynamic);
+    dynamic.clear();
     vesselAnims = [];
   }
 
   function tintCell(x, y, color) {
     const mesh = tileMeshes.get(`${x},${y}`);
-    if (mesh) mesh.material.color.set(color);
+    if (mesh) mesh.material.color.lerp(new THREE.Color(color), 0.32);
   }
   function resetTiles() {
     for (const mesh of tileMeshes.values()) mesh.material.color.copy(mesh.userData.baseColor);
@@ -383,6 +378,30 @@ export async function mountArena(container, callbacks = {}) {
     for (const [x, y] of legalAttacks) tintCell(x, y, "#e05a4a");
     for (const [x, y] of legalSummons) tintCell(x, y, "#7fc8e8");
     if (selected) tintCell(selected.x, selected.y, "#ffd166");
+
+    for (const marker of tileMarkers(view.tiles)) {
+      const pos = cellToWorld(marker.x, marker.y);
+      const tile = tileMeshes.get(`${marker.x},${marker.y}`);
+      const surface = tile ? tile.position.y + tile.geometry.parameters.height / 2 + 0.035 : 0.4;
+      const colors = { move: "#84c497", attack: "#e68b7c", summon: "#c6b777", selected: "#f2dfa0", blocked: "#9a99a0" };
+      const shape = { move: 32, attack: 4, summon: 6, selected: 4, blocked: 4 }[marker.kind];
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.39, 0.43, shape),
+        new THREE.MeshBasicMaterial({ color: colors[marker.kind], side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.rotation.z = marker.kind === "selected" ? Math.PI / 4 : 0;
+      ring.position.set(pos.x, surface, pos.z);
+      dynamic.add(ring);
+      if (marker.kind === "attack" || marker.kind === "blocked") {
+        for (const angle of [-Math.PI / 4, Math.PI / 4]) {
+          const bar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.012, 0.035), new THREE.MeshBasicMaterial({ color: colors[marker.kind] }));
+          bar.rotation.y = angle;
+          bar.position.set(pos.x, surface + 0.005, pos.z);
+          dynamic.add(bar);
+        }
+      }
+    }
 
     for (const unit of view.units ?? []) {
       const model = modelFor(unit.cardId);
@@ -504,6 +523,7 @@ export async function mountArena(container, callbacks = {}) {
       visibilityObserver?.disconnect();
       window.removeEventListener("resize", resize);
       clearDynamic();
+      disposeObjectResources(scene);
       renderer.dispose();
       renderer.domElement.remove();
     },

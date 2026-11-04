@@ -660,3 +660,14 @@ a plan, a placeholder, or an unrun test.
   `screenshots/humans-voxel.png`, `screenshots/mobile.png`.
 - Still open: human weapon silhouettes are simple; robe-wearers remain the closest cluster; the
   arena has one authored layout; combat FX were not re-reviewed on the new terrain.
+
+## Current sandbox session — 2026-11-04 — ARENA-R1
+
+### 2026-11-04 — ARENA-R1: renderer foundation (sandbox-tested patch)
+
+Base: main at 1ed84f7d3156a4bbd8d9a61d9ac61bdc04034400. Baseline npm run check: 193 passed, 0 failed. Post-change npm run check: 197 passed, 0 failed. npm run stamp, node --check src/render/arena3d.js, and git diff --check passed in the Vercel sandbox.
+Changes: material-aware voxel shading, shape-based legal-tile cues, softer terrain tint, shared resource teardown and static-scene disposal; four new pure-helper tests. No rules, catalog, balance, economy, database or network changes. No deployment or push.
+Paths: src/render/arena-presentation.js, src/render/arena3d.js, tests/arena-presentation.test.js, index.html, CHANGELOG.md, TODO.md, AI_HANDOFF.md.
+Limitations: browser/mobile visuals and performance not verified; full illustrated formations, targeting confirmation and combat-animation overhaul remain unfinished. Tracking wording in the exported patch records test results obtained after the sandbox edits; runtime files match the tested version.
+
+No GitHub commit or deployment was performed. Next: (1) inspect actual desktop/mobile gameplay and marker/material readability; (2) review and commit the patch after approval; (3) ARENA-R2 illustrated eight-slot formations and engine-derived confirmation targeting.
